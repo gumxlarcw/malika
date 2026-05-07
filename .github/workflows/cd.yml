@@ -1,6 +1,7 @@
 name: CD
 
-on:
+# Quote `on:` to prevent YAML 1.1 boolean coercion (`on` keyword → true).
+"on":
   push:
     branches: [ main, master ]
     tags: [ 'v*', 'v*.*.*' ]
@@ -39,7 +40,8 @@ jobs:
           ./scripts/deploy-public-pwa.sh
       - name: Skip (missing secrets)
         if: ${{ secrets.STAGING_DEPLOY_ENABLED != 'true' }}
-        run: echo "Staging deploy skipped: set STAGING_DEPLOY_ENABLED=true to enable."
+        run: |
+          echo "Staging deploy skipped — set STAGING_DEPLOY_ENABLED=true to enable."
       - name: Notify
         if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
         run: |
@@ -64,7 +66,8 @@ jobs:
           ./scripts/deploy-public-pwa.sh
       - name: Skip (missing secrets)
         if: ${{ secrets.PROD_DEPLOY_ENABLED != 'true' }}
-        run: echo "Production deploy skipped: set PROD_DEPLOY_ENABLED=true to enable."
+        run: |
+          echo "Production deploy skipped — set PROD_DEPLOY_ENABLED=true to enable."
       - name: Notify
         if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
         run: |
@@ -87,7 +90,8 @@ jobs:
           echo "Implement rollback script and wire it here."
       - name: Skip (missing secrets)
         if: ${{ secrets.ROLLBACK_ENABLED != 'true' }}
-        run: echo "Rollback skipped: set ROLLBACK_ENABLED=true to enable."
+        run: |
+          echo "Rollback skipped — set ROLLBACK_ENABLED=true to enable."
       - name: Notify
         if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
         run: |
