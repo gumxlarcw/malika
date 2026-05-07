@@ -1,4 +1,4 @@
-name: CI
+name: Checks
 
 # `on:` MUST be quoted — YAML 1.1 treats `on` as boolean `true` keyword,
 # which makes GitHub Actions fail to find the workflow trigger.
