@@ -45,9 +45,14 @@ function isSimilarQuery(q1, q2) {
   return overlap / Math.min(w1.size, w2.size) > 0.5;
 }
 
-/** Format a candidate for tool response (compact). */
+/** Format a candidate for tool response (compact, LLM-context oriented).
+ *  Includes BPS metadata (unit, subject, responsible_party) when available
+ *  — populated by datasourceAgent._loadCandidatesById from `indicator_meta`.
+ *  These extra fields cost ~50-100 chars per candidate and let the LLM
+ *  ground its responses in the actual unit + data steward.
+ */
 function formatCandidate(c) {
-  return {
+  const out = {
     id: c.id,
     name: c.name,
     type: c.type,
@@ -55,6 +60,10 @@ function formatCandidate(c) {
     category: c.category || null,
     description: c.description?.slice(0, 200) || '',
   };
+  if (c.unit) out.unit = c.unit;
+  if (c.subject_label) out.subject = c.subject_label;
+  if (c.responsible_party) out.source = c.responsible_party;
+  return out;
 }
 
 /** Format a knowledge doc for tool response. */
