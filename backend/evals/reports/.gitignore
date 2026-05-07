@@ -1,0 +1,4 @@
+# Eval reports directory
+# JSON reports from eval runs are saved here.
+# Not committed to git — each server generates its own baseline.
+*.json

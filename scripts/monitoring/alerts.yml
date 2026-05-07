@@ -1,0 +1,47 @@
+groups:
+  - name: malika-api
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(malika_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          sum(rate(malika_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate (>5%)"
+          description: "HTTP 5xx rate exceeded 5% over 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(malika_http_request_duration_ms_bucket[5m])) by (le)
+          ) > 2000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency (p95 > 2s)"
+          description: "Request latency p95 exceeded 2s over 5 minutes."
+
+      - alert: OpenAIFailureRateHigh
+        expr: |
+          sum(rate(malika_openai_requests_total{status="failure"}[5m]))
+          /
+          sum(rate(malika_openai_requests_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI failure rate > 5%"
+          description: "OpenAI failures exceeded 5% over 10 minutes."
+
+      - alert: DatabaseDown
+        expr: malika_db_up < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connectivity down"
+          description: "Database health gauge reports down."

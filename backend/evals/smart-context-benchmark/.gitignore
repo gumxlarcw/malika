@@ -1,0 +1,3 @@
+# Smart-context-benchmark response dumps (per-run output)
+# Not committed — each run regenerates its own JSON.
+responses-*.json

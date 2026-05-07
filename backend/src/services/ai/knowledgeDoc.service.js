@@ -1,0 +1,578 @@
+/**
+ * Knowledge Document Service
+ * Handle PDF/text parsing, chunking, and embedding for custom knowledge
+ * Now with Vision OCR support for scanned/image PDFs
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { PDFParse } = require('pdf-parse');
+const KnowledgeBase = require('../../models/KnowledgeBase.model');
+const { generateEmbedding, EMBEDDING_DIMENSIONS } = require('./embedding.service');
+const { extractTextFromImages, isVisionAvailable } = require('./visionOcr.service');
+const { pdfToImages, shouldUseOcr } = require('./pdfToImage.service');
+
+// Chunking config
+const MAX_CHUNK_SIZE = 2000; // chars per chunk
+const CHUNK_OVERLAP = 200;  // overlap between chunks
+const CONTENT_MAX_RETURN_TO_AI = 10000; // max content returned to AI per result (10k chars)
+
+/**
+ * Detect if text contains numbered sections (FAQ-style)
+ * Returns array of section boundaries or null if not FAQ-style
+ */
+function detectNumberedSections(text) {
+  // Common FAQ/numbered patterns:
+  // "1. Question" or "1) Question" or "FAQ 1:" or "Pertanyaan 1:" or "Q1:"
+  const patterns = [
+    /^(?:\d{1,3})\.\s+.+/gm,        // "1. Question"
+    /^(?:\d{1,3})\)\s+.+/gm,        // "1) Question"
+    /^FAQ\s*\d+[:.]\s*.+/gim,       // "FAQ 1: Question"
+    /^Pertanyaan\s*\d+[:.]\s*.+/gim, // "Pertanyaan 1: Question"
+    /^Q\d+[:.]\s*.+/gim,            // "Q1: Question"
+    /^(?:[IVX]+)\.\s+.+/gm,         // "I. Section" (Roman numerals)
+    /^[A-Z]\.\s+.+/gm,              // "A. Section"
+  ];
+
+  for (const pattern of patterns) {
+    const matches = Array.from(text.matchAll(pattern));
+    if (matches.length >= 3) {
+      // Found at least 3 numbered sections - this is FAQ-style
+      return {
+        pattern,
+        matches: matches.map(m => ({
+          text: m[0],
+          index: m.index
+        }))
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Split text by numbered sections (FAQ-style chunking)
+ * Each section becomes one chunk, combining question + answer
+ */
+function chunkByNumberedSections(text, sectionInfo, maxSize = MAX_CHUNK_SIZE) {
+  const { matches } = sectionInfo;
+  const chunks = [];
+  const lines = text.split('\n');
+  
+  for (let i = 0; i < matches.length; i++) {
+    const currentMatch = matches[i];
+    const nextMatch = matches[i + 1];
+    
+    // Find start and end positions in the text
+    const startIdx = currentMatch.index;
+    const endIdx = nextMatch ? nextMatch.index : text.length;
+    
+    let sectionText = text.slice(startIdx, endIdx).trim();
+    
+    // If section is too long, we need to sub-chunk it
+    if (sectionText.length > maxSize) {
+      // Keep the header and chunk the rest
+      const headerMatch = sectionText.match(/^.+?\n/);
+      const header = headerMatch ? headerMatch[0].trim() : '';
+      const body = sectionText.slice(header.length).trim();
+      
+      // Sub-chunk the body
+      const bodyChunks = chunkText(body, maxSize - header.length - 50, CHUNK_OVERLAP);
+      for (let j = 0; j < bodyChunks.length; j++) {
+        const subChunk = j === 0 
+          ? `${header}\n\n${bodyChunks[j]}`
+          : `${header} (lanjutan)\n\n${bodyChunks[j]}`;
+        chunks.push(subChunk);
+      }
+    } else if (sectionText.length > 50) {
+      chunks.push(sectionText);
+    }
+  }
+  
+  return chunks;
+}
+
+/**
+ * Smart chunking: detect structure and choose best strategy
+ * 1. If FAQ-style (numbered sections), chunk by section (even if small)
+ * 2. Otherwise, use paragraph/sentence-based chunking
+ */
+function smartChunkText(text, maxSize = MAX_CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
+  const cleanText = String(text || '').trim();
+  if (!cleanText) return [];
+  
+  // Check for FAQ-style documents FIRST (before size check)
+  // FAQ documents should be chunked by section for better search accuracy
+  const sectionInfo = detectNumberedSections(cleanText);
+  if (sectionInfo && sectionInfo.matches.length >= 3) {
+    console.log(`[KnowledgeDoc] Detected ${sectionInfo.matches.length} numbered sections, using semantic chunking`);
+    const sectionChunks = chunkByNumberedSections(cleanText, sectionInfo, maxSize);
+    if (sectionChunks.length > 0) {
+      return sectionChunks;
+    }
+  }
+  
+  // For non-FAQ text, return as single chunk if small enough
+  if (cleanText.length <= maxSize) {
+    return [cleanText];
+  }
+  
+  // Fallback to standard paragraph/sentence-based chunking
+  return chunkText(cleanText, maxSize, overlap);
+}
+
+/**
+ * Extract text from PDF buffer
+ * @param {Buffer} pdfBuffer 
+ * @returns {Promise<string>}
+ */
+async function extractTextFromPdf(pdfBuffer) {
+  try {
+    // Convert Buffer to Uint8Array (required by pdf-parse v2)
+    const uint8Array = new Uint8Array(pdfBuffer);
+    const pdf = new PDFParse(uint8Array);
+    await pdf.load();
+    const result = await pdf.getText();
+    // pdf-parse v2 returns object { text: string, ... }
+    const text = typeof result === 'string' ? result : (result?.text || '');
+    return text;
+  } catch (e) {
+    console.error('[KnowledgeDoc] PDF parse error:', e.message);
+    throw new Error('Failed to parse PDF: ' + e.message);
+  }
+}
+
+/**
+ * Extract text from PDF with OCR fallback for scanned/image pages
+ * @param {Buffer} pdfBuffer 
+ * @param {object} options 
+ * @returns {Promise<{text: string, method: string, pageCount?: number}>}
+ */
+async function extractTextFromPdfWithOcr(pdfBuffer, options = {}) {
+  const { forceOcr = false, maxOcrPages = 10 } = options;
+  
+  // First try normal text extraction
+  let textLayerContent = '';
+  try {
+    textLayerContent = await extractTextFromPdf(pdfBuffer);
+  } catch (e) {
+    console.log('[KnowledgeDoc] Text extraction failed, will try OCR:', e.message);
+  }
+
+  // If we have decent text content and not forcing OCR, use it
+  if (!forceOcr && textLayerContent.trim().length > 500) {
+    console.log(`[KnowledgeDoc] Using text layer (${textLayerContent.length} chars)`);
+    return { text: textLayerContent, method: 'text-layer' };
+  }
+
+  // Check if Vision OCR is available
+  if (!isVisionAvailable()) {
+    console.log('[KnowledgeDoc] Vision OCR not available, using text layer only');
+    return { text: textLayerContent, method: 'text-layer-only' };
+  }
+
+  // Convert PDF to images
+  console.log('[KnowledgeDoc] Converting PDF to images for OCR...');
+  const imageBuffers = await pdfToImages(pdfBuffer, { maxPages: maxOcrPages });
+  
+  if (imageBuffers.length === 0) {
+    console.log('[KnowledgeDoc] No images extracted, using text layer');
+    return { text: textLayerContent, method: 'text-layer-fallback' };
+  }
+
+  console.log(`[KnowledgeDoc] Running Vision OCR on ${imageBuffers.length} pages...`);
+  
+  // Run OCR on all images
+  const ocrResults = await extractTextFromImages(imageBuffers, { concurrency: 2 });
+  const ocrText = ocrResults.join('\n\n--- Page Break ---\n\n').trim();
+
+  // Combine: prefer OCR text if it's longer (scanned PDF)
+  // Otherwise merge both for mixed PDFs
+  let finalText;
+  let method;
+
+  if (ocrText.length > textLayerContent.length * 1.5) {
+    // OCR found significantly more text - use OCR
+    finalText = ocrText;
+    method = 'vision-ocr';
+    console.log(`[KnowledgeDoc] Using Vision OCR result (${ocrText.length} chars)`);
+  } else if (textLayerContent.length > ocrText.length * 1.5) {
+    // Text layer has significantly more - use text layer
+    finalText = textLayerContent;
+    method = 'text-layer';
+    console.log(`[KnowledgeDoc] Using text layer (${textLayerContent.length} chars)`);
+  } else {
+    // Similar lengths - combine both, deduplicated
+    finalText = combineTexts(textLayerContent, ocrText);
+    method = 'hybrid';
+    console.log(`[KnowledgeDoc] Using hybrid (${finalText.length} chars)`);
+  }
+
+  return { text: finalText, method, pageCount: imageBuffers.length };
+}
+
+/**
+ * Combine text from different sources, attempting to remove duplicates
+ */
+function combineTexts(textA, textB) {
+  // Simple approach: if B contains significant portions of A, just use B
+  // Otherwise concatenate with marker
+  const aLines = textA.split('\n').filter(l => l.trim().length > 20);
+  const bText = textB.toLowerCase();
+  
+  let matchCount = 0;
+  for (const line of aLines.slice(0, 20)) {
+    if (bText.includes(line.toLowerCase().slice(0, 50))) {
+      matchCount++;
+    }
+  }
+
+  // If most lines match, texts are similar - use the longer one
+  if (matchCount > aLines.length * 0.6) {
+    return textA.length > textB.length ? textA : textB;
+  }
+
+  // Otherwise combine
+  return `${textA}\n\n=== OCR Extracted Content ===\n\n${textB}`;
+}
+
+/**
+ * Split text into chunks with overlap
+ * @param {string} text 
+ * @param {number} maxSize 
+ * @param {number} overlap 
+ * @returns {string[]}
+ */
+function chunkText(text, maxSize = MAX_CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
+  const cleanText = String(text || '').trim();
+  if (!cleanText) return [];
+  
+  if (cleanText.length <= maxSize) {
+    return [cleanText];
+  }
+
+  const chunks = [];
+  let start = 0;
+
+  while (start < cleanText.length) {
+    let end = start + maxSize;
+    
+    // Try to break at sentence or paragraph boundary
+    if (end < cleanText.length) {
+      const slice = cleanText.slice(start, end);
+      const lastPeriod = slice.lastIndexOf('. ');
+      const lastNewline = slice.lastIndexOf('\n\n');
+      const breakPoint = Math.max(lastPeriod, lastNewline);
+      
+      if (breakPoint > maxSize * 0.5) {
+        end = start + breakPoint + 1;
+      }
+    }
+    
+    chunks.push(cleanText.slice(start, end).trim());
+    start = end - overlap;
+    
+    // Prevent infinite loop
+    if (start >= cleanText.length - overlap) break;
+  }
+
+  return chunks.filter(c => c.length > 50); // Skip very short chunks
+}
+
+/**
+ * Create knowledge document from text
+ * @param {object} params 
+ * @returns {Promise<object>}
+ */
+async function createFromText({ title, content, description, category, createdBy }) {
+  const cleanContent = String(content || '').trim();
+  if (!cleanContent) {
+    throw new Error('Content is required');
+  }
+  if (!title) {
+    throw new Error('Title is required');
+  }
+
+  // Use smart chunking (detects FAQ-style documents)
+  const chunks = smartChunkText(cleanContent);
+  const results = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const isFirst = i === 0;
+    
+    const doc = await KnowledgeBase.create({
+      title: chunks.length > 1 ? `${title} (${i + 1}/${chunks.length})` : title,
+      description: isFirst ? description : null,
+      category,
+      source_type: 'text',
+      content: chunk,
+      content_length: chunk.length,
+      chunk_index: i,
+      parent_id: isFirst ? null : (results[0]?.id || null),
+      status: 'pending',
+      created_by: createdBy,
+    });
+    
+    results.push(doc);
+  }
+
+  // Generate embeddings asynchronously
+  processEmbeddings(results.map(r => r.id)).catch(e => {
+    console.error('[KnowledgeDoc] Embedding error:', e.message);
+  });
+
+  return {
+    ok: true,
+    total: results.length,
+    documents: results.map(r => ({ id: r.id, title: r.title, chunk_index: r.chunk_index })),
+  };
+}
+
+/**
+ * Create knowledge document from PDF
+ * @param {object} params 
+ * @returns {Promise<object>}
+ */
+async function createFromPdf({ title, pdfBuffer, filename, description, category, createdBy, forceOcr = false }) {
+  if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer)) {
+    throw new Error('PDF buffer is required');
+  }
+  if (!title) {
+    throw new Error('Title is required');
+  }
+
+  // Extract text from PDF with OCR fallback
+  const { text: extractedText, method, pageCount } = await extractTextFromPdfWithOcr(pdfBuffer, { forceOcr });
+  
+  if (!extractedText || extractedText.length < 50) {
+    throw new Error('Could not extract text from PDF (empty or too short). Try enabling OCR if this is a scanned document.');
+  }
+
+  console.log(`[KnowledgeDoc] Extracted ${extractedText.length} chars using ${method}`);
+
+  // Use smart chunking (detects FAQ-style documents)
+  const chunks = smartChunkText(extractedText);
+  const results = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const isFirst = i === 0;
+    
+    const doc = await KnowledgeBase.create({
+      title: chunks.length > 1 ? `${title} (${i + 1}/${chunks.length})` : title,
+      description: isFirst ? description : null,
+      category,
+      source_type: method === 'vision-ocr' ? 'pdf-ocr' : 'pdf',
+      source_filename: filename,
+      content: chunk,
+      content_length: chunk.length,
+      chunk_index: i,
+      parent_id: isFirst ? null : (results[0]?.id || null),
+      status: 'pending',
+      created_by: createdBy,
+    });
+    
+    results.push(doc);
+  }
+
+  // Generate embeddings asynchronously
+  processEmbeddings(results.map(r => r.id)).catch(e => {
+    console.error('[KnowledgeDoc] Embedding error:', e.message);
+  });
+
+  return {
+    ok: true,
+    total: results.length,
+    chunks: chunks.length,
+    extractedLength: extractedText.length,
+    extractionMethod: method,
+    pageCount,
+    documents: results.map(r => ({ id: r.id, title: r.title, chunk_index: r.chunk_index })),
+  };
+}
+
+/**
+ * Process embeddings for knowledge documents
+ * @param {number[]} ids 
+ */
+async function processEmbeddings(ids) {
+  for (const id of ids) {
+    try {
+      const doc = await KnowledgeBase.findByPk(id);
+      if (!doc) continue;
+
+      await doc.update({ status: 'processing' });
+
+      const embedding = await generateEmbedding(doc.content);
+      
+      await doc.update({
+        embedding: JSON.stringify(embedding),
+        embedding_updated_at: new Date(),
+        status: 'ready',
+        error_message: null,
+      });
+    } catch (e) {
+      console.error(`[KnowledgeDoc] Embed error for ${id}:`, e.message);
+      await KnowledgeBase.update(
+        { status: 'error', error_message: e.message },
+        { where: { id } }
+      );
+    }
+  }
+}
+
+/**
+ * Re-embed a single knowledge document
+ * @param {number} id 
+ */
+async function reEmbed(id) {
+  const doc = await KnowledgeBase.findByPk(id);
+  if (!doc) {
+    throw new Error('Document not found');
+  }
+
+  await doc.update({ status: 'processing' });
+
+  try {
+    const embedding = await generateEmbedding(doc.content);
+    await doc.update({
+      embedding: JSON.stringify(embedding),
+      embedding_updated_at: new Date(),
+      status: 'ready',
+      error_message: null,
+    });
+    return { ok: true };
+  } catch (e) {
+    await doc.update({ status: 'error', error_message: e.message });
+    throw e;
+  }
+}
+
+/**
+ * Delete knowledge document and its chunks
+ * @param {number} id 
+ */
+async function deleteDocument(id) {
+  const doc = await KnowledgeBase.findByPk(id);
+  if (!doc) {
+    throw new Error('Document not found');
+  }
+
+  // Delete chunks if this is a parent
+  await KnowledgeBase.destroy({ where: { parent_id: id } });
+  
+  // Delete the document itself
+  await doc.destroy();
+  
+  return { ok: true };
+}
+
+/**
+ * Get all knowledge documents with stats
+ */
+async function getAllDocuments() {
+  const docs = await KnowledgeBase.findAll({
+    where: { parent_id: null }, // Only root documents
+    order: [['created_at', 'DESC']],
+    attributes: ['id', 'title', 'description', 'category', 'source_type', 'source_filename', 
+                 'content_length', 'status', 'embedding_updated_at', 'created_at'],
+  });
+
+  const { Sequelize, Op } = require('sequelize');
+  
+  // Get chunk counts for each parent
+  const chunkCounts = await KnowledgeBase.findAll({
+    where: { parent_id: { [Op.ne]: null } },
+    attributes: ['parent_id', [Sequelize.fn('COUNT', Sequelize.col('id')), 'chunks']],
+    group: ['parent_id'],
+    raw: true,
+  });
+
+  const chunkMap = new Map(chunkCounts.map(c => [c.parent_id, parseInt(c.chunks, 10)]));
+
+  // Get total content length for each parent (sum of all chunks including parent itself)
+  // For documents with chunks, sum all related chunk lengths
+  const docIds = docs.map(d => d.id);
+  const totalLengthResults = await KnowledgeBase.findAll({
+    where: {
+      [Op.or]: [
+        { id: { [Op.in]: docIds } },
+        { parent_id: { [Op.in]: docIds } }
+      ]
+    },
+    attributes: [
+      [Sequelize.literal('COALESCE(parent_id, id)'), 'root_id'],
+      [Sequelize.fn('SUM', Sequelize.fn('CHAR_LENGTH', Sequelize.col('content'))), 'total_length']
+    ],
+    group: [Sequelize.literal('COALESCE(parent_id, id)')],
+    raw: true,
+  });
+  
+  const totalLengthMap = new Map(totalLengthResults.map(r => [r.root_id, parseInt(r.total_length || 0, 10)]));
+
+  return docs.map(d => ({
+    ...d.toJSON(),
+    chunks: (chunkMap.get(d.id) || 0) + 1, // +1 for the parent itself
+    content_length: totalLengthMap.get(d.id) || d.content_length || 0, // Use total length across all chunks
+    hasEmbedding: !!d.embedding_updated_at,
+  }));
+}
+
+/**
+ * Get knowledge stats
+ */
+async function getKnowledgeStats() {
+  const { Sequelize } = require('sequelize');
+  
+  const [total, ready, pending, error, processingCount] = await Promise.all([
+    KnowledgeBase.count(),
+    KnowledgeBase.count({ where: { status: 'ready' } }),
+    KnowledgeBase.count({ where: { status: 'pending' } }),
+    KnowledgeBase.count({ where: { status: 'error' } }),
+    KnowledgeBase.count({ where: { status: 'processing' } }),
+  ]);
+
+  const rootDocs = await KnowledgeBase.count({ where: { parent_id: null } });
+  
+  // Get total characters in all documents
+  const charStats = await KnowledgeBase.findOne({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.fn('CHAR_LENGTH', Sequelize.col('content'))), 'totalChars'],
+      [Sequelize.fn('MAX', Sequelize.fn('CHAR_LENGTH', Sequelize.col('content'))), 'maxChars'],
+    ],
+    raw: true,
+  });
+
+  return {
+    total,
+    ready,
+    pending,
+    error,
+    processing: processingCount,
+    rootDocuments: rootDocs,
+    chunks: total - rootDocs,
+    totalChars: parseInt(charStats?.totalChars || 0, 10),
+    maxChars: parseInt(charStats?.maxChars || 0, 10),
+    maxReturnToAi: CONTENT_MAX_RETURN_TO_AI,
+    chunkSize: MAX_CHUNK_SIZE,
+    chunkOverlap: CHUNK_OVERLAP,
+  };
+}
+
+module.exports = {
+  extractTextFromPdf,
+  chunkText,
+  smartChunkText,
+  detectNumberedSections,
+  createFromText,
+  createFromPdf,
+  processEmbeddings,
+  reEmbed,
+  deleteDocument,
+  getAllDocuments,
+  getKnowledgeStats,
+  MAX_CHUNK_SIZE,
+  CHUNK_OVERLAP,
+  CONTENT_MAX_RETURN_TO_AI,
+};

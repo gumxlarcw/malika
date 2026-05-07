@@ -1,0 +1,59 @@
+{
+  "version": "1.1.0",
+  "created": "2026-04-18",
+  "description": "Search eval corpus — 43 labeled cases covering core, geo, abbrev, period, knowledge, deeplink, nomatch, typo. source_ids sourced from data_sources table (BPS Maluku Utara).",
+  "cases": [
+    { "id": "CR01", "query": "tpt malut 2024",                "tags": ["core", "abbrev"],         "expect_intent_det": { "type": "dynamic", "year": 2024 }, "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [19, 201] } } },
+    { "id": "CR02", "query": "kemiskinan maluku utara 2023",  "tags": ["core"],                   "expect_intent_det": { "type": "dynamic", "year": 2023 }, "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [12, 456] } } },
+    { "id": "CR03", "query": "ipm maluku utara",              "tags": ["core"],                   "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [10, 428] } } },
+    { "id": "CR04", "query": "inflasi bulan ini",             "tags": ["core"],                   "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [1] } } },
+    { "id": "CR05", "query": "pdrb 2023",                     "tags": ["core", "period"],         "expect_intent_det": { "type": "dynamic", "year": 2023 }, "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [286] } } },
+    { "id": "CR06", "query": "jumlah penduduk malut",         "tags": ["core"],                   "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [4, 184] } } },
+    { "id": "CR07", "query": "gini ratio 2024",               "tags": ["core", "period"],         "expect_intent_det": { "type": "dynamic", "year": 2024 }, "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [8, 14] } } },
+    { "id": "CR08", "query": "tingkat pengangguran terbuka",  "tags": ["core"],                   "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [19, 190, 201] } } },
+    { "id": "CR09", "query": "indeks pembangunan manusia",    "tags": ["core"],                   "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [10, 428] } } },
+    { "id": "CR10", "query": "persentase penduduk miskin",    "tags": ["core"],                   "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [12, 450] } } },
+
+    { "id": "GE01", "query": "kemiskinan di pulau morotai",   "tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "pulau morotai" } },
+    { "id": "GE02", "query": "tpt halmahera utara 2024",      "tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "year": 2024, "geo": "halmahera utara" } },
+    { "id": "GE03", "query": "ipm kota ternate",              "tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "ternate" } },
+    { "id": "GE04", "query": "inflasi kota tidore",           "tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "tidore" } },
+    { "id": "GE05", "query": "jumlah penduduk kepulauan sula","tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "sula" } },
+    { "id": "GE06", "query": "pengangguran halmahera selatan","tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "halmahera selatan" } },
+    { "id": "GE07", "query": "kemiskinan halmahera tengah",   "tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "halmahera tengah" } },
+    { "id": "GE08", "query": "ipm pulau taliabu",             "tags": ["geo"],                    "expect_intent_det": { "type": "dynamic", "geo": "pulau taliabu" } },
+
+    { "id": "AB01", "query": "TPT hal-ut 2024",               "tags": ["abbrev", "geo"],          "expect_intent_det": { "year": 2024, "geo": "halmahera utara" } },
+    { "id": "AB02", "query": "kemiskinan halsel",             "tags": ["abbrev", "geo"],          "expect_intent_det": { "geo": "halmahera selatan" } },
+    { "id": "AB03", "query": "tikep inflasi",                 "tags": ["abbrev", "geo"],          "expect_intent_det": { "geo": "tidore kepulauan" } },
+    { "id": "AB04", "query": "ipm pulmor",                    "tags": ["abbrev", "geo"],          "expect_intent_det": { "geo": "pulau morotai" } },
+    { "id": "AB05", "query": "TPT menurut kab/kota",          "tags": ["abbrev"],                 "expect_intent_det": { "type": "dynamic" },               "expect_dropdown": { "must_appear_in_top_k": { "k": 10, "ids": [201, 190] } } },
+    { "id": "AB06", "query": "IPM malut 2024",                "tags": ["abbrev", "core"],         "expect_intent_det": { "year": 2024 } },
+
+    { "id": "PE01", "query": "pdrb triwulan 3 2024",          "tags": ["period"],                 "expect_intent_det": { "type": "dynamic", "year": 2024 } },
+    { "id": "PE02", "query": "inflasi desember 2024",         "tags": ["period"],                 "expect_intent_det": { "type": "dynamic", "year": 2024 } },
+    { "id": "PE03", "query": "kemiskinan semester 1 2023",    "tags": ["period"],                 "expect_intent_det": { "type": "dynamic", "year": 2023 } },
+    { "id": "PE04", "query": "tpt tahun 2022",                "tags": ["period"],                 "expect_intent_det": { "type": "dynamic", "year": 2022 } },
+    { "id": "PE05", "query": "inflasi januari 2025",          "tags": ["period"],                 "expect_intent_det": { "type": "dynamic", "year": 2025 } },
+    { "id": "PE06", "query": "ipm 2020 2021 2022",            "tags": ["period"],                 "expect_intent_det": { "type": "dynamic" } },
+
+    { "id": "KB01", "query": "apa itu gini ratio",            "tags": ["knowledge"],              "expect_knowledge": { "min_precision_at_5": 0 } },
+    { "id": "KB02", "query": "cara menghitung ipm",           "tags": ["knowledge"],              "expect_knowledge": { "min_precision_at_5": 0 } },
+    { "id": "KB03", "query": "definisi tingkat pengangguran", "tags": ["knowledge"],              "expect_knowledge": { "min_precision_at_5": 0 } },
+    { "id": "KB04", "query": "metode pdrb",                   "tags": ["knowledge"],              "expect_knowledge": { "min_precision_at_5": 0 } },
+    { "id": "KB05", "query": "apa itu sakernas",              "tags": ["knowledge"],              "expect_knowledge": { "min_precision_at_5": 0 } },
+    { "id": "KB06", "query": "konsep garis kemiskinan",       "tags": ["knowledge"],              "expect_knowledge": { "min_precision_at_5": 0 } },
+
+    { "id": "DL01", "query": "TPT kab/kota 2024",             "tags": ["deeplink"],               "expect_plan": { "action": "deeplink" }, "expect_intent_det": { "type": "dynamic", "year": 2024 } },
+    { "id": "DL02", "query": "persentase penduduk miskin kabupaten kota", "tags": ["deeplink"],   "expect_plan": { "action": "deeplink" }, "expect_intent_det": { "type": "dynamic" } },
+    { "id": "DL03", "query": "IPM menurut kabupaten kota",    "tags": ["deeplink"],               "expect_plan": { "action": "deeplink" }, "expect_intent_det": { "type": "dynamic" } },
+    { "id": "DL04", "query": "inflasi kota ternate 2024",     "tags": ["deeplink", "geo"],        "expect_plan": { "action": "deeplink" }, "expect_intent_det": { "type": "dynamic", "year": 2024, "geo": "ternate" } },
+
+    { "id": "NM01", "query": "halo apa kabar",                "tags": ["nomatch"],                "expect_plan": { "action": "search" } },
+    { "id": "NM02", "query": "cuaca hari ini",                "tags": ["nomatch"],                "expect_plan": { "action": "search" } },
+    { "id": "NM03", "query": "resep rendang",                 "tags": ["nomatch"],                "expect_plan": { "action": "search" } },
+
+    { "id": "TY01", "query": "kemikisnan malut",              "tags": ["typo"],                   "expect_intent_det": { "type": "dynamic" } },
+    { "id": "TY02", "query": "pengngguran ternate",           "tags": ["typo", "geo"],            "expect_intent_det": { "geo": "ternate" } }
+  ]
+}

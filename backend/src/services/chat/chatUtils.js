@@ -1,0 +1,375 @@
+/**
+ * Chat utility functions — extracted from chat.service.js (Phase 44)
+ *
+ * Small, stateless utility functions used by both sendMessage (non-streaming)
+ * and the streaming pipeline.
+ */
+
+'use strict';
+
+const { expandGeoShorthand } = require('../../utils/geoAnalysis');
+
+/**
+ * Detects if a query is clearly NOT about statistical data.
+ */
+function isNonStatisticalQuery(text) {
+  const t = String(text || '').toLowerCase().trim();
+  if (t.length < 5) return true;
+
+  const greetings = /^(hi|halo|hai|hello|hey|pagi|siang|sore|malam|selamat|assalamu|salam|terima\s*kasih|makasih|thanks?|thank\s*you)\b/;
+  if (greetings.test(t)) return true;
+
+  const aboutAi = /\b(model\s*(apa|yang|kamu)|siapa\s*(kamu|nama|yang\s*buat)|kamu\s*(siapa|apa)|dibuat\s*(oleh|dengan)|nama\s*kamu|namamu)\b/;
+  if (aboutAi.test(t)) return true;
+
+  const generalKnowledge = /\b(presiden|menteri|gubernur|bupati|walikota|ibukota|bendera|lagu\s*kebangsaan|hari\s*kemerdekaan|sejarah\s*(indonesia|dunia))\b/i;
+  if (generalKnowledge.test(t) && !t.includes('data') && !t.includes('statistik')) {
+    const statSignal = /\b(jumlah|persentase|angka|data|statistik|grafik|tabel|perkembangan|tren|pertumbuhan)\b/;
+    if (!statSignal.test(t)) return true;
+  }
+
+  const askingList = /\b(siapa\s*saja|daftar\s*(presiden|menteri|gubernur|bupati|walikota))\b/;
+  if (askingList.test(t) && !t.includes('data') && !t.includes('statistik')) return true;
+
+  return false;
+}
+
+/**
+ * Parse quarter/triwulan from query text.
+ * Returns { quarter: 1-4, monthStart, monthEnd } or { semester: 1-2, monthStart, monthEnd } or null
+ */
+function parseQuarterFromText(text) {
+  const t = String(text || '').toLowerCase();
+
+  const triwulanMatch = t.match(/\btriwulan\s*(i{1,3}v?|iv|[1-4])\b/i);
+  const quarterMatch = t.match(/\bq([1-4])\b/i);
+  const kuartalMatch = t.match(/\bku?artal\s*(i{1,3}v?|iv|[1-4])\b/i);
+
+  let qNum = null;
+  if (triwulanMatch) {
+    const raw = triwulanMatch[1].toLowerCase();
+    if (raw === '1' || raw === 'i') qNum = 1;
+    else if (raw === '2' || raw === 'ii') qNum = 2;
+    else if (raw === '3' || raw === 'iii') qNum = 3;
+    else if (raw === '4' || raw === 'iv' || raw === 'iiii') qNum = 4;
+  } else if (quarterMatch) {
+    qNum = parseInt(quarterMatch[1], 10);
+  } else if (kuartalMatch) {
+    const raw = kuartalMatch[1].toLowerCase();
+    if (raw === '1' || raw === 'i') qNum = 1;
+    else if (raw === '2' || raw === 'ii') qNum = 2;
+    else if (raw === '3' || raw === 'iii') qNum = 3;
+    else if (raw === '4' || raw === 'iv' || raw === 'iiii') qNum = 4;
+  }
+
+  const semesterMatch = t.match(/\bsemester\s*(i{1,2}|[1-2])\b/i);
+  if (semesterMatch) {
+    const raw = semesterMatch[1].toLowerCase();
+    if (raw === '1' || raw === 'i') return { semester: 1, monthStart: 1, monthEnd: 6 };
+    else if (raw === '2' || raw === 'ii') return { semester: 2, monthStart: 7, monthEnd: 12 };
+  }
+
+  if (!qNum || qNum < 1 || qNum > 4) return null;
+
+  const quarterMonths = {
+    1: { monthStart: 1, monthEnd: 3 },
+    2: { monthStart: 4, monthEnd: 6 },
+    3: { monthStart: 7, monthEnd: 9 },
+    4: { monthStart: 10, monthEnd: 12 },
+  };
+
+  return { quarter: qNum, ...quarterMonths[qNum] };
+}
+
+/** Remove ```malika_ui ... ``` blocks from content */
+function stripMalikaUiBlock(content) {
+  return String(content || '').replace(/```\s*malika_ui\s*[\s\S]*?```/gi, '').trim();
+}
+
+/** Remove raw URLs, markdown links → plain label */
+function stripRawUrlsFromText(textRaw) {
+  let out = String(textRaw || '');
+  out = out.replace(/\[([^\]]+)]\((https?:\/\/[^)]+)\)/gi, '$1');
+  out = out.replace(/\bhttps?:\/\/[^\s<>()]+/gi, '');
+  out = out.replace(/\bwww\.[^\s<>()]+/gi, '');
+  out = out.replace(/\/data\?[^\s]+/gi, 'halaman data');
+  out = out.replace(/\/search\?q=[^\s]+/gi, 'halaman pencarian');
+  out = out.replace(/\/backend\/?[^\s]*/gi, '');
+  out = out.replace(/\s{2,}/g, ' ');
+  out = out.replace(/\n{3,}/g, '\n\n');
+  return out.trim();
+}
+
+/**
+ * Enforce response rhythm/length limits.
+ */
+function clampChatRhythm(textRaw) {
+  let out = String(textRaw || '').trim();
+  if (!out) return out;
+
+  const maxLines = Number(process.env.MALIKA_MAX_LINES) || 25;
+  const maxChars = Number(process.env.MALIKA_MAX_CHARS) || 3000;
+  const maxQuestions = Number(process.env.MALIKA_MAX_QUESTIONS) || 2;
+
+  out = out.replace(/\n{3,}/g, '\n\n').trim();
+  const lines = out.split('\n');
+  if (lines.length > maxLines) out = lines.slice(0, maxLines).join('\n').trim();
+  if (out.length > maxChars) out = out.slice(0, maxChars).trim();
+
+  const idxs = [];
+  for (let i = 0; i < out.length; i++) if (out[i] === '?') idxs.push(i);
+  if (idxs.length > maxQuestions) {
+    const chars = out.split('');
+    for (const i of idxs.slice(maxQuestions)) chars[i] = '.';
+    out = chars.join('');
+  }
+
+  return out.replace(/\s{2,}/g, ' ').replace(/\n\s+\n/g, '\n\n').trim();
+}
+
+function safeParseInt(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeYearValue(v) {
+  const n = safeParseInt(v);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) return null;
+  if (n >= 1900 && n <= 2100) return n;
+  if (n >= 0 && n <= 999) {
+    const y = 1900 + n;
+    return y >= 1900 && y <= 2100 ? y : null;
+  }
+  return null;
+}
+
+function normalizeType(raw) {
+  const t = String(raw || '').toLowerCase();
+  if (t === 'dynamic' || t === 'interop' || t === 'static' || t === 'exim' || t === 'pressrelease') return t;
+  return '';
+}
+
+function buildPeriodCandidates({ year, month }) {
+  const y = Number(year);
+  if (!Number.isInteger(y) || y < 1900 || y > 2100) return [];
+
+  const out = [];
+  out.push(String(y));
+  const three = y - 1900;
+  if (three >= 0 && three <= 999) out.push(String(three));
+
+  const m = Number(month);
+  if (Number.isInteger(m) && m >= 1 && m <= 12) {
+    const mm = String(m).padStart(2, '0');
+    out.push(`${y}${mm}`);
+    out.push(`${three}${mm}`);
+  }
+
+  return out;
+}
+
+/**
+ * Filter data rows by geo term.
+ * @returns {{ filtered: Array, geoMatched: boolean, geoMatchCount: number }}
+ */
+function filterDataByGeo(data, geo) {
+  if (!geo || !Array.isArray(data) || data.length === 0) {
+    return { filtered: data, geoMatched: false, geoMatchCount: 0 };
+  }
+
+  const geoNorm = String(geo).toLowerCase().replace(/[^a-z]/g, '');
+  const geoExpanded = expandGeoShorthand(geoNorm);
+
+  const filtered = data.filter(row => {
+    const rowValues = Object.values(row).map(v => String(v || '').toLowerCase());
+    return rowValues.some(v => v.includes(geoNorm) || (geoExpanded && v.includes(geoExpanded)));
+  });
+
+  return {
+    filtered: filtered.length > 0 ? filtered : data,
+    geoMatched: filtered.length > 0,
+    geoMatchCount: filtered.length,
+  };
+}
+
+/**
+ * Filter data rows by quarter (triwulan).
+ * @returns {{ filtered: Array, quarterMatched: boolean, quarterMatchCount: number }}
+ */
+function filterDataByQuarter(data, quarterNum) {
+  if (!quarterNum || !Array.isArray(data) || data.length === 0) {
+    return { filtered: data, quarterMatched: false, quarterMatchCount: 0 };
+  }
+
+  const quarterLabels = {
+    1: /triwulan\s*i\b/i,
+    2: /triwulan\s*ii\b/i,
+    3: /triwulan\s*iii\b/i,
+    4: /triwulan\s*iv\b/i,
+  };
+  const pattern = quarterLabels[quarterNum];
+  if (!pattern) return { filtered: data, quarterMatched: false, quarterMatchCount: 0 };
+
+  const filtered = data.filter(row => {
+    const quarterCol = row.Bulan || row.bulan || row.Periode || row.periode || row.Triwulan || row.triwulan;
+    if (quarterCol) return pattern.test(String(quarterCol));
+    return Object.values(row).some(v => typeof v === 'string' && pattern.test(v));
+  });
+
+  return {
+    filtered: filtered.length > 0 ? filtered : data,
+    quarterMatched: filtered.length > 0,
+    quarterMatchCount: filtered.length,
+  };
+}
+
+function isKabKotaLevelName(nameRaw) {
+  const s = String(nameRaw || '').toLowerCase();
+  if (!s) return false;
+  return /kabupaten\s*\/\s*kota|kab\s*\/\s*kota|\bkabupaten\b|\bkota\b/.test(s);
+}
+
+function isProvinceLevelName(nameRaw) {
+  const s = String(nameRaw || '').toLowerCase();
+  if (!s) return false;
+  return /\bprovinsi\b/.test(s);
+}
+
+function buildDataHref({ sourceId, type, period, month, geo }) {
+  const qp = new URLSearchParams();
+  qp.set('source_id', String(sourceId));
+  const t = normalizeType(type);
+  if (t && t !== 'pressrelease') qp.set('type', t);
+  if (period) qp.set('period', String(period));
+  if (month && Number.isFinite(Number(month)) && Number(month) >= 1 && Number(month) <= 12) qp.set('month', String(month));
+  if (geo && t !== 'static') qp.set('geo', String(geo));
+  return `/data?${qp.toString()}`;
+}
+
+function buildDeterministicSuggestions({ qb, hasGeoCandidate }) {
+  const type = normalizeType(qb?.type);
+  const year = qb?.params?.year;
+  const month = qb?.params?.month;
+
+  const tips = [];
+  if (!year) tips.push('Tambah tahun/periode (contoh: 2024).');
+  if (!month) tips.push('Tambah bulan jika perlu (contoh: Januari).');
+  if (hasGeoCandidate && !qb?.params?.geo) tips.push('Tambah wilayah (contoh: Maluku Utara / Ternate / Halmahera Barat).');
+  if (!type || type === 'pressrelease') tips.push('Sebutkan jenis data: dynamic / interop / static / exim.');
+  if (type === 'exim') {
+    tips.push('Untuk EXIM: bisa tambah "kode HS2 02", "menurut negara", atau "menurut pelabuhan".');
+  }
+  return tips.slice(0, 5);
+}
+
+function cleanAssistantTextAgainstDb({ text, requestedYear, anyCandidateHasYear, hasDataPreview }) {
+  let out = String(text || '').trim();
+  if (!out) return out;
+
+  if (requestedYear && anyCandidateHasYear) {
+    out = out
+      .replace(/\bbelum\s+tersedia\b[^.。\n]*[.。]?/gi, '')
+      .replace(/\b(proyeksi|perkiraan)\b[^.。\n]*[.。]?/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  return out;
+}
+
+function buildRoutingAppendix({ intentResult, candidates, latestBySource }) {
+  const lines = [];
+
+  const pickedSourceId = intentResult?.datasource?.source_id;
+  const periodExists = intentResult?.datasource?.periodExists;
+  const pickedLatest = pickedSourceId ? latestBySource?.get(Number(pickedSourceId)) : null;
+  if (pickedSourceId && periodExists === false && pickedLatest?.year) {
+    const t = normalizeType(intentResult?.query_builder?.type);
+    const fallbackHref = buildDataHref({
+      sourceId: pickedSourceId,
+      type: t || 'dynamic',
+      period: pickedLatest.year,
+      month: pickedLatest.month || null,
+      geo: intentResult?.query_builder?.params?.geo || null,
+    });
+    lines.push(
+      `Periode yang diminta belum ada di database untuk indikator ini. Periode terbaru: ${pickedLatest.month ? `${pickedLatest.year}-${String(pickedLatest.month).padStart(2, '0')}` : String(pickedLatest.year)} → ${fallbackHref}`
+    );
+  }
+
+  const tips = buildDeterministicSuggestions({
+    qb: intentResult?.query_builder,
+    hasGeoCandidate: true,
+  });
+
+  if (tips.length) {
+    lines.push('');
+    lines.push('Supaya lebih spesifik, coba:');
+    for (const t of tips) lines.push(`- ${t}`);
+  }
+
+  const out = lines.join('\n').trim();
+  return out ? `\n\n${out}` : '';
+}
+
+function buildDbFirstHeader({ intentResult, candidates, latestBySource }) {
+  const qb = intentResult?.query_builder;
+  const year = qb?.params?.year ? normalizeYearValue(qb.params.year) : null;
+  const month = qb?.params?.month ? Number(qb.params.month) : null;
+  const geo = qb?.params?.geo ? String(qb.params.geo).trim() : '';
+
+  const lines = [];
+  lines.push('Ringkasan dari database:');
+  if (year) lines.push(`- Tahun/periode diminta: ${year}${month ? `-${String(month).padStart(2, '0')}` : ''}`);
+  if (!geo) lines.push('- Wilayah: (default) Maluku Utara (jika ingin spesifik, sebutkan kab/kota).');
+
+  const plan = intentResult?.plan;
+  if (plan?.href) {
+    if (plan.action === 'deeplink') lines.push(`- Link data: ${plan.href}`);
+    else if (plan.action === 'search') lines.push(`- Link pencarian: ${plan.href}`);
+  }
+
+  const list = Array.isArray(candidates) ? candidates : [];
+  if (list.length) {
+    lines.push('');
+    lines.push('Top indikator terkait:');
+    for (const it of list.slice(0, 3)) {
+      const sid = Number(it?.id);
+      const name = String(it?.name || '').trim() || `Sumber ${sid}`;
+      const t = normalizeType(it?.type) || 'dynamic';
+      const latest = latestBySource?.get(sid) || null;
+      const latestLabel = latest?.year
+        ? latest.month
+          ? `${latest.year}-${String(latest.month).padStart(2, '0')}`
+          : String(latest.year)
+        : '—';
+      const link = latest?.year
+        ? buildDataHref({ sourceId: sid, type: t, period: latest.year, month: latest.month || null, geo: null })
+        : `/search?q=${encodeURIComponent(name)}`;
+      lines.push(`- ${name} (id=${sid}, ${t}, terbaru ${latestLabel}) → ${link}`);
+    }
+  }
+
+  return lines.join('\n').trim();
+}
+
+module.exports = {
+  isNonStatisticalQuery,
+  parseQuarterFromText,
+  stripMalikaUiBlock,
+  stripRawUrlsFromText,
+  clampChatRhythm,
+  safeParseInt,
+  normalizeYearValue,
+  normalizeType,
+  buildPeriodCandidates,
+  filterDataByGeo,
+  filterDataByQuarter,
+  isKabKotaLevelName,
+  isProvinceLevelName,
+  buildDataHref,
+  buildDeterministicSuggestions,
+  cleanAssistantTextAgainstDb,
+  buildRoutingAppendix,
+  buildDbFirstHeader,
+};

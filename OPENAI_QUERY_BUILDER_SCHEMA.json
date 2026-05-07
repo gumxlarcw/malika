@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bpsmalut.com/schemas/openai-query-builder.schema.json",
+  "title": "Query Builder Output (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "intent", "type", "params", "confidence"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "intent": {
+      "type": "string",
+      "enum": ["data", "search", "pressrelease", "unknown"]
+    },
+    "type": {
+      "type": "string",
+      "enum": ["dynamic", "exim", "pressrelease", "interop", "static", "unknown"]
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "q": { "type": "string", "minLength": 1 },
+
+        "source_id": { "type": ["integer", "null"], "minimum": 1 },
+
+        "period": {
+          "description": "For /data. Usually a year like '2024'. For static endpoints, can be 'static'.",
+          "type": ["string", "null"],
+          "pattern": "^(?:static|[0-9]{1,4})$"
+        },
+        "year": { "type": ["integer", "null"], "minimum": 1900, "maximum": 2999 },
+        "month": { "type": ["integer", "null"], "minimum": 1, "maximum": 12 },
+
+        "group": {
+          "type": ["string", "null"],
+          "enum": ["hs2", null]
+        },
+        "code_hs": {
+          "description": "HS2 filter (2 digits). Use null if user wants breakdown by HS2 (group=hs2).",
+          "type": ["string", "null"],
+          "pattern": "^(?:[0-9]{2})$"
+        },
+        "pod": { "type": ["string", "null"], "maxLength": 255 },
+        "ctr": { "type": ["string", "null"], "maxLength": 255 },
+        "metric": {
+          "description": "EXIM supports only value/netweight. Non-EXIM indicators may have other metric names; prefer null unless explicitly requested.",
+          "type": ["string", "null"],
+          "maxLength": 64
+        },
+
+        "direction": { "type": ["string", "null"], "enum": ["impor", "ekspor", null] }
+      }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "notes": { "type": ["string", "null"], "maxLength": 500 }
+  }
+}

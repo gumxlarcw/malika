@@ -1,0 +1,51 @@
+config:
+  target: "http://127.0.0.1:5000"
+  phases:
+    - duration: 20
+      arrivalRate: 2
+      name: smoke
+  defaults:
+    headers:
+      x-malika-uid: "load-smoke"
+  http:
+    timeout: 8000
+
+scenarios:
+  - name: search
+    flow:
+      - get:
+          url: "/search/intent?q=inflasi"
+
+  - name: api
+    flow:
+      - get:
+          url: "/categories"
+      - get:
+          url: "/notifications"
+
+  - name: chat
+    flow:
+      - post:
+          url: "/chat/threads"
+          json:
+            title: "Load Smoke"
+          capture:
+            - json: "$.thread.id"
+              as: "threadId"
+      - post:
+          url: "/chat/threads/{{ threadId }}/messages"
+          json:
+            text: "halo"
+
+  - name: sse
+    flow:
+      - post:
+          url: "/chat/threads"
+          json:
+            title: "Load Smoke SSE"
+          capture:
+            - json: "$.thread.id"
+              as: "threadId"
+      - get:
+          url: "/chat/threads/{{ threadId }}/stream?text=halo"
+          timeout: 3000

@@ -1,0 +1,56 @@
+config:
+  target: "http://127.0.0.1:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: warmup
+    - duration: 120
+      arrivalRate: 25
+      name: baseline
+  defaults:
+    headers:
+      x-malika-uid: "load-baseline"
+  http:
+    timeout: 10000
+
+scenarios:
+  - name: search
+    flow:
+      - get:
+          url: "/search/intent?q=inflasi"
+      - get:
+          url: "/search/intent?q=kemiskinan"
+
+  - name: api
+    flow:
+      - get:
+          url: "/categories"
+      - get:
+          url: "/notifications"
+
+  - name: chat
+    flow:
+      - post:
+          url: "/chat/threads"
+          json:
+            title: "Load Baseline"
+          capture:
+            - json: "$.thread.id"
+              as: "threadId"
+      - post:
+          url: "/chat/threads/{{ threadId }}/messages"
+          json:
+            text: "halo"
+
+  - name: sse
+    flow:
+      - post:
+          url: "/chat/threads"
+          json:
+            title: "Load Baseline SSE"
+          capture:
+            - json: "$.thread.id"
+              as: "threadId"
+      - get:
+          url: "/chat/threads/{{ threadId }}/stream?text=halo"
+          timeout: 5000

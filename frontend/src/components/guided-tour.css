@@ -1,0 +1,252 @@
+/* Custom styles for MALIKA guided tour */
+
+/* Popover styling */
+.malika-tour-popover {
+  --popover-bg: #ffffff;
+  --popover-text: #1f2937;
+  --popover-title: #111827;
+  --popover-border: #e5e7eb;
+  --popover-accent: #3b82f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .malika-tour-popover {
+    --popover-bg: #1f2937;
+    --popover-text: #d1d5db;
+    --popover-title: #f9fafb;
+    --popover-border: #374151;
+    --popover-accent: #60a5fa;
+  }
+}
+
+.malika-tour-popover.driver-popover {
+  background-color: var(--popover-bg) !important;
+  border: 1px solid var(--popover-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  max-width: 400px !important;
+  padding: 20px !important;
+}
+
+.malika-tour-popover .driver-popover-title {
+  color: var(--popover-title) !important;
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+}
+
+.malika-tour-popover .driver-popover-description {
+  color: var(--popover-text) !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.6 !important;
+}
+
+.malika-tour-popover .driver-popover-description p {
+  margin-bottom: 8px;
+}
+
+.malika-tour-popover .driver-popover-description ol,
+.malika-tour-popover .driver-popover-description ul {
+  margin-left: 4px;
+}
+
+.malika-tour-popover .driver-popover-description li {
+  margin-bottom: 6px;
+}
+
+/* Progress bar */
+.malika-tour-popover .driver-popover-progress-text {
+  color: var(--popover-text) !important;
+  opacity: 0.7;
+  font-size: 0.75rem !important;
+  margin-bottom: 12px !important;
+}
+
+/* Footer buttons */
+.malika-tour-popover .driver-popover-footer {
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--popover-border) !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.malika-tour-popover .driver-popover-navigation-btns {
+  gap: 8px !important;
+}
+
+/* Skip button */
+.malika-tour-popover .driver-popover-skip-btn {
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+  background-color: transparent !important;
+  color: var(--popover-text) !important;
+  opacity: 0.6 !important;
+  cursor: pointer !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+}
+
+.malika-tour-popover .driver-popover-skip-btn:hover {
+  opacity: 1 !important;
+}
+
+.malika-tour-popover .driver-popover-prev-btn,
+.malika-tour-popover .driver-popover-next-btn {
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+}
+
+.malika-tour-popover .driver-popover-prev-btn {
+  background-color: transparent !important;
+  color: var(--popover-text) !important;
+  border: 1px solid var(--popover-border) !important;
+}
+
+.malika-tour-popover .driver-popover-prev-btn:hover {
+  background-color: var(--popover-border) !important;
+}
+
+.malika-tour-popover .driver-popover-next-btn {
+  background-color: var(--popover-accent) !important;
+  color: #ffffff !important;
+}
+
+.malika-tour-popover .driver-popover-next-btn:hover {
+  opacity: 0.9 !important;
+}
+
+/* Close button */
+.malika-tour-popover .driver-popover-close-btn {
+  color: var(--popover-text) !important;
+  opacity: 0.5 !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 24px !important;
+}
+
+.malika-tour-popover .driver-popover-close-btn:hover {
+  opacity: 1 !important;
+}
+
+/* Arrow */
+.malika-tour-popover .driver-popover-arrow {
+  border-color: var(--popover-bg) !important;
+}
+
+.malika-tour-popover .driver-popover-arrow-side-left {
+  border-right-color: var(--popover-bg) !important;
+}
+
+.malika-tour-popover .driver-popover-arrow-side-right {
+  border-left-color: var(--popover-bg) !important;
+}
+
+.malika-tour-popover .driver-popover-arrow-side-top {
+  border-bottom-color: var(--popover-bg) !important;
+}
+
+.malika-tour-popover .driver-popover-arrow-side-bottom {
+  border-top-color: var(--popover-bg) !important;
+}
+
+/* Override high z-index elements during tour */
+.driver-active .driver-overlay {
+  z-index: 100000 !important;
+}
+
+.driver-active .driver-popover {
+  z-index: 100001 !important;
+}
+
+/* Highlighted element */
+.driver-active-element {
+  z-index: 100002 !important;
+}
+
+/* Force header to lower z-index during tour */
+body.driver-active header {
+  z-index: 99 !important;
+}
+
+body.driver-active aside {
+  z-index: 98 !important;
+}
+
+/* Force iframe to lower z-index during tour */
+body.driver-active iframe {
+  z-index: 1 !important;
+  position: relative !important;
+}
+
+/* Ensure driver elements are always visible */
+.driver-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+.driver-popover {
+  position: fixed !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .malika-tour-popover.driver-popover {
+    max-width: calc(100vw - 32px) !important;
+    margin: 16px !important;
+    padding: 16px !important;
+  }
+
+  .malika-tour-popover .driver-popover-title {
+    font-size: 1rem !important;
+  }
+
+  .malika-tour-popover .driver-popover-description {
+    font-size: 0.875rem !important;
+  }
+
+  .malika-tour-popover .driver-popover-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .malika-tour-popover .driver-popover-skip-btn {
+    order: 2 !important;
+    text-align: center !important;
+    margin-top: 8px !important;
+    padding: 8px !important;
+  }
+
+  .malika-tour-popover .driver-popover-prev-btn,
+  .malika-tour-popover .driver-popover-next-btn {
+    padding: 8px 16px !important;
+    font-size: 0.8125rem !important;
+  }
+}
+
+/* Animation for the tour */
+@keyframes tour-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+.driver-highlighted-element {
+  animation: tour-pulse 2s infinite !important;
+}

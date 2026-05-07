@@ -1,0 +1,21 @@
+# Backend secrets / local env
+.env*
+!.env.example
+
+# Logs / runtime
+logs/
+*.log
+nohup.out
+
+# Caches & build artifacts
+.cache/
+.next/
+*.tsbuildinfo
+
+# Editor backups (CLAUDE.md convention; should never be committed)
+*.backup
+*.bak
+*.orig
+
+# OS junk
+.DS_Store

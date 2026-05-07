@@ -1,0 +1,2 @@
+# Daily DB backup at 02:15
+15 2 * * * /var/www/html/project-data-strategis/scripts/backup-db.sh --env-file /var/www/html/project-data-strategis/backend/.env >> /var/log/malika-backup.log 2>&1

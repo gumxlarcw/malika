@@ -1,0 +1,312 @@
+table	source_id	source_name	eligible	dim_keys	distinct_kabkota	years	latest_year
+indikator_1	1	Inflasi Provinsi Maluku Utara (2022 = 100)	NO		0	2024,2025,2026	2026
+indikator_10	10	[Metode Baru] Indeks Pembangunan Manusia (Umur Harapan Hidup Hasil Long Form SP2020)	YES	Wilayah	10	2020,2021,2022,2023,2024,2025	2025
+indikator_11	11	[Metode Baru] Umur Harapan Hidup Saat Lahir (UHH) Hasil Long Form SP2020 (Tahun)	YES	Wilayah	10	2020,2021,2022,2023,2024,2025	2025
+indikator_12	12	Persentase Penduduk Miskin Maluku Utara	NO	Propinsi	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_13	13	Harapan Lama Sekolah Menurut Kabupaten/Kota (Tahun)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_14	14	Gini Ratio Provinsi Maluku Utara	NO	Propinsi	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_15	15	Garis Kemiskinan Provinsi Maluku Utara (Rupiah/Kapita/Bulan)	NO	Propinsi	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_159	159	EXIM Ekspor (ALL HS2)	NO	hs2|pod|ctr|kodehs	0	2020,2021,2022,2023,2024,2025,2026	2026
+indikator_16	16	Rata-Rata Lama Sekolah Menurut Kabupaten/Kota (Tahun)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_160	160	EXIM Impor (ALL HS2)	NO	hs2|pod|ctr|kodehs	0	2020,2021,2022,2023,2024,2025,2026	2026
+indikator_161	161	Indeks Harga Konsumen Provinsi Maluku Utara (2022 = 100)	NO		0	2024,2025	2025
+indikator_162	162	Nilai Tukar Petani (2018 = 100)	NO		0	2019,2020,2021,2022,2023,2024,2025,2026	2026
+indikator_163	163	Inflasi Kabupaten Halmahera Tengah (2022 = 100)	NO		0	2024,2025	2025
+indikator_164	164	Inflasi Kota Ternate (2022 = 100)	NO		0	2024,2025	2025
+indikator_165	165	Indeks Harga Konsumen Kota Ternate (2022 = 100)	NO		0	2024,2025	2025
+indikator_17	17	Nilai Tukar Petani (2018 = 100)	NO		0	2019,2020,2021,2022,2023,2024,2025,2026	2026
+indikator_170	170	Tingkat Penghunian Kamar Hotel Bintang dan Non Bintang	NO		0	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_171	171	Jumlah Perjalanan Wisatawan Nusantara Menurut Kabupaten Tujuan	YES	Kabupaten/Kota	10	2019,2020,2021,2022,2023,2024,2025	2025
+indikator_172	172	Jumlah Perjalanan Wisatawan Nusantara Menurut Kabupaten Asal	YES	Kabupaten/Kota	10	2019,2020,2021,2022,2023,2024,2025	2025
+indikator_173	173	Tamu Menginap di Hotel Bintang	NO		0	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_174	174	Jumlah Akomodasi, Kamar, dan Tempat Tidur yang Tersedia pada Hotel Nonbintang dan Akomodasi Lainnya  Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_175	175	Jumlah Akomodasi, Kamar, dan Tempat Tidur yang Tersedia pada Hotel Bintang Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_179	179	Rumah Tangga dan Rata-rata Banyaknya Anggota Rumah Tangga Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2010,2017,2018,2019	2019
+indikator_18	18	Tingkat Penghunian Kamar Hotel Bintang dan Non Bintang	NO		0	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_180	180	Proyeksi Rumah Tangga Menurut Kabupaten/Kota	YES	Wilayah	10	2012,2013,2014,2015,2016,2017,2018,2019,2020,2021	2021
+indikator_181	181	Rasio Jenis Kelamin Menurut Kabupaten/Kota	YES	Wilayah	10	2012,2013,2014,2015,2016,2017,2018,2019,2021,2022	2022
+indikator_182	182	Kepadatan Penduduk Menurut Kabupten/Kota	YES	Wilayah	10	2012,2013,2014,2015,2016,2017,2018,2019,2021,2022	2022
+indikator_183	183	Laju Pertumbuhan Penduduk	YES	Wilayah	10	2013,2014,2015,2016,2017,2018,2019,2020,2021,2022	2022
+indikator_184	184	Proyeksi Penduduk Menurut Kabupaten/Kota	YES	Wilayah	10	2013,2014,2015,2016,2017,2018,2019,2020,2021,2022	2022
+indikator_185	185	Jumlah Perceraian Menurut Kabupaten/Kota dan Faktor Penyebab Perceraian (perkara) di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_186	186	Jumlah Penduduk Menurut Kelompok Umur dan JenisKelamin (ribu jiwa) di Provinsi Maluku Utara,	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_187	187	Penduduk, Laju Pertumbuhan Penduduk, Distribusi Persentase Penduduk, Kepadatan Penduduk, Rasio Jenis Kelamin Penduduk Menurut Kabupaten/Kota di Provin	YES	Wilayah	10	2010,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_188	188	Penduduk Berumur 15 Tahun ke Atas yang Bekerja Selama Seminggu yang Lalu Menurut Kelompok Umur dan Jumlah Jam Kerja Seluruhnya di Provinsi Maluku Utar	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_189	189	Penduduk Berumur 15 Tahun ke Atas yang Bekerja Selama Seminggu yang Lalu Menurut Status Pekerjaan Utama dan Pendidikan Tertinggi yang Ditamatkan di Pr	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_19	19	Tingkat Partisipasi Angkatan Kerja (TPAK) dan Tingkat Pengangguran Terbuka (TPT) Menurut Jenis Kelamin	NO	TPAK dan TPT	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_190	190	Tingkat Pengangguran Terbuka (TPT) dan Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2025	2025
+indikator_191	191	Penduduk Berumur 15 Tahun ke Atas Menurut Kelompok Umur dan Jenis Kegiatan Selama Seminggu yang Lalu di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_192	192	Penduduk Berumur 15 Tahun ke Atas Menurut Kabupaten/Kota dan Jenis Kegiatan Selama Seminggu yang Lalu di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_193	193	Jumlah Penduduk Berumur 15 Tahun Keatas Menurut Jenis Kegiatan Selama Seminggu yang Lalu dan Jenis Kelamin di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_194	194	Penduduk Berumur 15 Tahun ke Atas Menurut Pendidikan Tertinggi yang Ditamatkan dan Jenis Kegiatan Selama Seminggu yang Lalu di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_195	195	Rata-rata Pendapatan Bersih Sebulan Pekerja Informal 1 Menurut Kabupaten/Kota dan Lapangan Pekerjaan Utama 2 di Provinsi Maluku Utara (rupiah)	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2025	2025
+indikator_196	196	Rata-rata Pendapatan Bersih Sebulan Pekerja Informal 1 Menurut Kabupaten/Kota dan Pendidikan Tertinggi yang Ditamatkan di Provinsi Maluku Utara (rupia	YES	Wilayah	10	2018,2020,2021,2022,2023,2025	2025
+indikator_197	197	Pencari Kerja Terdaftar, Lowongan Kerja Terdaftar, dan Penempatan/Pemenuhan Tenaga Kerja Menurut Kabupaten/Kota dan Jenis Kelamin di Provinsi Maluku U	YES	Wilayah	10	2018,2019,2020,2021,2023,2024	2024
+indikator_198	198	[Indeks Ketimpangan Gender-IKG] Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Jenis Kelamin	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_199	199	Jumlah Penduduk Usia 15 Tahun Keatas Menurut Jenis Kegiatan Utama	NO	Jenis Kegiatan Utama	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_2	2	Indeks Harga Konsumen Kabupaten Halmahera Tengah (2022 = 100)	NO		0	2024,2025	2025
+indikator_20	20	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Lapangan Usaha Provinsi Maluku Utara Atas Dasar Harga Konstan 2010	NO	Lapangan Usaha (Kategori)	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_200	200	Tingkat Partisipasi Angkatan Kerja (TPAK) dan Tingkat Pengangguran Terbuka (TPT) Menurut Klasifikasi Kota/Desa	NO	TPAK dan TPT	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_201	201	Tingkat Pengangguran Terbuka (TPT) Kabupaten/Kota	YES	Wilayah	10	2015,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_202	202	Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Kabupaten/Kota (Persen)	YES	Wilayah	10	2015,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_203	203	[Seri 2010] Produk Domestik Regional Bruto Menurut Kabupaten/Kota Provinsi Maluku Utara (Triwulanan)	YES	Wilayah	10	2022,2023,2024,2025	2025
+indikator_204	204	Persentase Penduduk Usia 7–24 Tahun Menurut Jenis Kelamin, Kelompok Umur Sekolah, dan Partisipasi Sekolah 1 di Provinsi Maluku Utara	NO	Wilayah	0	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_205	205	[Indeks Ketimpangan Gender-IKG] Persentase Penduduk Usia 25 tahun ke atas dengan Pendidikan SMA ke atas Menurut Jenis Kelamin	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_206	206	Harapan Lama Sekolah Menurut Kabupaten/Kota dan Jenis Kelamin	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_207	207	Rata-Rata Lama Sekolah Menurut Kabupaten/Kota dan Jenis Kelamin	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_208	208	Jumlah Perpustakaan Terakreditasi Menurut Kabupaten/Kota, Jenis Perpustakaan, dan Predikat Akreditasi di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_209	209	Jumlah Sekolah, Guru, dan Murid Madrasah Ibtidaiyah (MI) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_210	210	Tingkat Kegemaran Membaca Masyarakat dan Unsur Penyusunnya Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2024	2024
+indikator_211	211	Jumlah Pejabat Fungsional Pustakawan dan Asisten Perpustakaan Menurut Kabupaten/Kota dan Jabatan di Provinsi Maluku Utara	YES	Wilayah	10	2022,2023,2024	2024
+indikator_212	212	Indeks Pembangunan Literasi Masyarakat dan Unsur Penyusunnya Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_213	213	Persentase Penduduk Berumur 15 Tahun ke Atas yang Melek Huruf Menurut Kelompok Umur dan Daerah Tempat Tinggal di Provinsi Maluku Utara	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_214	214	Jumlah Perguruan Tinggi 1 , Dosen, dan Mahasiswa 2 (Negeri dan Swasta) di Bawah Kementerian Pendidikan Tinggi, Sains, dan Teknologi Menurut Kabupaten/	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_215	215	Angka Partisipasi Murni (APM) dan Angka Partisipasi Kasar (APK) Menurut Jenjang Pendidikan di Provinsi Maluku Utara	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_216	216	Jumlah Desa 1 /Kelurahan yang Memiliki Fasilitas Sekolah Menurut Kabupaten/Kota dan Tingkat Pendidikan di Provinsi Maluku Utara	YES	Wilayah	10	2011,2014,2018,2019,2020,2021,2024,2025	2025
+indikator_217	217	Jumlah Sekolah, Guru, dan Murid Sekolah Menengah Kejuruan (SMK) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Ko	YES	Wilayah	10	2016,2017,2019,2020,2021,2022,2023,2024	2024
+indikator_218	218	Jumlah Sekolah, Guru, dan Murid Sekolah Menengah Atas (SMA) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Kota d	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_219	219	Jumlah Sekolah, Guru, dan Murid Sekolah Menengah Pertama (SMP) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Kot	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_220	220	Jumlah Sekolah, Guru, dan Murid Sekolah Dasar (SD) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Kota di Provins	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_221	221	Jumlah Sekolah, Guru, dan Murid Taman Kanak-Kanak (TK) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Menurut Kabupaten/Kot	YES	Wilayah	10	2019,2020,2021,2023,2024	2024
+indikator_222	222	Angka Partisipasi Murni (APM) dan Angka Partisipasi Kasar (APK) menurut Jenjang Pendidikan	NO	Jenjang Pendidikan	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_223	223	Angka Partisipasi Sekolah menurut Kelompok Umur	NO	Kelompok Umur Pendidikan	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_224	224	Persentase Penduduk Berumur 7-24 Tahun yang Masih Sekolah menurut Golongan Umur, dan Kabupaten/Kota	YES	Wilayah	10	2011,2012,2013,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_225	225	Persentase Penduduk Berumur 7-24 Tahun menurut Partisipasi Sekolah	NO	Kelompok Umur Pendidikan	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_226	226	Jumlah Perguruan Tinggi, Tenaga Pendidik, dan Mahasiswa (Negeri dan Swasta) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023	2023
+indikator_227	227	Jumlah Sekolah, Guru, dan Murid Raudatul Athfal (RA) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_228	228	Jumlah Sekolah, Guru, dan Murid Madrasah Aliyah (MA) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_229	229	Jumlah Sekolah, Guru, dan Murid Madrasah Tsanawiyah (MTs) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_230	230	[Indeks Ketimpangan Gender-IKG] MTF (Proporsi perempuan usia 15-49 tahun yang melahirkan hidup tidak di fasilitas kesehatan)	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_231	231	[Indeks Ketimpangan Gender-IKG] MHPK20 (Proporsi perempuan usia 15-49 tahun yang melahirkan hidup pertama berusia kurang dari 20 tahun)	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_232	232	Umur Harapan Hidup Menurut Kabupaten/Kota dan Jenis Kelamin (berdasarkan UHH LFSP2020)	YES	Wilayah	10	2020,2021,2022,2023,2024	2024
+indikator_233	233	Angka Harapan Hidup Menurut Kabupaten/Kota dan Jenis Kelamin	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_234	234	Jumlah Rumah Sakit Umum, Rumah Sakit Khusus, Puskesmas, Klinik Pratama, dan Posyandu Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_235	235	Kasus Penyakit Menurut Kabupaten/Kota dan Jenis Penyakit di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2020,2021,2022,2024	2024
+indikator_236	236	Jumlah Desa 1 /Kelurahan Yang Memiliki Sarana Kesehatan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2011,2014,2018,2019,2020,2021,2024	2024
+indikator_237	237	Angka Harapan Hidup Menurut Kabupaten/Kota (Tahun)	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_238	238	Persentase Penduduk yang Memiliki Jaminan Kesehatan Menurut Kabupaten/Kota dan Jenis Jaminan di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_239	239	Persentase Penduduk Usia 15 Tahun Ke Atas yang Merokok dalam Sebulan Terakhir Menurut Kabupaten/Kota dan Kelompok Umur di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_240	240	Distribusi Persentase Penduduk yang Mempunyai Keluhan Kesehatan Selama Sebulan Terakhir dan Tidak Berobat Jalan Menurut Kabupaten/Kota dan Alasan Utam	YES	Wilayah	10	2017,2018,2020,2021,2022,2023	2023
+indikator_241	241	Persentase Penduduk yang Mempunyai Keluhan Kesehatan dan Berobat Jalan Selama Sebulan Terakhir Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_242	242	Persentase Penduduk yang Mempunyai Keluhan Kesehatan Selama Sebulan Terakhir Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_243	243	Perentase Wanita Berumur 15–49 Tahun yang Berstatus Kawin dan Menggunakan KB Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2022,2023	2023
+indikator_244	244	Jumlah Tenaga Kesehatan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023	2023
+indikator_245	245	Distribusi Persentase Wanita Berumur 15–49 Tahun yang Pernah Kawin dan Melahirkan Hidup dalam Dua Tahun Terakhir Menurut Kabupaten/Kota dan Penolong P	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_246	246	Banyaknya Klinik Keluarga Berencana dan Pos Pelayanan Keluarga Berencana Desa menurut Kabupaten/Kota	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_247	247	Tenaga Kesehatan Menurut Kabupaten/Kota	YES	Wilayah	10	2011,2014,2015,2016,2017,2019,2020,2021,2022,2023	2023
+indikator_248	248	Fasilitas Kesehatan menurut Kabupaten/Kota	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_249	249	Jumlah Kasus HIV/AIDS, IMS, DBD, Diare, TB, dan Malaria menurut Kabupaten/Kota	YES	Wilayah	10	2011,2012,2013,2014,2015,2016,2017,2018,2020	2020
+indikator_250	250	Banyaknya Tenaga Kesehatan menurut Unit Kerja dan Sarana Pelayanan Kesehatan	NO	Unit Kerja Kesehatan	0	2011,2012,2013,2014,2015,2016,2017	2017
+indikator_251	251	Pengeluaran Perkapita Riil Disesuaikan Menurut Kabupaten/Kota	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_252	252	Pengeluaran Perkapita Riil Disesuaikan Menurut Kabupaten/Kota dan Jenis Kelamin	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_253	253	Persentase Pengeluaran per Kapita Sebulan Makanan dan Bukan Makanan di Daerah Perkotaan dan Perdesaan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_254	254	Rata-rata Pengeluaran per Kapita Sebulan Makanan dan Bukan Makanan di Daerah Perkotaan dan Perdesaan Menurut Kabupaten/Kota di Provinsi Maluku Utara (	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_255	255	Persentase Pengeluaran per Kapita Sebulan Menurut Kelompok Komoditas dan Klasifikasi Desa di Provinsi Maluku Utara	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_256	256	Rata-rata Pengeluaran per Kapita Sebulan Menurut Kelompok Komoditas dan Klasifikasi Desa di Provinsi Maluku Utara (rupiah)	NO	Wilayah	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_257	257	Jumlah Keluarga Penerima Manfaat (KPM) dan Anggaran Bantuan Sosial Pangan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_258	258	Persentase Rumah Tangga yang Memiliki Akses Terhadap Sumber Air Minum Layak Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_259	259	Persentase Rumah Tangga yang Memiliki Akses Terhadap Sanitasi Layak Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_260	260	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Jenis Lantai Terluas di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_261	261	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Status Penguasaan Bangunan Tempat Tinggal di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_262	262	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Bahan Bakar Utama untuk Memasak di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_263	263	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Penggunaan Fasilitas Tempat Buang Air Besar di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_264	264	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Sumber Penerangan di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_265	265	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Sumber Air Minum di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_266	266	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Luas Lantai di Provinsi Maluku Utara (m 2 )	YES	Wilayah	10	2018,2020,2021,2022,2023	2023
+indikator_267	267	Jumlah Jemaah Haji yang Diberangkatkan ke Tanah Suci Mekah Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_268	268	Jumlah Kejahatan yang Dilaporkan, Risiko Penduduk Terkena Kejahatan per 100.000 Penduduk, Persentase Penyelesaian Kejahatan, dan Selang Waktu Terjadin	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_269	269	Jumlah Penduduk Menurut Kabupaten/Kota dan Agama yang Dianut	YES	Wilayah	10	2020,2021,2022,2023	2023
+indikator_270	270	Jumlah Perceraian Menurut Kabupaten/Kota dan Faktor	YES	Wilayah	10	2021,2022,2023	2023
+indikator_271	271	Jumlah Jemaah Haji yang Diberangkatkan ke Tanah Suci Mekah dari Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_272	272	Banyaknya Tempat Peribadatan menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_273	273	Persentase Penduduk Berumur 10 Tahun ke Atas yang Melakukan Olahraga Selama Seminggu Terakhir Menurut Tujuan Olahraga dan Tipe Daerah	NO	Tujuan Olahraga	0	2018	2018
+indikator_274	274	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara (Metode Baru)	NO	IDI Provinsi Maluku Utara	0	2021,2022,2023,2024	2024
+indikator_275	275	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Aspek (Metode Baru)	NO	Aspek Indeks Demokrasi Indonesia (IDI) Metode Baru	0	2021,2022,2023,2024	2024
+indikator_276	276	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Indikator (Metode Baru)	NO	Indikator Indeks Demokrasi Indonesia Metode Baru	0	2021,2022,2023,2024	2024
+indikator_277	277	[Indeks Ketimpangan Gender-IKG] Persentase Keterwakilan di Legislatif Menurut Jenis Kelamin	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_278	278	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara	NO	IDI Provinsi Maluku Utara	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_279	279	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Indikator	NO	Indikator Indeks Demokrasi Indonesia	0	2018,2019,2020	2020
+indikator_280	280	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Variabel	NO	Indeks Demokrasi Indonesia	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_281	281	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Aspek	NO	Aspek Indeks Demokrasi Indonesia (IDI)	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_282	282	[Seri 2010] Laju Pertumbuhan Indeks Harga Implisit PDRB Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran (Triwulanan)	0	2021,2022,2023,2024,2025	2025
+indikator_283	283	[Seri 2010] Indeks Harga Implisit PDRB Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran (Triwulanan)	0	2021,2022,2023,2024,2025	2025
+indikator_284	284	[Seri 2010] Laju Pertumbuhan PDRB Provinsi Maluku Utara Menurut Pengeluaran Atas Dasar Harga Konstan 2010	NO	Komponen Pengeluaran (Triwulanan)	0	2021,2022,2023,2024,2025	2025
+indikator_285	285	[Seri 2010] Distribusi Persentase PDRB Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Pengeluaran	NO	Komponen Pengeluaran (Triwulanan)	0	2021,2022,2023,2024,2025	2025
+indikator_286	286	[Seri 2010] PDRB Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran (Triwulanan)	0	2021,2022,2023,2024,2025	2025
+indikator_287	287	[Seri 2010] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_288	288	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Kabupaten/Kota di Provinsi Maluku Utara Atas Dasar Harga Konstan 2010 (Triwulanan)	YES	Wilayah	10	2022,2023,2024,2025	2025
+indikator_289	289	[Seri 2010] Distribusi Persentase Produk Domestik Regional Bruto Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Kabupaten/Kota	YES	Wilayah tanpa provinsi	10	2022,2023,2024,2025	2025
+indikator_290	290	[Seri 2010] Distribusi Persentase Produk Domestik Regional Bruto Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Lapangan Usaha	NO	Lapangan Usaha (Kategori)	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_291	291	[Seri 2010] Laju Pertumbuhan Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NO	Lapangan Usaha (Kategori)	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_292	292	[Seri 2010] Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NO	Lapangan Usaha (Kategori)	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_293	293	[Seri 2010] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NO	Lapangan Usaha (Kategori)	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_294	294	Laju Pertumbuhan Produk Domestik Regional Bruto per Kapita Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (persen)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_295	295	Produk Domestik Regional Bruto per Kapita Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (ribu rupiah)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_296	296	Produk Domestik Regional Bruto per Kapita Atas Dasar Harga Berlaku Menurut Kabupaten/Kota di Provinsi Maluku Utara (ribu rupiah)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_297	297	Laju Pertumbuhan Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (persen)	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_298	298	Distribusi Persentase Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Kabupaten/Kota (persen) di Provinsi Maluku Utara	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_299	299	Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (miliar rupiah)	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_3	3	Jumlah Pelanggan, Air Disalurkan (M3), dan Nilai (Rp) menurut Wilayah (PDAM Malut)	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022	2022
+indikator_300	300	Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Kabupaten/Kota di Provinsi Maluku Utara (miliar rupiah)	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_301	301	Distribusi Persentase Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Lapangan Usaha (persen) di Provinsi Maluku Utara	NO	Wilayah	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_302	302	Laju Pertumbuhan Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Lapangan Usaha di Provinsi Maluku Utara (persen)	NO	Wilayah	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_303	303	Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Lapangan Usaha di Provinsi Maluku Utara (miliar rupiah)	NO	Wilayah	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_304	304	Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Lapangan Usaha di Provinsi Maluku Utara (miliar rupiah)	NO	Wilayah	0	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_305	305	[Seri 2010] Produk Domestik Regional Bruto per Kapita Provinsi Maluku Utara	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_306	306	[Seri 2010] Produk Domestik Regional Bruto Menurut Kabupaten/Kota Provinsi Maluku Utara (Tahunan)	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_307	307	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Kabupaten/Kota Provinsi Maluku Utara Atas Dasar Harga Konstan 2010 (Tahunan)	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_308	308	[Seri 2010-Tahunan] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran (Tahunan)	0	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_309	309	[Seri 2010] Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_310	310	[Seri 2010-Tahunan] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NO	Lapangan Usaha (Subkategori)	0	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_311	311	[Seri 2010] Laju Pertumbuhan Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NO	Komponen Pengeluaran	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_312	312	[Seri 2010] Distribusi Persentase Produk Domestik Regional Bruto Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Pengeluaran (Persen)	NO	Komponen Pengeluaran	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_313	NULL	NULL	NO	NULL	0	NULL	NULL
+indikator_314	314	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran Atas Dasar Harga Konstan 2010	NO	Komponen Pengeluaran	0	2011,2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_315	315	Pertumbuhan Produksi Industri Manufaktur Mikro dan Kecil Menurut Jenis Industri	NO	Jenis Industri	0	2019	2019
+indikator_316	316	Pertumbuhan Produksi Industri Manufaktur Mikro dan Kecil Triwulanan	NO	Triwulan	0	2017,2018,2019	2019
+indikator_317	317	Rekapitulasi Realisasi Penerimaan dan Pengeluaran Pemerintah Daerah Kabupaten/Kota Menurut Kabupaten/Kota di Provinsi Maluku Utara (ribu rupiah)	YES	Wilayah	10	2022,2023,2024	2024
+indikator_318	318	Jumlah Pegawai Pemerintah dengan Perjanjian Kerja Menurut Tingkat Kepangkatan dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NO	Wilayah	0	2024,2025	2025
+indikator_319	319	Jumlah Pegawai Negeri Sipil Menurut Tingkat Kepangkatan dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NO	Wilayah	0	2024,2025	2025
+indikator_320	320	Jumlah Aparatur Sipil Negara (ASN) Menurut Jabatan, Jenis ASN, dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NO	Wilayah	0	2024,2025	2025
+indikator_321	321	Jumlah Aparatur Sipil Negara (ASN) Menurut Tingkat Pendidikan, Jenis ASN, dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NO	Wilayah	0	2024,2025	2025
+indikator_322	322	Jumlah Pegawai Negeri Sipil Menurut Tingkat Kepangkatan dan Jenis Kelamin di Provinsi Maluku Utara, Desember	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_323	323	Jumlah Pegawai Negeri Sipil Menurut Tingkat Pendidikan dan Jenis Kelamin di Provinsi Maluku Utara, Desember	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_324	324	Jumlah Pegawai Negeri Sipil Menurut Jabatan dan Jenis Kelamin di Provinsi Maluku Utara, Desember	NO	Wilayah	0	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_325	325	Realisasi Pendapatan dan Belanja Pemerintah Kabupaten/Kota	YES	Kabupaten/Kota	10	2015,2016,2017,2018,2019,2020	2020
+indikator_326	326	Realisasi Belanja Pemerintah Provinsi	NO	Jenis Belanja	0	2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_327	327	Realisasi Pendapatan Pemerintah Provinsi	NO	Jenis Pendapatan	0	2012,2013,2014,2015,2016,2017,2018,2019,2020	2020
+indikator_328	328	Pegawai Negeri	YES	Wilayah	10	2015,2017	2017
+indikator_329	329	Nilai dan Volume Impor	NO		0	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_330	330	Nilai dan Volume Ekspor	NO		0	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_331	331	Inflasi Kota Ternate (2018 = 100)	NO		0	2020,2021,2022,2023	2023
+indikator_332	332	Indeks Harga Konsumen Kota Ternate (2018 = 100)	NO		0	2020,2021,2022,2023	2023
+indikator_333	333	Indeks Harga Konsumen Kota Ternate (2012 = 100)	NO		0	2013,2014,2015,2016,2017,2018,2019	2019
+indikator_334	334	Inflasi Kota Ternate (2012 = 100)	NO		0	2013,2014,2015,2016,2017,2018,2019	2019
+indikator_335	335	Nilai Tukar Petani (2012 = 100)	NO		0	2014,2015,2016,2017,2018,2019	2019
+indikator_336	336	Jumlah Bencana Alam Menurut Kabupaten/Kota dan Jenis Bencana Alam (kejadian) di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_337	337	Jumlah Kerusakan Rumah yang Diakibatkan Bencana Alam Menurut Kabupaten/Kota dan Jenis Bencana Alam di Provinsi Maluku Utara (unit)	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_338	338	Jumlah Korban yang Diakibatkan Bencana Alam Menurut Kabupaten/Kota dan Jenis Bencana Alam di Provinsi Maluku Utara (orang)	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_339	339	Jumlah Desa 1 /Kelurahan Menurut Kabupaten/Kota dan Letak Geografi di Provinsi Maluku Utara	YES	Wilayah	10	2014,2018,2021,2024,2025	2025
+indikator_340	340	Jumlah Desa 1,2 /Kelurahan Menurut Kabupaten/Kota dan Topografi Wilayah di Provinsi Maluku Utara	YES	Wilayah	10	2014,2018,2021,2024	2024
+indikator_341	341	Hujan	NO		0	2015,2016	2016
+indikator_342	342	Jumlah Desa 1 /Kelurahan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_343	343	Luas Daerah dan Jumlah Pulau Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2020,2021,2022,2024	2024
+indikator_344	344	Jumlah Kecamatan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_345	345	Jumlah Desa/Kelurahan yang Mengalami Bencana Alam Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2011,2014,2018,2019,2020,2021,2024,2025	2025
+indikator_346	346	Tinggi Wilayah Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2015	2015
+indikator_347	347	Luas Daerah Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2019,2020,2021,2022	2022
+indikator_348	348	Jarak ke Ibukota Provinsi Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2015	2015
+indikator_349	349	Jumlah Desa/Kelurahan Menurut Kabupaten/Kota dan Letak Geografi di Provinsi Maluku Utara	YES	Wilayah	10	2014,2018,2021	2021
+indikator_350	350	Banyaknya Desa/Kelurahan Menurut Keberadaan Keluarga Pengguna Listrik	YES	Wilayah	10	2018,2019	2019
+indikator_351	351	Banyaknya Desa/Kelurahan Menurut Jenis Bencana Alam	YES	Wilayah	10	2014,2018,2019	2019
+indikator_352	352	Status Wilayah	YES	Wilayah	10	2010,2011,2012,2013,2014,2015,2016,2017,2019	2019
+indikator_353	353	Produksi Tanaman Buah–Buahan dan Sayuran Tahunan Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_354	354	Produksi Tanaman Hias Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_355	355	Produksi Tanaman Buah-buahan dan Sayuran Tahunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_356	356	Luas Panen Tanaman Hias Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_357	357	Produksi Tanaman Hias Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_358	358	Produksi Tanaman Biofarmaka Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_359	359	Luas Panen Tanaman Hias Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_360	360	Luas Panen Tanaman Biofarmaka Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_361	361	Produksi Tanaman Biofarmaka Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_362	362	Luas Panen Tanaman Biofarmaka Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_363	363	Produksi Tanaman Sayuran dan Buah–Buahan Semusim Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_364	364	Luas Panen Tanaman Sayuran dan Buah–Buahan Semusim Menurut Jenis Tanaman di Provinsi Maluku Utara	NO	Wilayah	0	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_365	365	Produksi Tanaman Sayuran dan Buah-Buahan Semusim Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_366	366	Luas Panen Tanaman Sayuran dan Buah-Buahan Semusim Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_367	367	Luas Panen, Produktivitas, dan Produksi Padi Menurut  Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_368	368	Produksi Tanaman Sayuran dan Buah-Buahan Tahunan (BST) menurut Jenis Tanaman dan Kabupaten/Kota di Provinsi Maluku Utara (Ton)	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_369	369	Produksi Jagung Pipilan Kering Kadar Air 14 Persen (JPK-KA14%) di Provinsi Maluku Utara	NO		0	2021,2022,2023,2024	2024
+indikator_370	370	Luas Panen Jagung di Provinsi Maluku Utara	NO		0	2021,2022,2023,2024	2024
+indikator_371	371	Produksi Tanaman Sayuran dan Buah-Buahan Semusim (SBS) menurut Jenis Tanaman dan Kabupaten/Kota di Provinsi Maluku Utara (Ton)	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_372	372	Produksi Padi dan Beras Menurut Kabupaten/Kota	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_373	373	Jumlah Produksi Telur Unggas dan Susu Sapi Segar Menurut Kabupaten/Kota di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_374	374	Jumlah Produksi Daging Unggas Menurut Kabupaten/Kota dan Jenis di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_375	375	Jumlah Produksi Daging Babi Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2023,2024	2024
+indikator_376	376	Jumlah Produksi Daging Domba Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2023,2024	2024
+indikator_377	377	Jumlah Produksi Daging Kambing Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2023,2024	2024
+indikator_378	378	Jumlah Produksi Daging Kerbau Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2023,2024	2024
+indikator_379	379	Jumlah Produksi Daging Kuda Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2023,2024	2024
+indikator_380	380	Jumlah Produksi Daging Sapi Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2023,2024	2024
+indikator_381	381	Populasi Unggas Menurut Kabupaten/Kota dan Jenis Unggas di Provinsi Maluku Utara (ekor)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_382	382	Populasi Ternak Menurut Kabupaten/Kota dan Jenis Ternak di Provinsi Maluku Utara (ekor)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_383	383	Produksi Padi 1 dan Beras Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_384	384	Luas Panen, Produktivitas, dan Produksi Padi Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_385	385	Volume Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_386	386	Volume Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Kegiatan di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_387	387	Produksi Kayu Bulat dan Olahan Menurut Jenis Produksi di Provinsi Maluku Utara	NO	Wilayah	0	2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_388	388	Volume Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_389	389	Volume Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Budidaya di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_390	390	Volume Produksi dan Nilai Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_391	391	Volume Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Lokasi di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_392	392	Volume Produksi dan Nilai Produksi Perikanan Tangkap Menurut Kabupaten/Kota dan Jenis di Provinsi Maluku Utara	YES	Wilayah	10	2023,2024	2024
+indikator_393	393	Luas Kawasan Hutan dan Konservasi Perairan 1 Menurut Kabupaten/Kota di Provinsi Maluku Utara (ha)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022	2022
+indikator_394	394	Produksi Perkebunan Rakyat Menurut Jenis Tanaman di Provinsi Maluku Utara (ribu ton)	NO	Wilayah	0	2022,2023	2023
+indikator_395	395	Populasi Ternak Menurut Kabupaten/Kota dan Jenis  Ternak (ekor) di Provinsi Maluku utara	YES	Kabupaten/Kota	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_396	396	Produksi Telur Unggas dan Susu Sapi Menurut  Kabupaten/Kota (kg) di Provinsi Maluku Utara	YES	Kabupaten/Kota	10	2019,2020,2021,2022,2023	2023
+indikator_397	397	Produksi Daging Unggas Menurut Kabupaten/Kota dan  Jenis Unggas (kg) di Provinsi Maluku Utara	YES	Kabupaten/Kota	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_398	398	Luas Areal Tanaman Perkebunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	YES	Kabupaten/Kota	10	2017,2019,2020,2021,2022,2023	2023
+indikator_399	399	Produksi Perkebunan Menurut Kabupaten/Kota dan Jenis  Tanaman di Provinsi Maluku Utara	YES	Kabupaten/Kota	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_4	4	Proyeksi Penduduk Menurut Kelompok Umur dan Jenis Kelamin	NO	Kelompok Umur	0	2013,2014,2015,2016,2017,2018,2019,2020,2021,2022	2022
+indikator_400	400	Produksi dan Nilai Produksi Perikanan Tangkap di Laut Menurut  Kabupaten/Kota dan Jenis Penangkapan di Provinsi  Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022	2022
+indikator_401	401	Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022	2022
+indikator_402	402	Nilai Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022	2022
+indikator_403	403	Produksi Kayu Bulat dan Olahan Menurut Jenis Produksi  di Provinsi Maluku Utara (M3)	NO	Katu Bulat	0	2015,2016,2017,2018,2019,2020,2021,2022	2022
+indikator_404	404	Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Budidaya di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022	2022
+indikator_405	405	Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022	2022
+indikator_406	406	Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Kegiatan di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022	2022
+indikator_407	407	Produksi Daging Ternak Menurut Kabupaten/Kota dan Jenis Ternak di Provinsi Maluku Utara (kg)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_408	408	Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Lokasi di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022	2022
+indikator_409	409	Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022	2022
+indikator_410	410	Produksi dan Nilai Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022	2022
+indikator_411	411	Produksi dan Nilai Produksi Perikanan Tangkap Menurut Kabupaten/Kota dan Jenis Penangkapan di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022	2022
+indikator_412	412	Luas Panen Tanaman Sayuran Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara (ha) - Hortikultura	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021	2021
+indikator_413	413	Luas Areal Tanaman Perkebunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara (ribu ha)	YES	Wilayah	10	2017,2018,2019,2020,2021	2021
+indikator_414	414	Produksi Perkebunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara (ribu ton)	YES	Wilayah	10	2017,2018,2019,2020,2021	2021
+indikator_415	415	Produksi Jagung 1 dan Kedelai 2 Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2015	2015
+indikator_416	416	Luas Lahan Sawah dan Bukan Sawah menurut Kabupaten / Kota	YES	Wilayah	10	2010,2011,2012,2013,2018,2019	2019
+indikator_417	417	Daya Terpasang, Produksi, dan Distribusi Listrik PT. PLN (Persero) Menurut Unit Layanan Pelanggan	YES	Kabupaten/Kota	10	2023	2023
+indikator_418	418	Jumlah Pelanggan Listrik Menurut Unit Layanan di Provinsi Maluku Utara	YES	Kabupaten/Kota | Unit Layanan Pelanggan	10	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_419	419	Indeks Kemahalan Konstruksi Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_420	420	Banyaknya Usaha/Perusahaan, Pekerja, Pendapatan, Pengeluaran, dan Balas Jasa Pekerja pada Usaha/Perusahaan Industri Pengolahan Mikro dan Kecil menurut	YES	Kabupaten/Kota	10	2021,2022,2023	2023
+indikator_421	421	Banyaknya Usaha/Perusahaan Industri Pengolahan Mikro dan Kecil menurut Kabupaten/Kota dan Kelompok Pekerja di Provinsi Maluku Utara	YES	Kabupaten/Kota	10	2021,2022,2023	2023
+indikator_422	422	Banyaknya Sampel Usaha, Rata-RataPekerja Tetap, Rata-Rata Hari OrangPekerja Harian, Median Balas Jasa danUpah Pekerja per Tahun, serta MedianNilai Kon	YES	Wilayah	10	2020,2022	2022
+indikator_423	423	Indeks Pembangunan Manusia Menurut Kabupaten/Kota dan Jenis Kelamin (berdasarkan UHH LFSP2020)	YES	Wilayah	10	2020,2021,2022,2023,2024	2024
+indikator_424	424	Indeks Pembangunan Manusia Menurut Kabupaten/Kota dan Jenis Kelamin	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_425	425	Jumlah dan Persentase Penduduk Miskin Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_426	426	Karakteristik Rumah Tangga Miskin dan Rumah Tangga Tidak Miskin di Provinsi Maluku Utara	NO	Wilayah	0	2019,2020,2021,2022,2023,2024,2025	2025
+indikator_427	427	Indeks Pembangunan Manusia Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_428	428	Indeks Pembangunan Manusia Menurut Kabupaten/Kota	YES	Wilayah	10	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_429	429	Garis Kemiskinan, Jumlah, dan Persentase Penduduk Miskin di Provinsi Maluku Utara	NO	Wilayah	0	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_430	430	Indeks Kedalaman Kemiskinan dan Indeks Keparahan Kemiskinan Menurut Daerah di Provinsi Maluku Utara	NO	Wilayah	0	2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_431	431	[Indeks Ketimpangan Gender-IKG] Indeks Ketimpangan Gender (IKG)	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024	2024
+indikator_432	432	[Indeks Pemberdayaan Gender-IDG] Indeks Pemberdayaan Gender (IDG) menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2021,2022,2023,2024	2024
+indikator_433	433	[Indeks Pemberdayaan Gender-IDG] Persentase Tenaga Manager, Profesional, Administrasi, Teknisi menurut Jenis Kelamin dan Kabupaten/Kota di Provinsi Ma	YES	Wilayah	10	2021,2022,2023,2024	2024
+indikator_434	434	[Indeks Pemberdayaan Gender-IDG] Sumbangan dalam Pendapatan Kerja menurut Jenis Kelamin dan Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2021,2022,2023,2024	2024
+indikator_435	435	[Indeks Pemberdayaan Gender-IDG] Persentase Keterlibatan di Parlemen menurut Jenis Kelamin dan Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2021,2022,2023,2024	2024
+indikator_436	436	Indeks Pembangunan Gender Menurut Kabupaten/Kota (berdasarkan UHH LFSP2020)	YES	Wilayah	10	2020,2021,2022,2023,2024	2024
+indikator_437	437	Indeks Pembangunan Gender Menurut Kabupaten/Kota	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_438	438	Jumlah Desa/Kelurahan yang Memiliki Kantor Pos Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2020,2021,2024,2025	2025
+indikator_439	439	Banyaknya Desa/Kelurahan menurut Kabupaten/Kota dan Penerimaan Sinyal Internet Telepon Seluler di Provinsi Maluku Utara	YES	Wilayah	10	2019,2020,2021	2021
+indikator_440	440	Jumlah Kendaraan Bermotor Menurut Kabupaten/Kota dan Jenis Kendaraan di Provinsi Maluku Utara (unit)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023	2023
+indikator_441	441	Ringkasan Statistik Konstruksi Perorangan di Provinsi Maluku Utara	NO	Wilayah	0	2020,2022	2022
+indikator_442	442	Jumlah Perusahaan, Tenaga Kerja, Investasi, dan Nilai  Produksi pada Industri Besar dan Sedang Menurut  Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2010,2011,2012,2013,2014,2015,2016,2017,2018,2019	2019
+indikator_443	443	Pertumbuhan Produksi Industri Manufaktur Besar dan Sedang Triwulanan	NO	Triwulan	0	2017,2018,2019	2019
+indikator_444	444	Panjang Jalan Menurut Kabupaten/Kota dan Tingkat Kewenangan Pemerintahan di Provinsi Maluku Utara (km)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024	2024
+indikator_445	445	Panjang Jalan Menurut Kabupaten/Kota dan Jenis Permukaan di Provinsi Maluku Utara	YES	Wilayah Jalan	10	2017,2018,2019,2020	2020
+indikator_446	446	Panjang Jalan Menurut Kabupaten/Kota dan Kondisi di Provinsi Maluku Utara	YES	Wilayah Jalan	10	2017,2018,2019,2020	2020
+indikator_447	447	Jumlah Penumpang di Bandar Udara Baabullah Ternate	NO		0	2017,2018,2019,2020,2021,2022,2023	2023
+indikator_448	448	Panjang Jalan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah Jalan	10	2017,2018,2019,2020	2020
+indikator_449	449	Tingkat Penghunian Kamar Hotel Bintang	NO		0	2024	2024
+indikator_450	450	Persentase Penduduk Miskin Menurut Kabupaten/Kota (Persen)	YES	Wilayah	10	2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_451	451	Indeks Kemiskinan Menurut Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_452	452	Jumlah Penduduk Miskin Menurut Kabupaten/Kota	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_453	453	Garis Kemiskinan Menurut Kabupaten/Kota Provinsi Maluku Utara (Rupiah/Kapita/Bulan)	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_454	454	Jumlah Penduduk Miskin Menurut Perkotaan-Pedesaan	NO	Propinsi	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_455	455	Persentase Penduduk Miskin di Maluku Utara Menurut Perkotaan-Perdesaan	NO	Propinsi	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_456	456	Jumlah dan Persentase Penduduk Miskin	NO	Propinsi	0	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_5	5	Nikah dan Cerai Menurut Kabupaten/Kota (kejadian) di Provinsi Maluku Utara	YES	Wilayah	10	2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_6	6	Pendapatan dan Belanja Pemerintah Desa Menurut Kabupaten/Kota di Provinsi Maluku Utara (rupiah)	YES	Wilayah	10	2020,2021,2022,2023,2024	2024
+indikator_7	7	Ibukota Kabupaten/Kota di Provinsi Maluku Utara	YES	Wilayah	10	0	0
+indikator_8	8	Gini Rasio Menurut Kabupaten/Kota Provinsi Maluku Utara	YES	Wilayah	10	2016,2017,2018,2019,2020,2021,2022,2023,2024,2025	2025
+indikator_9	9	[Proyeksi Hasil LFSP2020] Proyeksi Penduduk Maluku Utara Menurut Kelompok Umur dan Jenis Kelamin	NO	Kelompok Umur 0-75	0	2026,2027,2028,2029,2030,2031,2032,2033,2034,2035	2035

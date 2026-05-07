@@ -1,0 +1,21 @@
+<svg
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  overflow="visible"
+>
+  <!-- Simple, original gear icon built from primitives (circle + teeth). -->
+  <circle cx="12" cy="12" r="3.25" fill="currentColor" />
+  <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="2" />
+
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(45 12 12)" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(90 12 12)" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(135 12 12)" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(180 12 12)" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(225 12 12)" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(270 12 12)" />
+  <rect x="11" y="1.5" width="2" height="4" rx="1" fill="currentColor" transform="rotate(315 12 12)" />
+</svg>

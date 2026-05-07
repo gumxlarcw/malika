@@ -1,0 +1,76 @@
+{
+  "provinceAliases": ["maluku utara", "malut", "provinsi maluku utara", "provinsi", "north maluku"],
+  "provinceKode": "82",
+  "regions": [
+    {
+      "key": "ternate",
+      "name": "Kota Ternate",
+      "aliases": ["kota ternate", "tte", "ternate city"],
+      "kode_wilayah": "8271",
+      "type": "kota"
+    },
+    {
+      "key": "tidore kepulauan",
+      "name": "Kota Tidore Kepulauan",
+      "aliases": ["kota tidore", "tidore", "tikep", "kotif", "tidore islands", "kota tidore kepulauan"],
+      "kode_wilayah": "8272",
+      "type": "kota"
+    },
+    {
+      "key": "halmahera barat",
+      "name": "Kabupaten Halmahera Barat",
+      "aliases": ["halbar", "halmaherabarat", "halmahera-barat", "west halmahera"],
+      "kode_wilayah": "8201",
+      "type": "kabupaten"
+    },
+    {
+      "key": "halmahera tengah",
+      "name": "Kabupaten Halmahera Tengah",
+      "aliases": ["halteng", "halmaheratengah", "halmahera-tengah", "central halmahera"],
+      "kode_wilayah": "8202",
+      "type": "kabupaten"
+    },
+    {
+      "key": "halmahera utara",
+      "name": "Kabupaten Halmahera Utara",
+      "aliases": ["halut", "halmaherautara", "halmahera-utara", "north halmahera"],
+      "kode_wilayah": "8203",
+      "type": "kabupaten"
+    },
+    {
+      "key": "halmahera selatan",
+      "name": "Kabupaten Halmahera Selatan",
+      "aliases": ["halsel", "halmaheraselatan", "halmahera-selatan", "south halmahera"],
+      "kode_wilayah": "8204",
+      "type": "kabupaten"
+    },
+    {
+      "key": "halmahera timur",
+      "name": "Kabupaten Halmahera Timur",
+      "aliases": ["haltim", "halmaheratimur", "halmahera-timur", "east halmahera"],
+      "kode_wilayah": "8205",
+      "type": "kabupaten"
+    },
+    {
+      "key": "kepulauan sula",
+      "name": "Kabupaten Kepulauan Sula",
+      "aliases": ["sula", "kep. sula", "kep sula", "kepsula", "kepsul", "sula islands"],
+      "kode_wilayah": "8206",
+      "type": "kabupaten"
+    },
+    {
+      "key": "pulau morotai",
+      "name": "Kabupaten Pulau Morotai",
+      "aliases": ["morotai", "p. morotai", "p morotai", "pulaumorotai", "pulmor", "pul mor", "morotai island"],
+      "kode_wilayah": "8207",
+      "type": "kabupaten"
+    },
+    {
+      "key": "pulau taliabu",
+      "name": "Kabupaten Pulau Taliabu",
+      "aliases": ["taliabu", "p. taliabu", "p taliabu", "pulautaliabu", "pultal", "pul tal", "taliabu island"],
+      "kode_wilayah": "8208",
+      "type": "kabupaten"
+    }
+  ]
+}

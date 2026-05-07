@@ -1,0 +1,391 @@
+{
+  "summary": {
+    "tested": 56,
+    "errors": 255,
+    "issues": {
+      "malukuUtaraNotLast": 16,
+      "totalNotLast": 0,
+      "jumlahNotLast": 0,
+      "rataRataNotLast": 0,
+      "pdrbNotLast": 1
+    }
+  },
+  "allIssues": [
+    {
+      "id": 8,
+      "name": "Gini Rasio Menurut Kabupaten/Kota Provinsi Maluku Utara",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "[Metode Baru] Indeks Pembangunan Manusia (Umur Harapan Hidup Hasil Long Form SP2020)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "[Metode Baru] Umur Harapan Hidup Saat Lahir (UHH) Hasil Long Form SP2020 (Tahun)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Harapan Lama Sekolah Menurut Kabupaten/Kota (Tahun)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "Rata-Rata Lama Sekolah Menurut Kabupaten/Kota (Tahun)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Lapangan Usaha Provinsi Maluku Utara Atas Dasar Harga Konstan 2010",
+      "type": "dynamic",
+      "rows": 18,
+      "issues": [
+        "PDRB_NOT_LAST:15/17"
+      ],
+      "sampleRows": [
+        "A.       Pertanian, Kehutanan, dan Perikanan",
+        "B.       Pertambangan dan Penggalian",
+        "C.       Industri Pengolahan",
+        "D.       Pengadaan Listrik dan Gas",
+        "E.       Pengadaan Air, Pengelolaan Sampah, Limbah dan Daur Ulang",
+        "F.        Konstruksi",
+        "G.       Perdagangan Besar dan Eceran, reparasi Mobil dan Sepeda Motor",
+        "H.       Transportasi dan Pergudangan",
+        "I.        Penyediaan Akomodasi dan Makan Minum",
+        "J.        Informasi dan Komunikasi",
+        "K.       Jasa Keuangan dan Asuransi",
+        "L.       Real Estate"
+      ]
+    },
+    {
+      "id": 187,
+      "name": "Penduduk, Laju Pertumbuhan Penduduk, Distribusi Persentase Penduduk, Kepadatan Penduduk, Rasio Jenis Kelamin Penduduk Menurut Kabupaten/Kota di Provin",
+      "type": "interop",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:8/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Kota Ternate",
+        "Kota Tidore Kepulauan",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu"
+      ]
+    },
+    {
+      "id": 201,
+      "name": "Tingkat Pengangguran Terbuka (TPT) Kabupaten/Kota",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 202,
+      "name": "Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Kabupaten/Kota (Persen)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 251,
+      "name": "Pengeluaran Perkapita Riil Disesuaikan Menurut Kabupaten/Kota",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 253,
+      "name": "Persentase Pengeluaran per Kapita Sebulan Makanan dan Bukan Makanan di Daerah Perkotaan dan Perdesaan Menurut Kabupaten/Kota di Provinsi Maluku Utara",
+      "type": "interop",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:8/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Kota Ternate",
+        "Kota Tidore Kepulauan",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu"
+      ]
+    },
+    {
+      "id": 254,
+      "name": "Rata-rata Pengeluaran per Kapita Sebulan Makanan dan Bukan Makanan di Daerah Perkotaan dan Perdesaan Menurut Kabupaten/Kota di Provinsi Maluku Utara (",
+      "type": "interop",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:8/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Kota Ternate",
+        "Kota Tidore Kepulauan",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu"
+      ]
+    },
+    {
+      "id": 419,
+      "name": "Indeks Kemahalan Konstruksi Menurut Kabupaten/Kota di Provinsi Maluku Utara",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 450,
+      "name": "Persentase Penduduk Miskin Menurut Kabupaten/Kota (Persen)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 451,
+      "name": "Indeks Kemiskinan Menurut Kabupaten/Kota di Provinsi Maluku Utara",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 452,
+      "name": "Jumlah Penduduk Miskin Menurut Kabupaten/Kota",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    },
+    {
+      "id": 453,
+      "name": "Garis Kemiskinan Menurut Kabupaten/Kota Provinsi Maluku Utara (Rupiah/Kapita/Bulan)",
+      "type": "dynamic",
+      "rows": 11,
+      "issues": [
+        "MALUKU_UTARA_NOT_LAST:6/10"
+      ],
+      "sampleRows": [
+        "Halmahera Barat",
+        "Halmahera Selatan",
+        "Halmahera Tengah",
+        "Halmahera Timur",
+        "Halmahera Utara",
+        "Kepulauan Sula",
+        "Maluku Utara",
+        "Pulau Morotai",
+        "Pulau Taliabu",
+        "Ternate",
+        "Tidore Kepulauan"
+      ]
+    }
+  ],
+  "malutCorrect": []
+}

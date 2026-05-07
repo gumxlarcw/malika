@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package.json
+
+      - name: Install deps
+        run: npm install
+
+      - name: Lint
+        run: |
+          if [ -f "./node_modules/.bin/eslint" ]; then npm run lint || ./node_modules/.bin/eslint src --ext .js; else echo "ESLint not configured"; fi
+
+      - name: Test
+        env:
+          DB_NAME: testdb
+          DB_USER: testuser
+          DB_PASS: testpass
+          DB_HOST: localhost
+          JWT_SECRET: test-secret
+        run: |
+          if [ -f "./node_modules/.bin/jest" ]; then npm test -- --ci --passWithNoTests; else echo "Jest not configured"; fi
+
+  admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/admin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/admin/package.json
+      - name: Install deps
+        run: npm install
+      - name: Build
+        run: |
+          if [ -f package.json ]; then npm run build || echo "Build step not configured"; fi

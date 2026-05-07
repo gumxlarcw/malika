@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`dynamic.processor snapshot builds processed response 1`] = `
+{
+  "columns": [
+    "Kabupaten/Kota",
+    "Nilai",
+  ],
+  "data": [
+    {
+      "Kabupaten/Kota": "Kota Ternate",
+      "Nilai": null,
+    },
+    {
+      "Kabupaten/Kota": "Kota Tidore Kepulauan",
+      "Nilai": null,
+    },
+  ],
+  "last_update": "2025-01-01",
+  "period": "2024",
+  "source": "Kemiskinan",
+  "unit": "",
+}
+`;

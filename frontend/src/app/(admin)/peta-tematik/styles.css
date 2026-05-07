@@ -1,0 +1,181 @@
+/* Peta Tematik — styling aligned with Malika PWA design system
+ * Layout structure preserved (editorial header, auto-insights, map+sidebar, etc).
+ * Typography/colors alias to Malika tokens (Outfit font, gray-900 + brand-500).
+ */
+
+.peta-tematik-page {
+  /* === ALIAS to Malika tokens (light mode) === */
+  --pt-canvas: #ffffff;                /* white canvas, sama seperti Malika cards */
+  --pt-canvas-deep: #f9fafb;           /* gray-50 */
+  --pt-canvas-elevated: #ffffff;
+  --pt-ink: #111827;                   /* gray-900 — main text */
+  --pt-ink-soft: #6b7280;              /* gray-500 — subtle text */
+  --pt-ink-faint: #9ca3af;             /* gray-400 — placeholder */
+
+  /* Choropleth — blue sequential aligned with Malika brand */
+  --pt-bin-1: #ecf3ff;                 /* brand-50 */
+  --pt-bin-2: #c2d6ff;                 /* brand-200 */
+  --pt-bin-3: #7592ff;                 /* brand-400 */
+  --pt-bin-4: #3641f5;                 /* brand-600 */
+  --pt-bin-5: #262e89;                 /* brand-900 */
+  --pt-no-data: #e5e7eb;               /* gray-200 */
+
+  /* Diverging deltas */
+  --pt-delta-pos: #16a34a;             /* green-600 — naik */
+  --pt-delta-neg: #dc2626;             /* red-600 — turun */
+
+  /* UI accents */
+  --pt-accent: #465fff;                /* brand-500 — Malika signature */
+  --pt-accent-soft: #c2d6ff;           /* brand-200 */
+  --pt-border: #e5e7eb;                /* gray-200 */
+  --pt-border-strong: #d1d5db;         /* gray-300 */
+  --pt-shadow-warm: 0 1px 3px 0 rgba(16, 24, 40, 0.05), 0 1px 2px 0 rgba(16, 24, 40, 0.03);
+  --pt-shadow-deep: 0 8px 24px -8px rgba(16, 24, 40, 0.18);
+
+  background: var(--pt-canvas-deep);
+  color: var(--pt-ink);
+  font-family: var(--font-outfit), Outfit, system-ui, sans-serif;
+}
+
+/* === Dark mode — match Malika dark-gray-900 === */
+.peta-tematik-page.dark,
+.dark .peta-tematik-page {
+  --pt-canvas: #1f2937;                /* gray-800 */
+  --pt-canvas-deep: #111827;           /* gray-900 */
+  --pt-canvas-elevated: #1f2937;       /* gray-800 (cards) */
+  --pt-ink: #f9fafb;                   /* gray-50 */
+  --pt-ink-soft: #d1d5db;              /* gray-300 */
+  --pt-ink-faint: #9ca3af;             /* gray-400 */
+  --pt-no-data: #374151;               /* gray-700 */
+  --pt-border: #374151;                /* gray-700 */
+  --pt-border-strong: #4b5563;         /* gray-600 */
+
+  --pt-bin-1: #1e3a8a;
+  --pt-bin-2: #3641f5;
+  --pt-bin-3: #7592ff;
+  --pt-bin-4: #c2d6ff;
+  --pt-bin-5: #ecf3ff;
+
+  --pt-shadow-warm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --pt-shadow-deep: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* === Typography utilities — all Outfit, varied size/weight === */
+.peta-tematik-page .pt-display {
+  /* For "display" text — use heavier Outfit weight, slight letter tightening */
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.peta-tematik-page .pt-display em {
+  /* Italic accent — stays Outfit italic since we don't load serif */
+  font-style: italic;
+  font-weight: 500;
+}
+.peta-tematik-page .pt-body {
+  font-family: inherit;
+  font-weight: 400;
+}
+.peta-tematik-page .pt-mono {
+  /* Use system monospace stack — works for tabular figures */
+  font-family: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
+}
+.peta-tematik-page .pt-eyebrow {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--pt-ink-soft);
+}
+
+/* === Polygon stroke — adapts to canvas in light/dark === */
+.peta-tematik-page .pt-polygon {
+  stroke: var(--pt-canvas);
+}
+.peta-tematik-page .pt-polygon.pt-polygon-hover {
+  stroke: var(--pt-bin-5);
+  filter: drop-shadow(0 2px 6px rgba(70, 95, 255, 0.25));
+}
+.peta-tematik-page.dark .pt-polygon.pt-polygon-hover {
+  filter: drop-shadow(0 0 8px rgba(149, 168, 255, 0.6));
+}
+.peta-tematik-page.dark .leaflet-tile {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.5) brightness(1.05);
+}
+
+/* Polygon entrance stagger — wave reveal */
+@keyframes pt-polygon-fade-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.peta-tematik-page .leaflet-interactive {
+  animation: pt-polygon-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  transition: fill 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              fill-opacity 0.3s ease,
+              stroke-width 0.2s ease;
+  transform-origin: center;
+}
+.peta-tematik-page .leaflet-interactive:nth-child(1)  { animation-delay: 0ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(2)  { animation-delay: 50ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(3)  { animation-delay: 100ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(4)  { animation-delay: 150ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(5)  { animation-delay: 200ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(6)  { animation-delay: 250ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(7)  { animation-delay: 300ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(8)  { animation-delay: 350ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(9)  { animation-delay: 400ms; }
+.peta-tematik-page .leaflet-interactive:nth-child(10) { animation-delay: 450ms; }
+
+/* === Leaflet styling — Malika look === */
+.peta-tematik-page .leaflet-tooltip {
+  background: var(--pt-canvas-elevated);
+  color: var(--pt-ink);
+  border: 1px solid var(--pt-border);
+  border-radius: 12px;
+  box-shadow: var(--pt-shadow-deep);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.peta-tematik-page .leaflet-tooltip-top:before {
+  border-top-color: var(--pt-border);
+}
+.peta-tematik-page .leaflet-container {
+  background: var(--pt-canvas-deep);
+  font-family: inherit;
+  border-radius: 12px;
+}
+.peta-tematik-page .leaflet-control-attribution {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  background: var(--pt-canvas) !important;
+  color: var(--pt-ink-faint) !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--pt-border);
+}
+
+/* Dotted leader for top/bottom lists */
+.peta-tematik-page .pt-dotted-leader {
+  flex: 1;
+  height: 1em;
+  margin: 0 0.4rem;
+  border-bottom: 1px dotted var(--pt-ink-faint);
+  margin-bottom: 0.3em;
+  opacity: 0.5;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .peta-tematik-page .leaflet-container {
+    height: 50vh !important;
+  }
+  .peta-tematik-page .pt-mobile-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .peta-tematik-page .pt-mobile-stack > * {
+    width: 100%;
+  }
+}

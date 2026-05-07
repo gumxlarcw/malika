@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`analytics controller snapshots returns validation error when sessionId missing 1`] = `
+{
+  "error": "sessionId and pagePath required",
+  "ok": false,
+}
+`;

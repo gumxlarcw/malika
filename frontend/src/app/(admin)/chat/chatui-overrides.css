@@ -1,0 +1,537 @@
+/* ChatUI overrides for MALIKA chat page
+   - Keep typing indicator symbol-only (no text)
+   - Make dots visible and closer to the requested screenshot
+   - Dark mode support via .dark class (synced with ChatUI's data-color-scheme)
+*/
+
+/* ===========================================
+   DARK MODE OVERRIDES
+   ChatUI uses data-color-scheme="dark" on :root
+   PWA uses .dark class on html element
+   ThemeContext.tsx now syncs both, but we add
+   .dark overrides as fallback/supplement
+   =========================================== */
+
+/* Main chat app container */
+.dark .ChatApp {
+  background-color: #0f172a; /* slate-900 */
+  color: #f1f5f9; /* slate-100 */
+}
+
+/* Message list background */
+.dark .MessageList,
+.dark .MessageContainer,
+.dark .MessageContainer > .PullToRefresh {
+  background-color: #0f172a;
+}
+
+/* Chat bubbles - left (assistant) */
+.dark .Message.left .Bubble {
+  background-color: #1e293b; /* slate-800 */
+  color: #f1f5f9;
+}
+
+/* Chat bubbles - right (user) - keep brand color but ensure text is visible */
+.dark .Message.right .Bubble {
+  background-color: #3b82f6; /* blue-500, brand color */
+  color: #ffffff;
+}
+
+/* System messages / day separators */
+.dark .SystemMessage-inner {
+  background-color: #1e293b;
+  color: #94a3b8; /* slate-400 */
+}
+
+.dark .SystemMessage-inner:before {
+  background: #1e293b;
+}
+
+/* Composer (input area) */
+.dark .Composer {
+  background-color: #0f172a;
+  border-color: #334155; /* slate-700 */
+}
+
+.dark .Composer-input {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+.dark .Composer-input::placeholder {
+  color: #64748b; /* slate-500 */
+}
+
+.dark .Composer-actions .IconBtn {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
+/* Navbar */
+.dark .Navbar {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+.dark .Navbar-title {
+  color: #f1f5f9;
+}
+
+.dark .Navbar .IconBtn {
+  color: #f1f5f9;
+}
+
+/* Quick replies */
+.dark .QuickReplies {
+  background-color: #0f172a;
+}
+
+.dark .QuickReply {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.dark .QuickReply:hover {
+  background-color: #334155;
+}
+
+/* Buttons */
+.dark .Btn {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.dark .Btn--primary {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* Time text */
+.dark .Time {
+  color: #64748b;
+}
+
+/* Loading spinner */
+.dark .Loading {
+  color: #94a3b8;
+}
+
+/* Modal/Popup backgrounds */
+.dark .Modal-dialog,
+.dark .Popup-dialog {
+  background-color: #1e293b;
+}
+
+.dark .Modal-title,
+.dark .Popup-title {
+  color: #f1f5f9;
+}
+
+/* Input fields */
+.dark .Input {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.dark .Input::placeholder {
+  color: #64748b;
+}
+
+/* Labels and help text */
+.dark .Label,
+.dark .HelpText {
+  color: #94a3b8;
+}
+
+/* Scrollbar styling for dark mode */
+.dark .MessageList::-webkit-scrollbar,
+.dark .PullToRefresh::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark .MessageList::-webkit-scrollbar-track,
+.dark .PullToRefresh::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.dark .MessageList::-webkit-scrollbar-thumb,
+.dark .PullToRefresh::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+/* Typing indicator dots - ensure visibility in dark mode */
+.dark .Typing-dot {
+  background: #f97316; /* orange-500 - ChatUI brand color */
+}
+
+/* ===========================================
+   ORIGINAL OVERRIDES (light/dark agnostic)
+   =========================================== */
+
+/* Ensure no text label appears even if passed accidentally */
+.Typing-text {
+  display: none;
+}
+
+/* Use ChatUI brand color (orange) for dots and animate with smooth bounce */
+.Typing-dot {
+  background: var(--brand-1);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: malika-typing-dot 0.6s ease-in-out infinite;
+}
+
+.Typing-dot[data-i="1"] {
+  animation-delay: 0s;
+}
+
+.Typing-dot[data-i="2"] {
+  animation-delay: 0.15s;
+}
+
+@keyframes malika-typing-dot {
+  0%, 80%, 100% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-6px);
+  }
+}
+
+/* Move message meta (Time) under the bubble */
+.Message {
+  display: flex;
+  flex-direction: column;
+}
+
+.Message-main {
+  order: 1;
+}
+
+.Message-meta {
+  order: 2;
+  margin-top: 4px;
+}
+
+.Message.right .Message-meta {
+  align-self: flex-end;
+}
+
+.Message.left .Message-meta {
+  align-self: flex-start;
+}
+
+/* Day separator (system message) should be centered and badge-sized */
+.Message.SystemMessage {
+  flex-direction: row;
+  justify-content: center;
+}
+
+.Message.SystemMessage .SystemMessage-inner {
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+
+/* Fix ChatUI taking full height in PWA mode - ensure no gap at bottom */
+.ChatApp {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.ChatApp > .ChatApp-main {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+}
+
+/* In standalone PWA mode, ensure chat fills available space without extra padding */
+@media (display-mode: standalone) {
+  .ChatApp {
+    padding-bottom: 0 !important;
+  }
+  
+  .ChatApp .Composer {
+    /* Use max() to ensure at least 8px padding, or safe-area if larger (for iOS notched devices) */
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px)) !important;
+  }
+}
+
+/* ===========================================
+   TOUCH TARGET IMPROVEMENTS
+   Minimum 44x44px for all interactive elements (Apple HIG / WCAG 2.1 AAA)
+   =========================================== */
+
+/* Quick reply chips - ensure minimum touch target */
+.QuickReply {
+  min-height: 44px !important;
+  padding: 10px 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* Composer send button - ensure minimum touch target */
+.Composer .Btn--primary,
+.Composer .IconBtn {
+  min-height: 44px !important;
+  min-width: 44px !important;
+}
+
+/* ===========================================
+   LANDSCAPE MODE OPTIMIZATIONS
+   Reduce chrome when keyboard is visible in landscape
+   =========================================== */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .Navbar {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  .Composer {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+  
+  .QuickReplies {
+    padding: 4px 8px !important;
+  }
+  
+  .QuickReply {
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+  }
+}
+
+/* ===========================================
+   REDUCED MOTION SUPPORT
+   =========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .Typing-dot {
+    animation: none !important;
+    opacity: 0.7 !important;
+  }
+}
+
+/* ===========================================
+   iOS/MOBILE FIXES
+   =========================================== */
+
+/* Bug 1.4: Fix rubber-banding/overscroll in message list */
+.MessageList,
+.PullToRefresh,
+.MessageContainer {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Bug 6.2: Force hide ChatUI's default navbar (we use custom header) */
+.ChatApp > .Navbar {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Bug 5.2: Apply composer safe area for ALL mobile (not just standalone)
+   This fixes iPhone browser mode where home indicator overlaps */
+@media (max-width: 1023px) {
+  .ChatApp .Composer {
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px)) !important;
+  }
+}
+
+/* Bug 4.1: Split-screen minimum height to prevent layout collapse on iPad */
+.ChatApp {
+  min-height: 300px;
+}
+
+/* Bug 1.2: Top safe area for standalone PWA on notched devices */
+@media (display-mode: standalone) {
+  .ChatApp {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}
+
+/* ===========================================
+   iOS/MOBILE - ABSOLUTE POSITIONING LAYOUT
+   Uses position:absolute for reliable iOS Safari scroll
+   =========================================== */
+
+@media (max-width: 1023px) {
+  /* ChatApp uses absolute positioning for iOS Safari compatibility */
+  .ChatApp {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    /* Allow touch interactions */
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* MessageContainer takes remaining space, this is the ONLY scroll container */
+  .ChatApp .MessageContainer {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 0 !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    /* Force GPU acceleration for smoother scrolling */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  /* PullToRefresh wrapper - let parent handle scroll */
+  .ChatApp .MessageContainer .PullToRefresh {
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+  
+  .ChatApp .MessageList {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  
+  /* QuickReplies at bottom - stays in flow */
+  .ChatApp .QuickReplies {
+    flex-shrink: 0 !important;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    height: auto !important;
+    background: white !important;
+    padding: 6px 12px !important;
+    margin: 0 !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    border-top: 1px solid #e5e7eb !important;
+    touch-action: pan-x;
+  }
+  
+  .dark .ChatApp .QuickReplies {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+  
+  /* Composer at very bottom - stays in flow */
+  .ChatApp .Composer {
+    flex-shrink: 0 !important;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    height: auto !important;
+    background: white !important;
+    padding: 8px 12px !important;
+    margin: 0 !important;
+    border-top: 1px solid #e5e7eb !important;
+    touch-action: manipulation;
+  }
+  
+  .dark .ChatApp .Composer {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+  
+  /* ChatFooter if it exists */
+  .ChatApp .ChatFooter {
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+  }
+  
+  .dark .ChatApp .ChatFooter {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+}
+
+/* Standalone PWA: parent handles bottom nav space */
+@media (max-width: 1023px) and (display-mode: standalone) {
+  .ChatApp {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* ===========================================
+   PROCESS INDICATOR / ACTIVITY FEED ANIMATIONS
+   =========================================== */
+
+/* Fade + slide-up entry animation for pipeline steps and thinking items */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Shimmer text effect for active pipeline step labels */
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    currentColor 40%,
+    rgba(128, 128, 128, 0.4) 50%,
+    currentColor 60%,
+    currentColor 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerText 2s ease-in-out infinite;
+}
+
+@keyframes shimmerText {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Check mark pop-in animation */
+.process-check-enter {
+  animation: processCheckPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes processCheckPop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Step entry animation */
+.process-step-enter {
+  animation: fadeSlideIn 0.3s ease-out both;
+}
+

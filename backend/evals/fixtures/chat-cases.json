@@ -1,0 +1,451 @@
+{
+  "version": "1.0.0",
+  "created": "2026-02-10",
+  "description": "Automated eval set for MALIKA chat accuracy. Each case has a query, expected behavior, and scoring criteria.",
+  "cases": [
+    {
+      "id": "greeting-01",
+      "category": "greeting",
+      "query": "halo",
+      "expect": {
+        "shouldContain": [
+          "MALIKA"
+        ],
+        "shouldNotContain": [
+          "maaf",
+          "tidak tersedia"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 15000,
+        "tier": "GREETING"
+      }
+    },
+    {
+      "id": "greeting-02",
+      "category": "greeting",
+      "query": "selamat pagi",
+      "expect": {
+        "shouldContain": [
+          "MALIKA"
+        ],
+        "shouldNotContain": [
+          "error"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 15000,
+        "tier": "GREETING"
+      }
+    },
+    {
+      "id": "data-simple-01",
+      "category": "data-simple",
+      "query": "data inflasi terbaru",
+      "expect": {
+        "shouldContain": [
+          "inflasi",
+          "%|persen"
+        ],
+        "shouldNotContain": [
+          "tidak tersedia",
+          "maaf"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 50,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-simple-02",
+      "category": "data-simple",
+      "query": "jumlah penduduk maluku utara",
+      "expect": {
+        "shouldContain": [
+          "penduduk",
+          "jiwa"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-simple-03",
+      "category": "data-simple",
+      "query": "TPT Kota Ternate",
+      "expect": {
+        "shouldContain": [
+          "Ternate",
+          "%|persen"
+        ],
+        "shouldNotContain": [
+          "tidak tersedia"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-simple-04",
+      "category": "data-simple",
+      "query": "kemiskinan maluku utara 2024",
+      "expect": {
+        "shouldContain": [
+          "miskin",
+          "%|persen"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-simple-05",
+      "category": "data-simple",
+      "query": "PDRB halmahera utara",
+      "expect": {
+        "shouldContain": [
+          "PDRB"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-simple-06",
+      "category": "data-simple",
+      "query": "IPM provinsi maluku utara",
+      "expect": {
+        "shouldContain": [
+          "IPM"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-simple-07",
+      "category": "data-simple",
+      "query": "upah minimum malut",
+      "expect": {
+        "shouldContain": [
+          "upah"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-geo-01",
+      "category": "data-geo",
+      "query": "inflasi kota tidore kepulauan",
+      "expect": {
+        "shouldContain": [
+          "Tidore",
+          "%|persen"
+        ],
+        "shouldNotContain": [
+          "Ternate inflasi"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-geo-02",
+      "category": "data-geo",
+      "query": "kemiskinan kepulauan sula",
+      "expect": {
+        "shouldContain": [
+          "Sula",
+          "miskin"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "data-geo-03",
+      "category": "data-geo",
+      "query": "jumlah penduduk halmahera selatan",
+      "expect": {
+        "shouldContain": [
+          "Halmahera Selatan"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "knowledge-brs-01",
+      "category": "knowledge-brs",
+      "query": "inflasi kelompok pengeluaran maluku utara",
+      "expect": {
+        "shouldContain": [
+          "%|persen"
+        ],
+        "mustCiteNumber": true,
+        "mustCiteSource": true,
+        "minLength": 100,
+        "maxLatencyMs": 45000,
+        "description": "Should cite BRS and list multiple expenditure groups with y-on-y percentages"
+      }
+    },
+    {
+      "id": "knowledge-brs-02",
+      "category": "knowledge-brs",
+      "query": "pendatang ke kota ternate",
+      "expect": {
+        "shouldContain": [
+          "Ternate"
+        ],
+        "shouldNotContain": [
+          "131.929"
+        ],
+        "mustCiteNumber": true,
+        "mustCiteSource": true,
+        "minLength": 50,
+        "maxLatencyMs": 45000,
+        "description": "Must read correct row for Ternate migration, NOT the Jumlah/Total row"
+      }
+    },
+    {
+      "id": "knowledge-brs-03",
+      "category": "knowledge-brs",
+      "query": "data gini ratio maluku utara terbaru",
+      "expect": {
+        "shouldContain": [
+          "Gini"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 45000
+      }
+    },
+    {
+      "id": "knowledge-pub-01",
+      "category": "knowledge-pub",
+      "query": "statistik migrasi maluku utara",
+      "expect": {
+        "shouldContain": [
+          "migrasi"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 50,
+        "maxLatencyMs": 45000
+      }
+    },
+    {
+      "id": "knowledge-ppid-01",
+      "category": "knowledge-ppid",
+      "query": "siapa kepala BPS maluku utara",
+      "expect": {
+        "shouldContain": [
+          "Kepala",
+          "BPS"
+        ],
+        "shouldNotContain": [
+          "tidak tersedia",
+          "maaf"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "knowledge-ppid-02",
+      "category": "knowledge-ppid",
+      "query": "alamat kantor BPS maluku utara",
+      "expect": {
+        "shouldContain": [
+          "alamat"
+        ],
+        "shouldNotContain": [
+          "tidak tersedia"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "complex-01",
+      "category": "complex",
+      "query": "bandingkan kemiskinan per kabupaten di maluku utara",
+      "expect": {
+        "shouldContain": [
+          "%|persen"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 100,
+        "maxLatencyMs": 60000,
+        "description": "Should list multiple kab/kota with their poverty percentages"
+      }
+    },
+    {
+      "id": "complex-02",
+      "category": "complex",
+      "query": "bagaimana tren inflasi maluku utara 3 tahun terakhir",
+      "expect": {
+        "shouldContain": [
+          "inflasi",
+          "%|persen"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 100,
+        "maxLatencyMs": 60000,
+        "description": "Should show multiple years of inflation data with comparison"
+      }
+    },
+    {
+      "id": "complex-03",
+      "category": "complex",
+      "query": "kabupaten mana yang paling miskin di maluku utara dan kenapa",
+      "expect": {
+        "shouldContain": [
+          "%|persen",
+          "miskin"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 100,
+        "maxLatencyMs": 60000
+      }
+    },
+    {
+      "id": "complex-04",
+      "category": "complex",
+      "query": "pertumbuhan ekonomi maluku utara dibanding nasional",
+      "expect": {
+        "shouldContain": [
+          "pertumbuhan",
+          "%|persen"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 80,
+        "maxLatencyMs": 60000,
+        "description": "Should discuss economic growth (PDRB) with % numbers comparing Malut vs national"
+      }
+    },
+    {
+      "id": "exim-01",
+      "category": "exim",
+      "query": "data ekspor maluku utara 2024",
+      "expect": {
+        "shouldContain": [
+          "ekspor"
+        ],
+        "mustCiteNumber": true,
+        "minLength": 30,
+        "maxLatencyMs": 45000
+      }
+    },
+    {
+      "id": "exim-02",
+      "category": "exim",
+      "query": "komoditas impor terbesar malut",
+      "expect": {
+        "shouldContain": [
+          "impor"
+        ],
+        "minLength": 30,
+        "maxLatencyMs": 45000
+      }
+    },
+    {
+      "id": "edge-nondata-01",
+      "category": "edge",
+      "query": "apa itu BRS",
+      "expect": {
+        "shouldContain": [
+          "Berita Resmi Statistik"
+        ],
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "edge-nondata-02",
+      "category": "edge",
+      "query": "cara mengakses data BPS",
+      "expect": {
+        "shouldNotContain": [
+          "tidak tersedia"
+        ],
+        "minLength": 30,
+        "maxLatencyMs": 30000
+      }
+    },
+    {
+      "id": "edge-outofscope-01",
+      "category": "edge",
+      "query": "data kemiskinan jakarta",
+      "expect": {
+        "shouldContain": [
+          "Maluku Utara"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 30000,
+        "description": "Should redirect to Maluku Utara scope or explain limitation"
+      }
+    },
+    {
+      "id": "edge-ambiguous-01",
+      "category": "edge",
+      "query": "data terbaru",
+      "expect": {
+        "shouldNotContain": [
+          "error"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 30000,
+        "description": "Ambiguous query — should offer suggestions or ask for clarification"
+      }
+    },
+    {
+      "id": "edge-typo-01",
+      "category": "edge",
+      "query": "kemiiskinan halsel",
+      "expect": {
+        "shouldContain": [
+          "miskin"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 30000,
+        "description": "Typo in 'kemiskinan' and abbreviation 'halsel' should still find data"
+      }
+    },
+    {
+      "id": "hallucination-guard-01",
+      "category": "hallucination",
+      "query": "angka harapan hidup maluku utara 2030",
+      "expect": {
+        "shouldNotContain": [
+          "angka harapan hidup 2030",
+          "AHH 2030",
+          "sebesar 2030"
+        ],
+        "shouldContain": [
+          "belum tersedia"
+        ],
+        "minLength": 20,
+        "maxLatencyMs": 30000,
+        "description": "Future year — should say 2030 data not available and give latest. May mention 2030 to acknowledge query but must NOT present data FOR 2030."
+      }
+    },
+    {
+      "id": "hallucination-guard-02",
+      "category": "hallucination",
+      "query": "jumlah penduduk pulau morotai 1990",
+      "expect": {
+        "minLength": 20,
+        "maxLatencyMs": 30000,
+        "description": "Very old data — should say data not available or give nearest available"
+      }
+    }
+  ]
+}

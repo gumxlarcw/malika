@@ -1,0 +1,309 @@
+source_id	source_name	latest_year_with_data	distinct_kabkota	n_with_values	dim_keys	n_metrics	status
+1	Inflasi Provinsi Maluku Utara (2022 = 100)	NULL	0	0	1	3	EMPTY
+10	[Metode Baru] Indeks Pembangunan Manusia (Umur Harapan Hidup Hasil Long Form SP2020)	2025	10	10	1	1	OK
+11	[Metode Baru] Umur Harapan Hidup Saat Lahir (UHH) Hasil Long Form SP2020 (Tahun)	2025	10	10	1	1	OK
+12	Persentase Penduduk Miskin Maluku Utara	NULL	0	0	1	1	EMPTY
+13	Harapan Lama Sekolah Menurut Kabupaten/Kota (Tahun)	2025	10	10	1	1	OK
+14	Gini Ratio Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+15	Garis Kemiskinan Provinsi Maluku Utara (Rupiah/Kapita/Bulan)	NULL	0	0	1	1	EMPTY
+16	Rata-Rata Lama Sekolah Menurut Kabupaten/Kota (Tahun)	2025	10	10	1	1	OK
+161	Indeks Harga Konsumen Provinsi Maluku Utara (2022 = 100)	NULL	0	0	1	1	EMPTY
+162	Nilai Tukar Petani (2018 = 100)	NULL	0	0	1	1	EMPTY
+163	Inflasi Kabupaten Halmahera Tengah (2022 = 100)	NULL	0	0	1	3	EMPTY
+164	Inflasi Kota Ternate (2022 = 100)	NULL	0	0	1	2	EMPTY
+165	Indeks Harga Konsumen Kota Ternate (2022 = 100)	NULL	0	0	1	1	EMPTY
+17	Nilai Tukar Petani (2018 = 100)	NULL	0	0	1	1	EMPTY
+170	Tingkat Penghunian Kamar Hotel Bintang dan Non Bintang	NULL	0	0	1	3	EMPTY
+171	Jumlah Perjalanan Wisatawan Nusantara Menurut Kabupaten Tujuan	2025	10	10	1	1	OK
+172	Jumlah Perjalanan Wisatawan Nusantara Menurut Kabupaten Asal	2025	10	10	1	1	OK
+173	Tamu Menginap di Hotel Bintang	NULL	0	0	1	2	EMPTY
+174	Jumlah Akomodasi, Kamar, dan Tempat Tidur yang Tersedia pada Hotel Nonbintang dan Akomodasi Lainnya  Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	4	OK
+175	Jumlah Akomodasi, Kamar, dan Tempat Tidur yang Tersedia pada Hotel Bintang Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	5	3	1	4	OK
+179	Rumah Tangga dan Rata-rata Banyaknya Anggota Rumah Tangga Menurut Kabupaten/Kota di Provinsi Maluku Utara	2019	10	10	1	3	OK
+18	Tingkat Penghunian Kamar Hotel Bintang dan Non Bintang	NULL	0	0	1	3	EMPTY
+180	Proyeksi Rumah Tangga Menurut Kabupaten/Kota	2021	10	10	1	1	OK
+181	Rasio Jenis Kelamin Menurut Kabupaten/Kota	2022	10	10	1	3	OK
+182	Kepadatan Penduduk Menurut Kabupten/Kota	2022	10	10	1	1	OK
+183	Laju Pertumbuhan Penduduk	2022	10	10	1	1	OK
+184	Proyeksi Penduduk Menurut Kabupaten/Kota	2022	10	10	1	1	OK
+185	Jumlah Perceraian Menurut Kabupaten/Kota dan Faktor Penyebab Perceraian (perkara) di Provinsi Maluku Utara	2025	10	10	1	15	OK
+186	Jumlah Penduduk Menurut Kelompok Umur dan JenisKelamin (ribu jiwa) di Provinsi Maluku Utara,	NULL	0	0	1	3	EMPTY
+187	Penduduk, Laju Pertumbuhan Penduduk, Distribusi Persentase Penduduk, Kepadatan Penduduk, Rasio Jenis Kelamin Penduduk Menurut Kabupaten/Kota di Provin	2025	10	10	1	5	OK
+188	Penduduk Berumur 15 Tahun ke Atas yang Bekerja Selama Seminggu yang Lalu Menurut Kelompok Umur dan Jumlah Jam Kerja Seluruhnya di Provinsi Maluku Utar	NULL	0	0	1	5	EMPTY
+189	Penduduk Berumur 15 Tahun ke Atas yang Bekerja Selama Seminggu yang Lalu Menurut Status Pekerjaan Utama dan Pendidikan Tertinggi yang Ditamatkan di Pr	NULL	0	0	1	5	EMPTY
+19	Tingkat Partisipasi Angkatan Kerja (TPAK) dan Tingkat Pengangguran Terbuka (TPT) Menurut Jenis Kelamin	NULL	0	0	1	3	EMPTY
+190	Tingkat Pengangguran Terbuka (TPT) dan Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	4	OK
+191	Penduduk Berumur 15 Tahun ke Atas Menurut Kelompok Umur dan Jenis Kegiatan Selama Seminggu yang Lalu di Provinsi Maluku Utara	NULL	0	0	1	15	EMPTY
+192	Penduduk Berumur 15 Tahun ke Atas Menurut Kabupaten/Kota dan Jenis Kegiatan Selama Seminggu yang Lalu di Provinsi Maluku Utara	2025	10	10	1	15	OK
+193	Jumlah Penduduk Berumur 15 Tahun Keatas Menurut Jenis Kegiatan Selama Seminggu yang Lalu dan Jenis Kelamin di Provinsi Maluku Utara	NULL	0	0	1	3	EMPTY
+194	Penduduk Berumur 15 Tahun ke Atas Menurut Pendidikan Tertinggi yang Ditamatkan dan Jenis Kegiatan Selama Seminggu yang Lalu di Provinsi Maluku Utara	NULL	0	0	1	15	EMPTY
+195	Rata-rata Pendapatan Bersih Sebulan Pekerja Informal 1 Menurut Kabupaten/Kota dan Lapangan Pekerjaan Utama 2 di Provinsi Maluku Utara (rupiah)	2025	10	10	1	4	OK
+196	Rata-rata Pendapatan Bersih Sebulan Pekerja Informal 1 Menurut Kabupaten/Kota dan Pendidikan Tertinggi yang Ditamatkan di Provinsi Maluku Utara (rupia	2025	10	10	1	5	OK
+197	Pencari Kerja Terdaftar, Lowongan Kerja Terdaftar, dan Penempatan/Pemenuhan Tenaga Kerja Menurut Kabupaten/Kota dan Jenis Kelamin di Provinsi Maluku U	2024	10	10	1	9	OK
+198	[Indeks Ketimpangan Gender-IKG] Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Jenis Kelamin	2024	10	10	1	2	OK
+199	Jumlah Penduduk Usia 15 Tahun Keatas Menurut Jenis Kegiatan Utama	NULL	0	0	1	1	EMPTY
+2	Indeks Harga Konsumen Kabupaten Halmahera Tengah (2022 = 100)	NULL	0	0	1	1	EMPTY
+20	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Lapangan Usaha Provinsi Maluku Utara Atas Dasar Harga Konstan 2010	NULL	0	0	1	3	EMPTY
+200	Tingkat Partisipasi Angkatan Kerja (TPAK) dan Tingkat Pengangguran Terbuka (TPT) Menurut Klasifikasi Kota/Desa	NULL	0	0	1	3	EMPTY
+201	Tingkat Pengangguran Terbuka (TPT) Kabupaten/Kota	2025	10	10	1	1	OK
+202	Tingkat Partisipasi Angkatan Kerja (TPAK) Menurut Kabupaten/Kota (Persen)	2025	10	10	1	1	OK
+203	[Seri 2010] Produk Domestik Regional Bruto Menurut Kabupaten/Kota Provinsi Maluku Utara (Triwulanan)	2025	10	10	1	2	OK
+204	Persentase Penduduk Usia 7–24 Tahun Menurut Jenis Kelamin, Kelompok Umur Sekolah, dan Partisipasi Sekolah 1 di Provinsi Maluku Utara	NULL	0	0	1	6	EMPTY
+205	[Indeks Ketimpangan Gender-IKG] Persentase Penduduk Usia 25 tahun ke atas dengan Pendidikan SMA ke atas Menurut Jenis Kelamin	2024	10	10	1	2	OK
+206	Harapan Lama Sekolah Menurut Kabupaten/Kota dan Jenis Kelamin	2024	10	10	1	2	OK
+207	Rata-Rata Lama Sekolah Menurut Kabupaten/Kota dan Jenis Kelamin	2024	10	10	1	2	OK
+208	Jumlah Perpustakaan Terakreditasi Menurut Kabupaten/Kota, Jenis Perpustakaan, dan Predikat Akreditasi di Provinsi Maluku Utara	2024	8	8	1	17	OK
+209	Jumlah Sekolah, Guru, dan Murid Madrasah Ibtidaiyah (MI) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	2023	10	10	1	9	OK
+210	Tingkat Kegemaran Membaca Masyarakat dan Unsur Penyusunnya Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	6	OK
+211	Jumlah Pejabat Fungsional Pustakawan dan Asisten Perpustakaan Menurut Kabupaten/Kota dan Jabatan di Provinsi Maluku Utara	2024	4	4	1	7	OK
+212	Indeks Pembangunan Literasi Masyarakat dan Unsur Penyusunnya Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	8	OK
+213	Persentase Penduduk Berumur 15 Tahun ke Atas yang Melek Huruf Menurut Kelompok Umur dan Daerah Tempat Tinggal di Provinsi Maluku Utara	NULL	0	0	1	3	EMPTY
+214	Jumlah Perguruan Tinggi 1 , Dosen, dan Mahasiswa 2 (Negeri dan Swasta) di Bawah Kementerian Pendidikan Tinggi, Sains, dan Teknologi Menurut Kabupaten/	2024	6	6	1	9	OK
+215	Angka Partisipasi Murni (APM) dan Angka Partisipasi Kasar (APK) Menurut Jenjang Pendidikan di Provinsi Maluku Utara	NULL	0	0	1	2	EMPTY
+216	Jumlah Desa 1 /Kelurahan yang Memiliki Fasilitas Sekolah Menurut Kabupaten/Kota dan Tingkat Pendidikan di Provinsi Maluku Utara	2025	10	10	1	5	OK
+217	Jumlah Sekolah, Guru, dan Murid Sekolah Menengah Kejuruan (SMK) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Ko	2024	10	10	1	9	OK
+218	Jumlah Sekolah, Guru, dan Murid Sekolah Menengah Atas (SMA) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Kota d	2024	10	10	1	9	OK
+219	Jumlah Sekolah, Guru, dan Murid Sekolah Menengah Pertama (SMP) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Kot	2024	10	10	1	9	OK
+220	Jumlah Sekolah, Guru, dan Murid Sekolah Dasar (SD) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Kabupaten/Kota di Provins	2024	10	10	1	9	OK
+221	Jumlah Sekolah, Guru, dan Murid Taman Kanak-Kanak (TK) di Bawah Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi Menurut Menurut Kabupaten/Kot	2024	10	10	1	9	OK
+222	Angka Partisipasi Murni (APM) dan Angka Partisipasi Kasar (APK) menurut Jenjang Pendidikan	NULL	0	0	1	2	EMPTY
+223	Angka Partisipasi Sekolah menurut Kelompok Umur	NULL	0	0	1	1	EMPTY
+224	Persentase Penduduk Berumur 7-24 Tahun yang Masih Sekolah menurut Golongan Umur, dan Kabupaten/Kota	2023	10	10	1	5	OK
+225	Persentase Penduduk Berumur 7-24 Tahun menurut Partisipasi Sekolah	NULL	0	0	1	2	EMPTY
+226	Jumlah Perguruan Tinggi, Tenaga Pendidik, dan Mahasiswa (Negeri dan Swasta) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	3	3	1	9	OK
+227	Jumlah Sekolah, Guru, dan Murid Raudatul Athfal (RA) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	2023	10	10	1	3	OK
+228	Jumlah Sekolah, Guru, dan Murid Madrasah Aliyah (MA) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	2023	10	10	1	9	OK
+229	Jumlah Sekolah, Guru, dan Murid Madrasah Tsanawiyah (MTs) di Bawah Kementerian Agama Menurut Kabupaten/Kota di Provinsi Maluku Utara, 2023/2024	2023	10	10	1	9	OK
+230	[Indeks Ketimpangan Gender-IKG] MTF (Proporsi perempuan usia 15-49 tahun yang melahirkan hidup tidak di fasilitas kesehatan)	2024	10	10	1	1	OK
+231	[Indeks Ketimpangan Gender-IKG] MHPK20 (Proporsi perempuan usia 15-49 tahun yang melahirkan hidup pertama berusia kurang dari 20 tahun)	2024	10	10	1	1	OK
+232	Umur Harapan Hidup Menurut Kabupaten/Kota dan Jenis Kelamin (berdasarkan UHH LFSP2020)	2024	10	10	1	2	OK
+233	Angka Harapan Hidup Menurut Kabupaten/Kota dan Jenis Kelamin	2024	10	10	1	2	OK
+234	Jumlah Rumah Sakit Umum, Rumah Sakit Khusus, Puskesmas, Klinik Pratama, dan Posyandu Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	10	OK
+235	Kasus Penyakit Menurut Kabupaten/Kota dan Jenis Penyakit di Provinsi Maluku Utara	2024	10	10	1	16	OK
+236	Jumlah Desa 1 /Kelurahan Yang Memiliki Sarana Kesehatan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	6	OK
+237	Angka Harapan Hidup Menurut Kabupaten/Kota (Tahun)	2024	10	10	1	1	OK
+238	Persentase Penduduk yang Memiliki Jaminan Kesehatan Menurut Kabupaten/Kota dan Jenis Jaminan di Provinsi Maluku Utara	2023	10	10	1	5	OK
+239	Persentase Penduduk Usia 15 Tahun Ke Atas yang Merokok dalam Sebulan Terakhir Menurut Kabupaten/Kota dan Kelompok Umur di Provinsi Maluku Utara	2023	10	10	1	6	OK
+240	Distribusi Persentase Penduduk yang Mempunyai Keluhan Kesehatan Selama Sebulan Terakhir dan Tidak Berobat Jalan Menurut Kabupaten/Kota dan Alasan Utam	2023	10	10	1	11	OK
+241	Persentase Penduduk yang Mempunyai Keluhan Kesehatan dan Berobat Jalan Selama Sebulan Terakhir Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	1	OK
+242	Persentase Penduduk yang Mempunyai Keluhan Kesehatan Selama Sebulan Terakhir Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	1	OK
+243	Perentase Wanita Berumur 15–49 Tahun yang Berstatus Kawin dan Menggunakan KB Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	1	OK
+244	Jumlah Tenaga Kesehatan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	15	OK
+245	Distribusi Persentase Wanita Berumur 15–49 Tahun yang Pernah Kawin dan Melahirkan Hidup dalam Dua Tahun Terakhir Menurut Kabupaten/Kota dan Penolong P	2023	10	10	1	6	OK
+246	Banyaknya Klinik Keluarga Berencana dan Pos Pelayanan Keluarga Berencana Desa menurut Kabupaten/Kota	2023	10	10	1	2	OK
+247	Tenaga Kesehatan Menurut Kabupaten/Kota	2023	10	10	1	8	OK
+248	Fasilitas Kesehatan menurut Kabupaten/Kota	2023	10	10	1	6	OK
+249	Jumlah Kasus HIV/AIDS, IMS, DBD, Diare, TB, dan Malaria menurut Kabupaten/Kota	2020	10	10	1	6	OK
+250	Banyaknya Tenaga Kesehatan menurut Unit Kerja dan Sarana Pelayanan Kesehatan	NULL	0	0	1	8	EMPTY
+251	Pengeluaran Perkapita Riil Disesuaikan Menurut Kabupaten/Kota	2025	10	10	1	1	OK
+252	Pengeluaran Perkapita Riil Disesuaikan Menurut Kabupaten/Kota dan Jenis Kelamin	2024	10	10	1	2	OK
+253	Persentase Pengeluaran per Kapita Sebulan Makanan dan Bukan Makanan di Daerah Perkotaan dan Perdesaan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	2	OK
+254	Rata-rata Pengeluaran per Kapita Sebulan Makanan dan Bukan Makanan di Daerah Perkotaan dan Perdesaan Menurut Kabupaten/Kota di Provinsi Maluku Utara (	2025	10	10	1	3	OK
+255	Persentase Pengeluaran per Kapita Sebulan Menurut Kelompok Komoditas dan Klasifikasi Desa di Provinsi Maluku Utara	NULL	0	0	1	3	EMPTY
+256	Rata-rata Pengeluaran per Kapita Sebulan Menurut Kelompok Komoditas dan Klasifikasi Desa di Provinsi Maluku Utara (rupiah)	NULL	0	0	1	3	EMPTY
+257	Jumlah Keluarga Penerima Manfaat (KPM) dan Anggaran Bantuan Sosial Pangan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	4	OK
+258	Persentase Rumah Tangga yang Memiliki Akses Terhadap Sumber Air Minum Layak Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	1	OK
+259	Persentase Rumah Tangga yang Memiliki Akses Terhadap Sanitasi Layak Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	1	OK
+260	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Jenis Lantai Terluas di Provinsi Maluku Utara	2023	10	10	1	3	OK
+261	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Status Penguasaan Bangunan Tempat Tinggal di Provinsi Maluku Utara	2023	10	10	1	4	OK
+262	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Bahan Bakar Utama untuk Memasak di Provinsi Maluku Utara	2023	10	10	1	7	OK
+263	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Penggunaan Fasilitas Tempat Buang Air Besar di Provinsi Maluku Utara	2023	10	10	1	6	OK
+264	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Sumber Penerangan di Provinsi Maluku Utara	2023	10	10	1	4	OK
+265	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Sumber Air Minum di Provinsi Maluku Utara	2023	10	10	1	11	OK
+266	Distribusi Persentase Rumah Tangga Menurut Kabupaten/Kota dan Luas Lantai di Provinsi Maluku Utara (m 2 )	2023	10	10	1	6	OK
+267	Jumlah Jemaah Haji yang Diberangkatkan ke Tanah Suci Mekah Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	1	OK
+268	Jumlah Kejahatan yang Dilaporkan, Risiko Penduduk Terkena Kejahatan per 100.000 Penduduk, Persentase Penyelesaian Kejahatan, dan Selang Waktu Terjadin	2023	10	10	1	4	OK
+269	Jumlah Penduduk Menurut Kabupaten/Kota dan Agama yang Dianut	2023	10	10	1	7	OK
+270	Jumlah Perceraian Menurut Kabupaten/Kota dan Faktor	2023	4	4	1	15	OK
+271	Jumlah Jemaah Haji yang Diberangkatkan ke Tanah Suci Mekah dari Provinsi Maluku Utara	2023	10	10	1	1	OK
+272	Banyaknya Tempat Peribadatan menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	6	OK
+273	Persentase Penduduk Berumur 10 Tahun ke Atas yang Melakukan Olahraga Selama Seminggu Terakhir Menurut Tujuan Olahraga dan Tipe Daerah	NULL	0	0	1	3	EMPTY
+274	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara (Metode Baru)	NULL	0	0	1	1	EMPTY
+275	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Aspek (Metode Baru)	NULL	0	0	1	1	EMPTY
+276	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Indikator (Metode Baru)	NULL	0	0	1	1	EMPTY
+277	[Indeks Ketimpangan Gender-IKG] Persentase Keterwakilan di Legislatif Menurut Jenis Kelamin	2024	10	10	1	2	OK
+278	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+279	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Indikator	NULL	0	0	1	1	EMPTY
+280	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Variabel	NULL	0	0	1	1	EMPTY
+281	Indeks Demokrasi Indonesia (IDI) Provinsi Maluku Utara Menurut Aspek	NULL	0	0	1	1	EMPTY
+282	[Seri 2010] Laju Pertumbuhan Indeks Harga Implisit PDRB Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	1	EMPTY
+283	[Seri 2010] Indeks Harga Implisit PDRB Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	1	EMPTY
+284	[Seri 2010] Laju Pertumbuhan PDRB Provinsi Maluku Utara Menurut Pengeluaran Atas Dasar Harga Konstan 2010	NULL	0	0	1	3	EMPTY
+285	[Seri 2010] Distribusi Persentase PDRB Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Pengeluaran	NULL	0	0	1	1	EMPTY
+286	[Seri 2010] PDRB Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	2	EMPTY
+287	[Seri 2010] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	2	EMPTY
+288	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Kabupaten/Kota di Provinsi Maluku Utara Atas Dasar Harga Konstan 2010 (Triwulanan)	2025	10	10	1	3	OK
+289	[Seri 2010] Distribusi Persentase Produk Domestik Regional Bruto Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Kabupaten/Kota	2025	10	10	1	1	OK
+290	[Seri 2010] Distribusi Persentase Produk Domestik Regional Bruto Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Lapangan Usaha	NULL	0	0	1	1	EMPTY
+291	[Seri 2010] Laju Pertumbuhan Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NULL	0	0	1	1	EMPTY
+292	[Seri 2010] Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NULL	0	0	1	1	EMPTY
+293	[Seri 2010] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NULL	0	0	1	2	EMPTY
+294	Laju Pertumbuhan Produk Domestik Regional Bruto per Kapita Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (persen)	2024	10	10	1	1	OK
+295	Produk Domestik Regional Bruto per Kapita Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (ribu rupiah)	2024	10	10	1	1	OK
+296	Produk Domestik Regional Bruto per Kapita Atas Dasar Harga Berlaku Menurut Kabupaten/Kota di Provinsi Maluku Utara (ribu rupiah)	2024	10	10	1	2	OK
+297	Laju Pertumbuhan Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (persen)	2024	10	10	1	1	OK
+298	Distribusi Persentase Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Kabupaten/Kota (persen) di Provinsi Maluku Utara	2024	10	10	1	1	OK
+299	Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Kabupaten/Kota di Provinsi Maluku Utara (miliar rupiah)	2024	10	10	1	2	OK
+3	Jumlah Pelanggan, Air Disalurkan (M3), dan Nilai (Rp) menurut Wilayah (PDAM Malut)	2022	10	9	1	3	OK
+300	Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Kabupaten/Kota di Provinsi Maluku Utara (miliar rupiah)	2024	10	10	1	2	OK
+301	Distribusi Persentase Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Lapangan Usaha (persen) di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+302	Laju Pertumbuhan Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Lapangan Usaha di Provinsi Maluku Utara (persen)	NULL	0	0	1	1	EMPTY
+303	Produk Domestik Regional Bruto Atas Dasar Harga Berlaku Menurut Lapangan Usaha di Provinsi Maluku Utara (miliar rupiah)	NULL	0	0	1	2	EMPTY
+304	Produk Domestik Regional Bruto Atas Dasar Harga Konstan 2010 Menurut Lapangan Usaha di Provinsi Maluku Utara (miliar rupiah)	NULL	0	0	1	2	EMPTY
+305	[Seri 2010] Produk Domestik Regional Bruto per Kapita Provinsi Maluku Utara	2024	10	10	1	2	OK
+306	[Seri 2010] Produk Domestik Regional Bruto Menurut Kabupaten/Kota Provinsi Maluku Utara (Tahunan)	2024	10	10	1	2	OK
+307	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Menurut Kabupaten/Kota Provinsi Maluku Utara Atas Dasar Harga Konstan 2010 (Tahunan)	2024	10	10	1	1	OK
+308	[Seri 2010-Tahunan] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	2	EMPTY
+309	[Seri 2010] Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	1	EMPTY
+310	[Seri 2010-Tahunan] Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha	NULL	0	0	1	2	EMPTY
+311	[Seri 2010] Laju Pertumbuhan Indeks Harga Implisit Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran	NULL	0	0	1	1	EMPTY
+312	[Seri 2010] Distribusi Persentase Produk Domestik Regional Bruto Provinsi Maluku Utara Atas Dasar Harga Berlaku Menurut Pengeluaran (Persen)	NULL	0	0	1	1	EMPTY
+313	NULL	NULL	0	0	0	0	EMPTY
+314	[Seri 2010] Laju Pertumbuhan Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Pengeluaran Atas Dasar Harga Konstan 2010	NULL	0	0	1	3	EMPTY
+315	Pertumbuhan Produksi Industri Manufaktur Mikro dan Kecil Menurut Jenis Industri	NULL	0	0	1	2	EMPTY
+316	Pertumbuhan Produksi Industri Manufaktur Mikro dan Kecil Triwulanan	NULL	0	0	1	2	EMPTY
+317	Rekapitulasi Realisasi Penerimaan dan Pengeluaran Pemerintah Daerah Kabupaten/Kota Menurut Kabupaten/Kota di Provinsi Maluku Utara (ribu rupiah)	2024	10	10	1	4	OK
+318	Jumlah Pegawai Pemerintah dengan Perjanjian Kerja Menurut Tingkat Kepangkatan dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NULL	0	0	1	3	EMPTY
+319	Jumlah Pegawai Negeri Sipil Menurut Tingkat Kepangkatan dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NULL	0	0	1	3	EMPTY
+320	Jumlah Aparatur Sipil Negara (ASN) Menurut Jabatan, Jenis ASN, dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NULL	0	0	1	9	EMPTY
+321	Jumlah Aparatur Sipil Negara (ASN) Menurut Tingkat Pendidikan, Jenis ASN, dan Jenis Kelamin di Provinsi Maluku Utara (orang), Desember	NULL	0	0	1	9	EMPTY
+322	Jumlah Pegawai Negeri Sipil Menurut Tingkat Kepangkatan dan Jenis Kelamin di Provinsi Maluku Utara, Desember	NULL	0	0	1	3	EMPTY
+323	Jumlah Pegawai Negeri Sipil Menurut Tingkat Pendidikan dan Jenis Kelamin di Provinsi Maluku Utara, Desember	NULL	0	0	1	3	EMPTY
+324	Jumlah Pegawai Negeri Sipil Menurut Jabatan dan Jenis Kelamin di Provinsi Maluku Utara, Desember	NULL	0	0	1	3	EMPTY
+325	Realisasi Pendapatan dan Belanja Pemerintah Kabupaten/Kota	2020	10	10	1	2	OK
+326	Realisasi Belanja Pemerintah Provinsi	NULL	0	0	1	1	EMPTY
+327	Realisasi Pendapatan Pemerintah Provinsi	NULL	0	0	1	1	EMPTY
+328	Pegawai Negeri	2017	10	10	1	3	OK
+329	Nilai dan Volume Impor	NULL	0	0	1	2	EMPTY
+330	Nilai dan Volume Ekspor	NULL	0	0	1	2	EMPTY
+331	Inflasi Kota Ternate (2018 = 100)	NULL	0	0	1	2	EMPTY
+332	Indeks Harga Konsumen Kota Ternate (2018 = 100)	NULL	0	0	1	1	EMPTY
+333	Indeks Harga Konsumen Kota Ternate (2012 = 100)	NULL	0	0	1	1	EMPTY
+334	Inflasi Kota Ternate (2012 = 100)	NULL	0	0	1	1	EMPTY
+335	Nilai Tukar Petani (2012 = 100)	NULL	0	0	1	1	EMPTY
+336	Jumlah Bencana Alam Menurut Kabupaten/Kota dan Jenis Bencana Alam (kejadian) di Provinsi Maluku Utara	2025	10	10	1	10	OK
+337	Jumlah Kerusakan Rumah yang Diakibatkan Bencana Alam Menurut Kabupaten/Kota dan Jenis Bencana Alam di Provinsi Maluku Utara (unit)	2025	10	9	1	44	OK
+338	Jumlah Korban yang Diakibatkan Bencana Alam Menurut Kabupaten/Kota dan Jenis Bencana Alam di Provinsi Maluku Utara (orang)	2025	10	10	1	30	OK
+339	Jumlah Desa 1 /Kelurahan Menurut Kabupaten/Kota dan Letak Geografi di Provinsi Maluku Utara	2025	10	10	1	2	OK
+340	Jumlah Desa 1,2 /Kelurahan Menurut Kabupaten/Kota dan Topografi Wilayah di Provinsi Maluku Utara	2024	10	10	1	3	OK
+341	Hujan	NULL	0	0	1	2	EMPTY
+342	Jumlah Desa 1 /Kelurahan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	1	OK
+343	Luas Daerah dan Jumlah Pulau Menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	6	OK
+344	Jumlah Kecamatan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	1	OK
+345	Jumlah Desa/Kelurahan yang Mengalami Bencana Alam Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	3	OK
+346	Tinggi Wilayah Menurut Kabupaten/Kota di Provinsi Maluku Utara	2015	10	10	1	1	OK
+347	Luas Daerah Menurut Kabupaten/Kota di Provinsi Maluku Utara	2022	10	10	1	1	OK
+348	Jarak ke Ibukota Provinsi Menurut Kabupaten/Kota di Provinsi Maluku Utara	2015	10	10	1	1	OK
+349	Jumlah Desa/Kelurahan Menurut Kabupaten/Kota dan Letak Geografi di Provinsi Maluku Utara	2021	10	10	1	2	OK
+350	Banyaknya Desa/Kelurahan Menurut Keberadaan Keluarga Pengguna Listrik	2019	10	10	1	3	OK
+351	Banyaknya Desa/Kelurahan Menurut Jenis Bencana Alam	2019	10	10	1	10	OK
+352	Status Wilayah	2019	10	10	1	3	OK
+353	Produksi Tanaman Buah–Buahan dan Sayuran Tahunan Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+354	Produksi Tanaman Hias Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+355	Produksi Tanaman Buah-buahan dan Sayuran Tahunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2024	10	9	1	28	OK
+356	Luas Panen Tanaman Hias Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+357	Produksi Tanaman Hias Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2022	3	1	1	32	OK
+358	Produksi Tanaman Biofarmaka Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+359	Luas Panen Tanaman Hias Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2022	3	1	1	30	OK
+360	Luas Panen Tanaman Biofarmaka Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+361	Produksi Tanaman Biofarmaka Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2024	7	2	1	17	OK
+362	Luas Panen Tanaman Biofarmaka Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2024	7	2	1	17	OK
+363	Produksi Tanaman Sayuran dan Buah–Buahan Semusim Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+364	Luas Panen Tanaman Sayuran dan Buah–Buahan Semusim Menurut Jenis Tanaman di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+365	Produksi Tanaman Sayuran dan Buah-Buahan Semusim Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2024	10	10	1	34	OK
+366	Luas Panen Tanaman Sayuran dan Buah-Buahan Semusim Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2024	10	10	1	31	OK
+367	Luas Panen, Produktivitas, dan Produksi Padi Menurut  Kabupaten/Kota di Provinsi Maluku Utara	2024	10	8	1	3	OK
+368	Produksi Tanaman Sayuran dan Buah-Buahan Tahunan (BST) menurut Jenis Tanaman dan Kabupaten/Kota di Provinsi Maluku Utara (Ton)	2023	10	10	1	24	OK
+369	Produksi Jagung Pipilan Kering Kadar Air 14 Persen (JPK-KA14%) di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+370	Luas Panen Jagung di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+371	Produksi Tanaman Sayuran dan Buah-Buahan Semusim (SBS) menurut Jenis Tanaman dan Kabupaten/Kota di Provinsi Maluku Utara (Ton)	2023	10	10	1	14	OK
+372	Produksi Padi dan Beras Menurut Kabupaten/Kota	2024	10	10	1	2	OK
+373	Jumlah Produksi Telur Unggas dan Susu Sapi Segar Menurut Kabupaten/Kota di Provinsi Maluku Utara (kg)	2024	10	10	1	5	OK
+374	Jumlah Produksi Daging Unggas Menurut Kabupaten/Kota dan Jenis di Provinsi Maluku Utara (kg)	2024	10	10	1	5	OK
+375	Jumlah Produksi Daging Babi Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	2024	6	6	1	6	OK
+376	Jumlah Produksi Daging Domba Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	NULL	0	0	1	6	EMPTY
+377	Jumlah Produksi Daging Kambing Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	2024	10	10	1	6	OK
+378	Jumlah Produksi Daging Kerbau Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	2023	1	1	1	6	OK
+379	Jumlah Produksi Daging Kuda Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	NULL	0	0	1	6	EMPTY
+380	Jumlah Produksi Daging Sapi Menurut Kabupaten/Kota dan Jenis Produksi di Provinsi Maluku Utara (kg)	2024	10	10	1	6	OK
+381	Populasi Unggas Menurut Kabupaten/Kota dan Jenis Unggas di Provinsi Maluku Utara (ekor)	2024	10	10	1	7	OK
+382	Populasi Ternak Menurut Kabupaten/Kota dan Jenis Ternak di Provinsi Maluku Utara (ekor)	2024	10	10	1	7	OK
+383	Produksi Padi 1 dan Beras Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	9	8	1	2	OK
+384	Luas Panen, Produktivitas, dan Produksi Padi Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	9	8	1	3	OK
+385	Volume Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	NULL	0	0	1	8	EMPTY
+386	Volume Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Kegiatan di Provinsi Maluku Utara	2024	10	10	1	3	OK
+387	Produksi Kayu Bulat dan Olahan Menurut Jenis Produksi di Provinsi Maluku Utara	NULL	0	0	1	9	EMPTY
+388	Volume Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	2024	10	10	1	20	OK
+389	Volume Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Budidaya di Provinsi Maluku Utara	2024	10	10	1	26	OK
+390	Volume Produksi dan Nilai Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	2024	10	10	1	12	OK
+391	Volume Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Lokasi di Provinsi Maluku Utara	NULL	0	0	1	10	EMPTY
+392	Volume Produksi dan Nilai Produksi Perikanan Tangkap Menurut Kabupaten/Kota dan Jenis di Provinsi Maluku Utara	2024	10	10	1	6	OK
+393	Luas Kawasan Hutan dan Konservasi Perairan 1 Menurut Kabupaten/Kota di Provinsi Maluku Utara (ha)	2022	10	10	1	9	OK
+394	Produksi Perkebunan Rakyat Menurut Jenis Tanaman di Provinsi Maluku Utara (ribu ton)	NULL	0	0	1	1	EMPTY
+395	Populasi Ternak Menurut Kabupaten/Kota dan Jenis  Ternak (ekor) di Provinsi Maluku utara	2023	10	10	1	5	OK
+396	Produksi Telur Unggas dan Susu Sapi Menurut  Kabupaten/Kota (kg) di Provinsi Maluku Utara	2023	10	10	1	4	OK
+397	Produksi Daging Unggas Menurut Kabupaten/Kota dan  Jenis Unggas (kg) di Provinsi Maluku Utara	2023	10	10	1	4	OK
+398	Luas Areal Tanaman Perkebunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara	2023	10	10	1	7	OK
+399	Produksi Perkebunan Menurut Kabupaten/Kota dan Jenis  Tanaman di Provinsi Maluku Utara	2023	10	10	1	8	OK
+4	Proyeksi Penduduk Menurut Kelompok Umur dan Jenis Kelamin	NULL	0	0	1	3	EMPTY
+400	Produksi dan Nilai Produksi Perikanan Tangkap di Laut Menurut  Kabupaten/Kota dan Jenis Penangkapan di Provinsi  Maluku Utara	2022	10	10	1	2	OK
+401	Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	2022	10	10	1	5	OK
+402	Nilai Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	2022	10	10	1	5	OK
+403	Produksi Kayu Bulat dan Olahan Menurut Jenis Produksi  di Provinsi Maluku Utara (M3)	NULL	0	0	1	1	EMPTY
+404	Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Budidaya di Provinsi Maluku Utara	2022	10	10	1	26	OK
+405	Produksi dan Nilai Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	2022	10	10	1	22	OK
+406	Produksi Perikanan Budidaya Menurut Kabupaten/Kota dan Jenis Kegiatan di Provinsi Maluku Utara	2022	10	10	1	4	OK
+407	Produksi Daging Ternak Menurut Kabupaten/Kota dan Jenis Ternak di Provinsi Maluku Utara (kg)	2023	10	10	1	6	OK
+408	Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Lokasi di Provinsi Maluku Utara	NULL	0	0	1	10	EMPTY
+409	Produksi dan Nilai Produksi Perikanan Tangkap di Perairan Darat Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	NULL	0	0	1	8	EMPTY
+410	Produksi dan Nilai Produksi Perikanan Tangkap di Laut Menurut Kabupaten/Kota dan Komoditas Utama di Provinsi Maluku Utara	2022	10	10	1	12	OK
+411	Produksi dan Nilai Produksi Perikanan Tangkap Menurut Kabupaten/Kota dan Jenis Penangkapan di Provinsi Maluku Utara	2022	10	10	1	6	OK
+412	Luas Panen Tanaman Sayuran Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara (ha) - Hortikultura	2021	10	8	1	14	OK
+413	Luas Areal Tanaman Perkebunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara (ribu ha)	2021	10	10	1	8	OK
+414	Produksi Perkebunan Menurut Kabupaten/Kota dan Jenis Tanaman di Provinsi Maluku Utara (ribu ton)	2021	10	10	1	8	OK
+415	Produksi Jagung 1 dan Kedelai 2 Menurut Kabupaten/Kota di Provinsi Maluku Utara	2015	10	10	1	2	OK
+416	Luas Lahan Sawah dan Bukan Sawah menurut Kabupaten / Kota	2019	10	10	1	2	OK
+417	Daya Terpasang, Produksi, dan Distribusi Listrik PT. PLN (Persero) Menurut Unit Layanan Pelanggan	2023	10	10	1	5	OK
+419	Indeks Kemahalan Konstruksi Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	1	OK
+420	Banyaknya Usaha/Perusahaan, Pekerja, Pendapatan, Pengeluaran, dan Balas Jasa Pekerja pada Usaha/Perusahaan Industri Pengolahan Mikro dan Kecil menurut	2023	10	10	1	7	OK
+421	Banyaknya Usaha/Perusahaan Industri Pengolahan Mikro dan Kecil menurut Kabupaten/Kota dan Kelompok Pekerja di Provinsi Maluku Utara	2023	10	10	1	6	OK
+422	Banyaknya Sampel Usaha, Rata-RataPekerja Tetap, Rata-Rata Hari OrangPekerja Harian, Median Balas Jasa danUpah Pekerja per Tahun, serta MedianNilai Kon	2022	10	10	1	6	OK
+423	Indeks Pembangunan Manusia Menurut Kabupaten/Kota dan Jenis Kelamin (berdasarkan UHH LFSP2020)	2024	10	10	1	2	OK
+424	Indeks Pembangunan Manusia Menurut Kabupaten/Kota dan Jenis Kelamin	2024	10	10	1	2	OK
+425	Jumlah dan Persentase Penduduk Miskin Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	6	OK
+426	Karakteristik Rumah Tangga Miskin dan Rumah Tangga Tidak Miskin di Provinsi Maluku Utara	NULL	0	0	1	4	EMPTY
+427	Indeks Pembangunan Manusia Menurut Kabupaten/Kota di Provinsi Maluku Utara	2023	10	10	1	1	OK
+428	Indeks Pembangunan Manusia Menurut Kabupaten/Kota	2024	10	10	1	1	OK
+429	Garis Kemiskinan, Jumlah, dan Persentase Penduduk Miskin di Provinsi Maluku Utara	NULL	0	0	1	8	EMPTY
+430	Indeks Kedalaman Kemiskinan dan Indeks Keparahan Kemiskinan Menurut Daerah di Provinsi Maluku Utara	NULL	0	0	1	6	EMPTY
+431	[Indeks Ketimpangan Gender-IKG] Indeks Ketimpangan Gender (IKG)	2024	10	10	1	1	OK
+432	[Indeks Pemberdayaan Gender-IDG] Indeks Pemberdayaan Gender (IDG) menurut Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	1	OK
+433	[Indeks Pemberdayaan Gender-IDG] Persentase Tenaga Manager, Profesional, Administrasi, Teknisi menurut Jenis Kelamin dan Kabupaten/Kota di Provinsi Ma	2024	10	10	1	2	OK
+434	[Indeks Pemberdayaan Gender-IDG] Sumbangan dalam Pendapatan Kerja menurut Jenis Kelamin dan Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	2	OK
+435	[Indeks Pemberdayaan Gender-IDG] Persentase Keterlibatan di Parlemen menurut Jenis Kelamin dan Kabupaten/Kota di Provinsi Maluku Utara	2024	10	10	1	2	OK
+436	Indeks Pembangunan Gender Menurut Kabupaten/Kota (berdasarkan UHH LFSP2020)	2024	10	10	1	1	OK
+437	Indeks Pembangunan Gender Menurut Kabupaten/Kota	2024	10	10	1	1	OK
+438	Jumlah Desa/Kelurahan yang Memiliki Kantor Pos Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	1	OK
+439	Banyaknya Desa/Kelurahan menurut Kabupaten/Kota dan Penerimaan Sinyal Internet Telepon Seluler di Provinsi Maluku Utara	2021	10	10	1	4	OK
+440	Jumlah Kendaraan Bermotor Menurut Kabupaten/Kota dan Jenis Kendaraan di Provinsi Maluku Utara (unit)	2023	10	10	1	5	OK
+441	Ringkasan Statistik Konstruksi Perorangan di Provinsi Maluku Utara	NULL	0	0	1	4	EMPTY
+442	Jumlah Perusahaan, Tenaga Kerja, Investasi, dan Nilai  Produksi pada Industri Besar dan Sedang Menurut  Kabupaten/Kota di Provinsi Maluku Utara	2018	10	10	1	4	OK
+443	Pertumbuhan Produksi Industri Manufaktur Besar dan Sedang Triwulanan	NULL	0	0	1	2	EMPTY
+444	Panjang Jalan Menurut Kabupaten/Kota dan Tingkat Kewenangan Pemerintahan di Provinsi Maluku Utara (km)	2024	10	6	1	4	OK
+445	Panjang Jalan Menurut Kabupaten/Kota dan Jenis Permukaan di Provinsi Maluku Utara	2020	10	10	1	3	OK
+446	Panjang Jalan Menurut Kabupaten/Kota dan Kondisi di Provinsi Maluku Utara	2020	10	10	1	4	OK
+447	Jumlah Penumpang di Bandar Udara Baabullah Ternate	NULL	0	0	1	2	EMPTY
+448	Panjang Jalan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2020	10	10	1	1	OK
+449	Tingkat Penghunian Kamar Hotel Bintang	NULL	0	0	1	1	EMPTY
+450	Persentase Penduduk Miskin Menurut Kabupaten/Kota (Persen)	2025	10	10	1	1	OK
+451	Indeks Kemiskinan Menurut Kabupaten/Kota di Provinsi Maluku Utara	2025	10	10	1	2	OK
+452	Jumlah Penduduk Miskin Menurut Kabupaten/Kota	2025	10	10	1	1	OK
+453	Garis Kemiskinan Menurut Kabupaten/Kota Provinsi Maluku Utara (Rupiah/Kapita/Bulan)	2025	10	10	1	1	OK
+454	Jumlah Penduduk Miskin Menurut Perkotaan-Pedesaan	NULL	0	0	1	2	EMPTY
+455	Persentase Penduduk Miskin di Maluku Utara Menurut Perkotaan-Perdesaan	NULL	0	0	1	2	EMPTY
+456	Jumlah dan Persentase Penduduk Miskin	NULL	0	0	1	2	EMPTY
+5	Nikah dan Cerai Menurut Kabupaten/Kota (kejadian) di Provinsi Maluku Utara	2025	10	10	1	4	OK
+6	Pendapatan dan Belanja Pemerintah Desa Menurut Kabupaten/Kota di Provinsi Maluku Utara (rupiah)	2024	9	9	1	2	OK
+7	Ibukota Kabupaten/Kota di Provinsi Maluku Utara	NULL	0	0	1	1	EMPTY
+8	Gini Rasio Menurut Kabupaten/Kota Provinsi Maluku Utara	2025	10	10	1	1	OK
+9	[Proyeksi Hasil LFSP2020] Proyeksi Penduduk Maluku Utara Menurut Kelompok Umur dan Jenis Kelamin	NULL	0	0	1	3	EMPTY

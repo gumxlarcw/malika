@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`responseFormatter snapshots formats comparison response 1`] = `
+"📊 **Inflasi YoY**
+📅 Periode: Desember 2024
+
+• Maluku Utara: **3,1** % (↓0.20%)
+• Nasional: **2,8** % (↑0.10%)
+
+💡 Inflasi daerah masih sejalan dengan nasional."
+`;
+
+exports[`responseFormatter snapshots formats data response 1`] = `
+"📊 **Kemiskinan Maluku Utara**
+📅 Periode: 2024
+
+Kemiskinan menurun tipis dibanding tahun sebelumnya.
+
+• Kota Ternate: **12,34** %
+• Kota Tidore Kepulauan: **10,21** %
+
+📌 Sumber: BPS"
+`;
+
+exports[`responseFormatter snapshots formats not found response 1`] = `
+"Data belum tersedia.
+
+Mungkin Anda mencari:
+• Kemiskinan 2024
+• Inflasi 2024
+
+📱 Untuk informasi lebih lanjut, silakan hubungi kami via WhatsApp."
+`;

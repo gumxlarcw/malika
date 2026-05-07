@@ -1,0 +1,593 @@
+/* Assistant UI styles for MALIKA chat
+ * 
+ * Key features:
+ * - iOS Safari compatible scrolling using absolute positioning
+ * - GPU-accelerated scroll container
+ * - Safe area support for notched devices
+ * - Smooth animations for messages
+ * - Thinking indicator with status text
+ * - Streaming text animations
+ */
+
+/* ===========================================
+   BUBBLE STYLES (migrated from @chatui/core)
+   =========================================== */
+.Bubble {
+  position: relative;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.Bubble.text,
+.Bubble.richtext {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.dark .Bubble.text,
+.dark .Bubble.richtext {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
+.Bubble.text p,
+.Bubble.richtext p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.Bubble.richtext a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.dark .Bubble.richtext a {
+  color: #60a5fa;
+}
+
+/* Neutralise .Bubble inside user messages so the brand-500 wrapper is the only visible shape */
+.malika-user-message .Bubble,
+.malika-user-message .Bubble.text,
+.malika-user-message .Bubble.richtext {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Neutralise .Bubble inside assistant messages — the outer MalikaAssistantMessage
+   wrapper already provides bg-white/bg-gray-800, rounded-[20px], px-4 py-3.
+   Without this, the inner .Bubble adds a SECOND grey bg + padding → overlapping layers. */
+.malika-assistant-message .Bubble,
+.malika-assistant-message .Bubble.text,
+.malika-assistant-message .Bubble.richtext {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ===========================================
+   PREVENT BLUE FOCUS OUTLINES ON CHAT BUBBLES
+   Override the global :focus-visible styles
+   =========================================== */
+.malika-user-message,
+.malika-assistant-message,
+.malika-user-message *,
+.malika-assistant-message *,
+.malika-messages,
+.malika-messages *,
+.Bubble,
+.Bubble * {
+  outline: none !important;
+}
+
+/* More specific overrides for :focus-visible */
+.malika-user-message:focus-visible,
+.malika-assistant-message:focus-visible,
+.malika-user-message *:focus-visible,
+.malika-assistant-message *:focus-visible,
+.malika-messages:focus-visible,
+.malika-messages *:focus-visible,
+.Bubble:focus-visible,
+.Bubble *:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
+/* For interactive elements inside bubbles, use subtle underline instead */
+.malika-assistant-message a:focus-visible {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+}
+
+.malika-assistant-message button:focus-visible {
+  opacity: 0.8 !important;
+}
+
+/* Main thread container — pure flex layout (no absolute positioning)
+   This is more reliable than position:absolute on iOS Safari. */
+.malika-thread {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scroll viewport - the only scrollable element */
+.malika-viewport {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  /* GPU acceleration for smoother scrolling */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  /* Relative so welcome placeholder can center absolutely */
+  position: relative;
+}
+
+/* Message animations */
+.malika-user-message,
+.malika-assistant-message {
+  animation: malikaSlideIn 0.2s ease-out;
+}
+
+@keyframes malikaSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Typing indicator bouncing dots */
+.malika-dot {
+  animation: malikaBounce 1.4s infinite ease-in-out both;
+}
+
+@keyframes malikaBounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===========================================
+   THINKING BUBBLE WITH STATUS TEXT
+   =========================================== */
+.malika-thinking-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.malika-status-text {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  animation: malikaStatusFade 0.3s ease-out;
+  white-space: nowrap;
+}
+
+.dark .malika-status-text {
+  color: #9ca3af;
+}
+
+@keyframes malikaStatusFade {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Thinking bubble subtle pulse */
+.malika-thinking-bubble {
+  animation: malikaPulse 2s infinite ease-in-out;
+}
+
+@keyframes malikaPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* ===========================================
+   STREAMING TEXT ANIMATION
+   =========================================== */
+.malika-streaming {
+  animation: malikaStreamIn 0.15s ease-out;
+}
+
+@keyframes malikaStreamIn {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Smooth height transition for growing content */
+.malika-growing-content {
+  transition: max-height 0.2s ease-out;
+  overflow: hidden;
+}
+
+/* ===========================================
+   ERROR BUBBLE
+   =========================================== */
+.malika-error-bubble {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  animation: malikaSlideIn 0.2s ease-out;
+}
+
+.dark .malika-error-bubble {
+  background-color: rgba(127, 29, 29, 0.2);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: #fca5a5;
+}
+
+.malika-error-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.malika-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s;
+}
+
+.malika-retry-btn:hover {
+  background-color: #2563eb;
+}
+
+.malika-retry-btn:active {
+  transform: scale(0.97);
+}
+
+.malika-retry-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.malika-dismiss-btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.malika-dismiss-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.dark .malika-dismiss-btn {
+  border-color: #4b5563;
+  color: #9ca3af;
+}
+
+.dark .malika-dismiss-btn:hover {
+  background-color: #374151;
+}
+
+/* ===========================================
+   THINKING SECTION (Collapsible AI Reasoning)
+   =========================================== */
+.malika-thinking-section {
+  animation: malikaSlideIn 0.2s ease-out;
+}
+
+.malika-thinking-section button {
+  outline: none !important;
+}
+
+.malika-thinking-section button:focus-visible {
+  ring: 2px;
+  ring-color: rgba(251, 191, 36, 0.5);
+}
+
+.malika-thinking-section pre {
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* Quick replies horizontal scroll */
+.malika-quick-replies {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.malika-quick-replies::-webkit-scrollbar {
+  display: none;
+}
+
+/* Footer area (chips + composer) – pinned below scroll viewport */
+.malika-footer {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  background-color: white;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+  /* Block vertical panning so swipes don't move the chat viewport */
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+/* Re-enable touch for interactive children */
+.malika-footer textarea,
+.malika-footer button,
+.malika-footer a,
+.malika-footer input {
+  touch-action: manipulation;
+}
+
+/* Chips need horizontal scroll */
+.malika-footer .malika-quick-replies {
+  touch-action: pan-x;
+}
+
+.dark .malika-footer {
+  background-color: #0f172a;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* Mobile-specific styles */
+@media (max-width: 1023px) {
+  /*
+   * position:fixed is the only reliable way to prevent iOS Safari from
+   * scrolling the whole page.  Anchor between admin header (60px top)
+   * and bottom nav.
+   *
+   * Safari/iOS: env(safe-area-inset-bottom) works correctly + 2rem
+   *   clears the bottom nav without overlap.
+   * Other browsers (Chrome, Firefox, Android): env() returns 0 and
+   *   the viewport doesn't shift, so we need the full nav height (4rem).
+   *
+   * Classes set by ChatPageClient:
+   *   .chat-ios    → Safari / iOS devices
+   *   .chat-non-ios → Chrome, Firefox, Android, etc.
+   */
+  .chat-page-root.chat-ios {
+    position: fixed !important;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+    height: auto !important;
+    max-height: none;
+    overflow: hidden;
+    z-index: 30;
+  }
+
+  .chat-page-root.chat-non-ios {
+    position: fixed !important;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: calc(4rem + 2px); /* h-16 bottom nav (4rem=64px) + 2px safety margin */
+    height: auto !important;
+    max-height: none;
+    overflow: hidden;
+    z-index: 30;
+  }
+
+  .malika-thread {
+    min-height: 0;
+    overflow: hidden;
+  }
+  
+  .malika-viewport {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .malika-footer {
+    padding-bottom: 0;
+  }
+  
+  .malika-composer {
+    padding-bottom: 0.5rem;
+    margin-bottom: var(--keyboard-h, 0px);
+    transition: margin-bottom 0.1s ease-out;
+  }
+}
+
+/* Tablet-specific layout improvements (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .malika-messages {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  .malika-composer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Dark mode adjustments */
+.dark .malika-thread {
+  background-color: #0f172a;
+}
+
+.dark .malika-composer {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+/* Ensure proper text rendering */
+.malika-messages {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Welcome placeholder — absolutely centered in viewport */
+.malika-welcome-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  max-width: 320px;
+  padding: 1.5rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===========================================
+   DESKTOP-SPECIFIC POLISH (lg: 1024px+)
+   =========================================== */
+@media (min-width: 1024px) {
+  /* Use full width on desktop - no max-width constraint */
+  .malika-messages {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  /* Composer uses full width with comfortable padding */
+  .malika-composer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  /* Quick replies use full width */
+  .malika-quick-replies {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  /* Smooth scrollbar for desktop viewport */
+  .malika-viewport {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .malika-viewport::-webkit-scrollbar {
+    width: 6px;
+  }
+  .malika-viewport::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .malika-viewport::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+  }
+  .malika-viewport::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+  .dark .malika-viewport {
+    scrollbar-color: #334155 transparent;
+  }
+  .dark .malika-viewport::-webkit-scrollbar-thumb {
+    background-color: #334155;
+  }
+  .dark .malika-viewport::-webkit-scrollbar-thumb:hover {
+    background-color: #475569;
+  }
+
+  /* Desktop footer subtle top border without heavy shadow */
+  .malika-footer {
+    box-shadow: none;
+    border-top: 1px solid #e5e7eb;
+  }
+  .dark .malika-footer {
+    box-shadow: none;
+    border-top: 1px solid #334155;
+  }
+
+  /* GPU compositing for smoother desktop animations */
+  .process-indicator-wrapper {
+    will-change: opacity;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  /* Welcome placeholder larger on desktop */
+  .malika-welcome-placeholder {
+    max-width: 400px;
+  }
+  .malika-welcome-placeholder h3 {
+    font-size: 1.125rem;
+  }
+  .malika-welcome-placeholder p {
+    max-width: 22rem;
+  }
+
+  /* Sidebar thread list scrollbar */
+  .malika-sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .malika-sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .malika-sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .malika-sidebar-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 2px;
+  }
+  .malika-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+  .dark .malika-sidebar-scroll {
+    scrollbar-color: #334155 transparent;
+  }
+  .dark .malika-sidebar-scroll::-webkit-scrollbar-thumb {
+    background-color: #334155;
+  }
+}

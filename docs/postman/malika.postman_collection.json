@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "Malika API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"secret\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "GET /search/intent",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search/intent?q=inflasi",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "intent"],
+              "query": [{ "key": "q", "value": "inflasi" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "POST /chat/threads",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-malika-uid", "value": "postman-sample" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Statistik 2024\"\n}"
+            },
+            "url": "{{baseUrl}}/chat/threads"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Datasource",
+      "item": [
+        {
+          "name": "GET /datasource",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/datasource"
+          }
+        }
+      ]
+    }
+  ]
+}
