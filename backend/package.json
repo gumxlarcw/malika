@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "ai": "^6.0.176",
     "ajv": "^8.17.1",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
