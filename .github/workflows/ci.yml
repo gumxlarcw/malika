@@ -1,6 +1,8 @@
 name: CI
 
-on:
+# `on:` MUST be quoted — YAML 1.1 treats `on` as boolean `true` keyword,
+# which makes GitHub Actions fail to find the workflow trigger.
+"on":
   push:
     branches: [ main, master ]
   pull_request:
