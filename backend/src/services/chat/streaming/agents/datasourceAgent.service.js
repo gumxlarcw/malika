@@ -200,11 +200,33 @@ async function _loadCandidatesById(ids) {
       where: { id: ids },
       attributes: ['id', 'name', 'description', 'type', 'aliases', 'category', 'visible', 'bps_web_url'],
     });
-    return sources.map(ds => ({
+    const baseCandidates = sources.map(ds => ({
       id: ds.id, name: ds.name, description: ds.description,
       type: ds.type, aliases: ds.aliases || null, category: ds.category || null, score: 100,
       bps_web_url: ds.bps_web_url || null,
     }));
+
+    // Enrich with indicator_meta (unit, definition, footnote legend, attribution, etc.)
+    // — load in one bulk SELECT to avoid N+1. Failure-tolerant: if metadata lookup
+    // throws or returns nothing, candidates keep base shape (backward compat).
+    try {
+      const metaLookup = require('../../../petaTematik/metadataLookup.service');
+      const metaMap = await metaLookup.getIndikatorMetaBulk(baseCandidates.map(c => c.id));
+      for (const c of baseCandidates) {
+        const m = metaMap.get(c.id);
+        if (!m) continue;
+        c.unit = m.unit_id ?? null;
+        c.decimal_places = m.decimal_places ?? null;
+        c.subject_label = m.subject_label ?? null;
+        c.responsible_party = m.responsible_party ?? null;
+      }
+    } catch (e) {
+      // Metadata enrichment is additive — log and continue with base shape.
+      const logger = require('../../../../utils/logger');
+      logger?.warn?.({ err: e.message }, '[datasourceAgent] indicator_meta enrichment failed');
+    }
+
+    return baseCandidates;
   } catch { return []; }
 }
 
