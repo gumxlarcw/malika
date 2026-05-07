@@ -3022,6 +3022,7 @@ async function stageStream(ctx, svc) {
             {
               const toolStatusMap = {
                 search_data: 'Mencari indikator statistik...',
+                search_indicators_semantic: 'Mencari indikator berdasarkan makna...',
                 get_data_preview: 'Mengambil data tabel...',
                 search_knowledge: 'Mencari dokumen BPS...',
                 search_document_table: 'Mencari tabel dalam dokumen...',
@@ -3645,6 +3646,13 @@ function _summarizeToolResult(toolName, result) {
       const n = result.count || result.candidates?.length || 0;
       const top = result.candidates?.[0]?.name;
       return `${n} indikator ditemukan${top ? ` · ${top.slice(0, 50)}` : ''}${result.cached ? ' (cache)' : ''}`;
+    }
+    case 'search_indicators_semantic': {
+      const n = result.count || result.results?.length || 0;
+      const top = result.results?.[0];
+      return top
+        ? `${n} hasil semantic · ${(top.title || '').slice(0, 50)} (${(top.score || 0).toFixed(2)})`
+        : `${n} hasil semantic`;
     }
     case 'get_data_preview': {
       const rows = result.rows || 0;

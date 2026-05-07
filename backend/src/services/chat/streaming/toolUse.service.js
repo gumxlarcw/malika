@@ -82,6 +82,7 @@ function formatKnowledgeDoc(d) {
 const TOOL_INSTRUCTIONS = `## PENGGUNAAN TOOLS
 Kamu memiliki akses ke tools berikut:
 - search_data: Cari datasource/indikator statistik BPS berdasarkan kata kunci
+- search_indicators_semantic: Cari indikator berdasarkan kesamaan makna (semantic). Pakai ketika search_data gagal atau untuk discovery indikator terkait
 - get_data_preview: Ambil data tabel dari datasource tertentu (perlu source_id dari search_data)
 - search_knowledge: Cari dokumen BRS (Berita Resmi Statistik) dan Publikasi BPS
 - search_document_table: Cari dan ekstrak TABEL SPESIFIK dari dokumen yang sudah ada di konteks (gunakan doc_id)
@@ -208,6 +209,65 @@ function buildTools(ctx, svc) {
       } catch (error) {
         logger.warn({ error: error.message }, 'search_data tool failed');
         return { found: false, error: error.message };
+      }
+    },
+  });
+
+  // ── Tool 1b: Semantic indicator search ────────────────────────────────
+  // Direct cosine similarity over `indicator_meta.embedding` (Gemini 768-dim).
+  // Use case: discovering related/adjacent indicators by *meaning*, not by
+  // keyword overlap. search_data is preferred for typical lookups; this tool
+  // shines when the user asks "indikator apa lagi tentang X" or wants to
+  // explore the BPS catalog semantically.
+  tools.search_indicators_semantic = tool({
+    description:
+      'Cari indikator berdasarkan kesamaan makna (semantic similarity) dari nama, definisi, dan metadata BPS. ' +
+      'Berbeda dengan search_data yang pakai keyword + intent: tool ini langsung match dengan vector embedding ' +
+      'dari indicator_meta.flat_text. Gunakan untuk: discovery indikator terkait, eksplorasi katalog, ' +
+      'atau ketika search_data tidak menemukan hasil yang relevan. ' +
+      'Returns: array of {source_id, source_type, title, unit, subject, score} sorted by similarity descending.',
+    inputSchema: jsonSchema({
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Frasa pencarian, e.g. "tingkat pengangguran", "luas hutan dan konservasi", "indeks pembangunan manusia"',
+        },
+        limit: {
+          type: 'number',
+          description: 'Jumlah maksimal hasil (default 5, max 20)',
+        },
+        type: {
+          type: 'string',
+          enum: ['static', 'dynamic', 'interop', 'exim'],
+          description: 'Filter opsional berdasarkan tipe sumber data BPS. Kosongkan untuk semua tipe.',
+        },
+        min_score: {
+          type: 'number',
+          description: 'Threshold cosine similarity 0-1 (default 0.5). Score >= 0.8 = sangat relevan, 0.6-0.8 = relevan, 0.4-0.6 = mirip-mirip.',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    }),
+    execute: async ({ query, limit, type, min_score }) => {
+      try {
+        const metaLookup = require('../../petaTematik/metadataLookup.service');
+        const results = await metaLookup.semanticSearchIndikator({
+          query,
+          limit: Math.min(20, limit || 5),
+          type: type || null,
+          minScore: typeof min_score === 'number' ? min_score : 0.5,
+        });
+        return {
+          found: results.length > 0,
+          count: results.length,
+          query,
+          results,
+        };
+      } catch (e) {
+        logger.warn({ err: e.message, query }, 'search_indicators_semantic failed');
+        return { found: false, count: 0, error: e.message };
       }
     },
   });
