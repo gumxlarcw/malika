@@ -51,7 +51,19 @@ textarea:focus-visible,
   outline-color: #60a5fa;
 }
 
-/* Reduced motion preference */
+/* Reduced motion preference.
+ *
+ * Two-pass rule: first kill all decorative motion globally, then re-enable
+ * the small set of *functional* animations that communicate state (loading
+ * spinners, skeleton chips, typing indicators). Without this exemption,
+ * desktop users with OS-level reduce-motion (macOS Accessibility -> Display
+ * -> Reduce motion, Windows Visual Effects off) see static skeleton bars
+ * while the chat is fetching — looks frozen/broken. Mobile defaults to no
+ * preference so they're unaffected either way.
+ *
+ * Re-enabled animations use slower durations than default (gentler on
+ * vestibular sensitivity) but remain visibly animated.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -59,6 +71,25 @@ textarea:focus-visible,
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Loading-state indicators — must remain animated to convey state */
+  .animate-spin {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .animate-pulse {
+    animation-duration: 2.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .animate-bounce {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .malika-dot,
+  .Typing-dot {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 
