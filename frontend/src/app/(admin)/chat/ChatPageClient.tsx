@@ -802,84 +802,10 @@ export default function ChatPageClient() {
           updateMsg(assistantStreamId, { content: { text: assistantText } });
         },
 
-        onStatus: (data) => {
-          const statusText = String(data?.message || data?.stage || "");
-          if (statusText) setTypingStatus(statusText);
-          // Track pipeline process steps for live indicator
-          if (data?.stage && data?.message) {
-            const now = Date.now();
-            // Push step via unified context (updates both state + shadow ref)
-            pushStep({ message: data.message, stage: data.stage!, status: "active" as const, startedAt: now });
-          }
-        },
-
-        onStatusDetail: (data) => {
-          // Attach detail text to the matching step (by stage name)
-          if (data?.stage && data?.detail) {
-            // Update step detail via unified context (with optional resultStatus)
-            pushStepDetail(data.stage, data.detail, data.resultStatus);
-          }
-        },
-
-        onToolCall: (data) => {
-          if (data?.toolName) {
-            pushToolCall(data);
-          }
-        },
-
-        onToolResult: (data) => {
-          if (data?.toolName) {
-            pushToolResult(data);
-          }
-        },
-
-        onThinking: (data) => {
-          if (!data?.step || !mountedRef.current) return;
-
-          // ── Extended Thinking: raw reasoning deltas ──
-          if (data.step === "thinking-delta" && data.content) {
-            reasoningBufferRef.current += data.content;
-            setIsThinkingActive(true);
-            if (reasoningRafRef.current === null) {
-              reasoningRafRef.current = requestAnimationFrame(() => {
-                reasoningRafRef.current = null;
-                if (!mountedRef.current) return;
-                setReasoningText(reasoningBufferRef.current);
-              });
-            }
-            return;
-          }
-
-          // ── Pipeline steps → natural text (separate from reasoning) ──
-          {
-            const line = buildPipelineLine(data);
-            if (line.trim()) {
-              pipelineTextRef.current += (pipelineTextRef.current ? "\n" : "") + line.trim();
-              setIsThinkingActive(true);
-              if (pipelineRafRef.current === null) {
-                pipelineRafRef.current = requestAnimationFrame(() => {
-                  pipelineRafRef.current = null;
-                  if (!mountedRef.current) return;
-                  setPipelineText(pipelineTextRef.current);
-                });
-              }
-            }
-          }
-
-          // Still track thinking items for persistence (independent RAF)
-          const item: ThinkingItem = data;
-          thinkingBatchRef.current.push(item);
-          if (thinkingItemsRafRef.current === null) {
-            thinkingItemsRafRef.current = requestAnimationFrame(() => {
-              const batch = thinkingBatchRef.current;
-              thinkingBatchRef.current = [];
-              thinkingItemsRafRef.current = null;
-              if (!mountedRef.current || batch.length === 0) return;
-              setThinkingItems((prev) => [...prev, ...batch]);
-            });
-          }
-          setShowThinking(true);
-        },
+        // Note: V2 pipeline events (status, status_detail, tool_call, tool_result,
+        // thinking) are no longer emitted by the live backend (cleanup commit 9dc176f).
+        // Their handlers were removed; persisted thinkingItems on saved messages
+        // still replay via the ui.thinkingItems path elsewhere in this file.
 
         onDone: (data) => {
           const finalText = String(data?.full_text || "");
@@ -1022,24 +948,6 @@ export default function ChatPageClient() {
               streamingUiMeta = { ...streamingUiMeta, suggestions: llmSuggestionsRef.current };
             }
             setLastAssistantUi(streamingUiMeta);
-          }
-        },
-
-        onSuggestionsUpdate: (data) => {
-          // LLM-generated suggestions arrived
-          setSuggestionsLoading(false);
-          if (suggestionsTimeoutRef.current) clearTimeout(suggestionsTimeoutRef.current);
-          if (data?.suggestions && Array.isArray(data.suggestions)) {
-            // Persist in ref so refreshMessagesSilently won't overwrite
-            llmSuggestionsRef.current = data.suggestions;
-            // Sync local var so onDone uses the merged version
-            if (streamingUiMeta) {
-              streamingUiMeta = { ...streamingUiMeta, suggestions: data.suggestions };
-            }
-            setLastAssistantUi((prev) => {
-              if (!prev) return { v: 1, suggestions: data.suggestions } as MalikaUiMetaV1;
-              return { ...prev, suggestions: data.suggestions };
-            });
           }
         },
 

@@ -15,26 +15,25 @@
 import { CHAT_API_BASE } from "@/lib/chatConstants";
 import type { ThinkingItem } from "@/types/chat";
 
-/** Re-export for backward compatibility — callers importing ThinkingEvent still work */
+/** Re-export retained for backward compatibility — context state types still reference it. */
 export type ThinkingEvent = ThinkingItem;
 
 /**
- * SSE events emitted by the backend.
- * The transport parses these and maps them to AI SDK message parts.
+ * SSE events emitted by the live backend.
+ * The V2 refactor's richer events (thinking, status, status_detail, tool_call,
+ * tool_result, suggestions_update) were never wired into the live pipeline; the
+ * backend dead code was removed in commit 9dc176f. The types below were trimmed
+ * accordingly. ToolCallEvent/ToolResultEvent are kept because ChatProcessContext
+ * still references them as state shape (state remains permanently empty).
+ * See docs/workspace/chat-pipeline.md.
  */
 export type SSEEventType =
   | "text"
   | "chunk"    // V1 legacy format (greeting handler)
-  | "thinking"
-  | "status"
   | "intent"
   | "malika_ui"
-  | "suggestions_update"
   | "user_saved"
   | "thread_updated"
-  | "status_detail"
-  | "tool_call"
-  | "tool_result"
   | "done"
   | "error"
   | "heartbeat";
@@ -44,7 +43,7 @@ export interface SSEEvent {
   data: any;
 }
 
-/** Payload for tool_call SSE event */
+/** Retained for ChatProcessContext state shape — never populated at runtime. */
 export interface ToolCallEvent {
   toolName: string;
   callId: string;
@@ -52,7 +51,7 @@ export interface ToolCallEvent {
   message: string;
 }
 
-/** Payload for tool_result SSE event */
+/** Retained for ChatProcessContext state shape — never populated at runtime. */
 export interface ToolResultEvent {
   toolName: string;
   callId: string | null;
@@ -67,12 +66,6 @@ export interface StreamCallbacks {
   onThreadUpdated?: (data: { title: string; topics?: string }) => void;
   onIntent?: (data: IntentEvent) => void;
   onMalikaUi?: (data: any) => void;
-  onSuggestionsUpdate?: (data: { suggestions: string[] }) => void;
-  onStatus?: (data: { message: string; stage?: string; step?: number; totalSteps?: number }) => void;
-  onStatusDetail?: (data: { stage: string; detail: string; resultStatus?: "ok" | "warn" | "empty" }) => void;
-  onToolCall?: (data: ToolCallEvent) => void;
-  onToolResult?: (data: ToolResultEvent) => void;
-  onThinking?: (data: ThinkingEvent) => void;
   onText?: (data: { content: string }) => void;
   onDone?: (data: { full_text: string }) => void;
   onError?: (data: { message: string }) => void;
@@ -114,13 +107,8 @@ export function* parseSSEEvents(text: string): Generator<SSEEvent> {
       } catch (e) {
         // Log malformed JSON for debugging
         console.warn('[chatTransport] Malformed SSE JSON:', eventType, dataStr.slice(0, 200));
-        if (eventType === 'thinking') {
-          // Emit a fallback item so timeline isn't silently broken
-          yield { event: eventType, data: { content: dataStr.slice(0, 100), step: 'parse-error' } };
-        } else {
-          // Emit as error event so callers get notified of data loss
-          yield { event: "error" as SSEEventType, data: { message: `Malformed ${eventType} event`, event: eventType } };
-        }
+        // Emit as error event so callers get notified of data loss
+        yield { event: "error" as SSEEventType, data: { message: `Malformed ${eventType} event`, event: eventType } };
       }
     }
   }
@@ -206,21 +194,6 @@ export function streamMessage(
               case "intent":
                 callbacks.onIntent?.(evt.data);
                 break;
-              case "status":
-                callbacks.onStatus?.(evt.data);
-                break;
-              case "status_detail":
-                callbacks.onStatusDetail?.(evt.data);
-                break;
-              case "tool_call":
-                callbacks.onToolCall?.(evt.data);
-                break;
-              case "tool_result":
-                callbacks.onToolResult?.(evt.data);
-                break;
-              case "thinking":
-                callbacks.onThinking?.(evt.data);
-                break;
               case "text":
                 callbacks.onText?.(evt.data);
                 break;
@@ -230,9 +203,6 @@ export function streamMessage(
                 break;
               case "malika_ui":
                 callbacks.onMalikaUi?.(evt.data);
-                break;
-              case "suggestions_update":
-                callbacks.onSuggestionsUpdate?.(evt.data);
                 break;
               case "done":
                 callbacks.onDone?.(evt.data);
@@ -248,7 +218,7 @@ export function streamMessage(
         }
       }
 
-      // Process remaining buffer — handle ALL event types (not just text/done)
+      // Process remaining buffer
       if (buffer.trim()) {
         for (const evt of parseSSEEvents(buffer + "\n\n")) {
           switch (evt.event) {
@@ -263,24 +233,6 @@ export function streamMessage(
               break;
             case "malika_ui":
               callbacks.onMalikaUi?.(evt.data);
-              break;
-            case "suggestions_update":
-              callbacks.onSuggestionsUpdate?.(evt.data);
-              break;
-            case "status":
-              callbacks.onStatus?.(evt.data);
-              break;
-            case "status_detail":
-              callbacks.onStatusDetail?.(evt.data);
-              break;
-            case "tool_call":
-              callbacks.onToolCall?.(evt.data);
-              break;
-            case "tool_result":
-              callbacks.onToolResult?.(evt.data);
-              break;
-            case "thinking":
-              callbacks.onThinking?.(evt.data);
               break;
             case "error":
               callbacks.onError?.(evt.data);
