@@ -2,14 +2,6 @@ const chatService = require('../services/chat/chat.service');
 const streamingService = require('../services/chat/streaming.service');
 const threadSuggestionsService = require('../services/chat/threadSuggestions.service');
 
-const DEFAULT_SUGGESTIONS = [
-  'Data penduduk',
-  'Data kemiskinan',
-  'Data inflasi',
-  'Data pengangguran',
-  'Data PDRB',
-];
-
 async function listThreads(req, res, next) {
   try {
     const ownerId = chatService.getOwnerIdFromReq(req);
@@ -114,9 +106,10 @@ async function streamMessage(req, res, next) {
  * Get context-aware suggestion chips for a thread.
  * GET /chat/threads/:id/suggestions
  *
- * Always returns 200 with `{ ok: true, suggestions: [...] }` — falls back
- * to default chips when LLM generation fails or is disabled, so the UI
- * never has to handle errors.
+ * Returns 200 with `{ ok: true, suggestions: [...] }` only when the LLM
+ * generated real chips. On LLM failure / empty / not ready, returns 503
+ * with `{ ok: false, error: 'suggestions_unavailable' }` so the UI can
+ * retry or stay in loading state — no hardcoded fallback chips.
  */
 async function getThreadSuggestions(req, res, next) {
   try {
@@ -127,14 +120,12 @@ async function getThreadSuggestions(req, res, next) {
     }
 
     const generated = await threadSuggestionsService.generateForThread(threadId, ownerId);
-    const suggestions = Array.isArray(generated) && generated.length > 0
-      ? generated
-      : DEFAULT_SUGGESTIONS;
-
-    res.json({ ok: true, suggestions });
+    if (Array.isArray(generated) && generated.length > 0) {
+      return res.json({ ok: true, suggestions: generated });
+    }
+    return res.status(503).json({ ok: false, error: 'suggestions_unavailable' });
   } catch (e) {
-    // Never propagate — endpoint is best-effort
-    res.json({ ok: true, suggestions: DEFAULT_SUGGESTIONS });
+    return res.status(503).json({ ok: false, error: 'suggestions_unavailable' });
   }
 }
 

@@ -565,26 +565,17 @@ function isGreeting(raw) {
  * - For existing conversation: suggest follow-up based on previous topic
  */
 function buildGreetingSuggestions(historyArray, conversationTopic) {
-  // Default suggestions for new chat (popular data topics)
-  const newChatSuggestions = [
-    'Data penduduk',
-    'Data kemiskinan',
-    'Data inflasi',
-    'Data pengangguran',
-    'Data PDRB',
-  ];
-  
-  // If there's a previous topic, suggest follow-ups
+  // Only emit contextual suggestions. When there's no conversationTopic the
+  // chips stay empty so the UI shows its loading skeleton until the
+  // /chat/threads/:id/suggestions endpoint returns real LLM-generated chips.
   if (conversationTopic) {
-    const topicSuggestions = [
+    return [
       `Lanjutkan tentang ${conversationTopic}`,
       `Data ${conversationTopic} terbaru`,
       `${conversationTopic} menurut kabupaten/kota`,
     ];
-    return [...topicSuggestions.slice(0, 2), ...newChatSuggestions.slice(0, 3)];
   }
-  
-  return newChatSuggestions;
+  return [];
 }
 
 /**
@@ -622,12 +613,9 @@ function buildContextualSuggestions({
       suggestions.push('Syarat pengajuan?');
       suggestions.push('Format surat permohonan?');
       suggestions.push('Kontak BPS Malut');
-    } else {
-      // Generic knowledge suggestions
-      suggestions.push('Layanan BPS lainnya');
-      suggestions.push('Kontak BPS Malut');
-      suggestions.push('Data penduduk');
     }
+    // No topic match → return [] (UI keeps loading state until LLM endpoint
+    // returns real suggestions)
     return suggestions.slice(0, 3);
   }
   
@@ -652,13 +640,10 @@ function buildContextualSuggestions({
     if (conversationTopic) {
       suggestions.push(`${conversationTopic} menurut kabupaten/kota`);
     }
-  } else {
-    // No candidates, suggest popular topics
-    suggestions.push('Data penduduk');
-    suggestions.push('Data kemiskinan');
-    suggestions.push('Data inflasi');
   }
-  
+  // No candidates and no preview → return [] (UI keeps loading state until
+  // /chat/threads/:id/suggestions endpoint returns real LLM-generated chips)
+
   return suggestions.slice(0, 5);
 }
 

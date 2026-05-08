@@ -557,31 +557,53 @@ export default function ChatPageClient() {
   }, [activeThreadId, apiBase, headers, malikaUid, resetList]);
 
   /**
-   * Fetch context-aware suggestions for a loaded thread (fire-and-forget).
-   * Shows skeleton loading, then populates chips.
+   * Fetch context-aware suggestions for a loaded thread.
+   *
+   * The backend returns 200 only when the LLM produced real chips; on
+   * unavailable/error it returns 503. We retry on 503 with exponential
+   * backoff (4 attempts, ~30s total) and KEEP the loading skeleton
+   * visible the whole time — no hardcoded fallback chips. If all attempts
+   * fail, loading stops and chip area stays empty.
    */
   const fetchThreadSuggestions = useCallback(
     async (threadId: number) => {
       if (!malikaUid) return;
-      setSuggestionsLoading(true);
-      try {
-        const res = await fetch(`${apiBase}/threads/${threadId}/suggestions`, {
-          method: "GET",
-          headers,
-        });
-        const json = await res.json();
-        if (res.ok && json?.ok && Array.isArray(json.suggestions) && json.suggestions.length > 0) {
-          llmSuggestionsRef.current = json.suggestions;
-          setLastAssistantUi((prev) => {
-            if (!prev) return { v: 1, suggestions: json.suggestions } as MalikaUiMetaV1;
-            return { ...prev, suggestions: json.suggestions };
-          });
-        }
-      } catch {
-        // Silent fail — chips will fall back to defaults
-      } finally {
-        setSuggestionsLoading(false);
+      // Take ownership of the loading state — clear any short safety timeout
+      // set elsewhere so retries get to run to completion.
+      if (suggestionsTimeoutRef.current) {
+        clearTimeout(suggestionsTimeoutRef.current);
+        suggestionsTimeoutRef.current = null;
       }
+      setSuggestionsLoading(true);
+
+      const delays = [0, 3000, 8000, 15000]; // attempt offsets in ms
+      for (let attempt = 0; attempt < delays.length; attempt++) {
+        if (delays[attempt] > 0) {
+          await new Promise((r) => setTimeout(r, delays[attempt]));
+        }
+        try {
+          const res = await fetch(`${apiBase}/threads/${threadId}/suggestions`, {
+            method: "GET",
+            headers,
+          });
+          const json = await res.json().catch(() => null);
+          if (res.ok && json?.ok && Array.isArray(json.suggestions) && json.suggestions.length > 0) {
+            llmSuggestionsRef.current = json.suggestions;
+            setLastAssistantUi((prev) => {
+              if (!prev) return { v: 1, suggestions: json.suggestions } as MalikaUiMetaV1;
+              return { ...prev, suggestions: json.suggestions };
+            });
+            setSuggestionsLoading(false);
+            return;
+          }
+          // 503 / non-ok / empty → fall through to next retry
+        } catch {
+          // network error → fall through to next retry
+        }
+      }
+      // All attempts exhausted — drop loading without hardcoded chips so the
+      // UI shows the empty state rather than misleading defaults.
+      setSuggestionsLoading(false);
     },
     [apiBase, headers, malikaUid]
   );
@@ -881,6 +903,14 @@ export default function ChatPageClient() {
           // replaced by DB IDs → React unmounts/remounts all bubbles).
           // DB state is canonical for page reloads; live state is fine here.
           loadThreads();
+
+          // If the streamed malika_ui didn't include suggestions (or only
+          // generic ones), fetch LLM-generated context-aware chips. The
+          // skeleton stays visible until they arrive.
+          const streamedSuggestions = streamingUiMeta?.suggestions;
+          if (!Array.isArray(streamedSuggestions) || streamedSuggestions.length === 0) {
+            fetchThreadSuggestions(threadId);
+          }
 
           // Thank-you rating check
           if (pendingThankYouRef.current && !hasExistingFeedback) {
