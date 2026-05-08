@@ -26,6 +26,16 @@ fixed. The phantom workflow now intercepts triggers but always reports startup_f
 - `gh api -X DELETE .../workflows/272866782` → `404: Not Found`
 - Renaming workflow files (forces re-registration, but phantom still fires alongside)
 - Adding totally-new workflow files (phantom takes precedence over them)
+- Fixing real workflow files so they're parser-valid (phantom now intercepts them entirely — `cd.yml` validates locally and on GitHub's content API but `workflow_dispatch` returns `startup_failure` with zero jobs created)
+
+### Pathology has worsened
+
+As of 2026-05-08, the phantom appears to be intercepting ALL workflow runs, not just running alongside them:
+
+- Push to `main` after commit `231b9de` (cd.yml fix): only the phantom fires; neither `cd.yml` nor `checks.yml` show new runs.
+- Manual `workflow_dispatch` against `cd.yml` (with valid file content): `conclusion=startup_failure`, zero jobs.
+
+This means GitHub Actions on this repo is functionally non-operational until the phantom is cleared.
 
 ### What MIGHT work (untested, escalate if it matters)
 
