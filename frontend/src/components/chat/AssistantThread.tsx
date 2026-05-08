@@ -480,28 +480,24 @@ export const MalikaQuickReplies = ({
 }) => {
   if (!visible || (!items.length && !loading)) return null;
 
+  // Layout (per Chat MALIKA design): 2-column grid on mobile to avoid awkward
+  // wrap; horizontal flex-wrap on desktop. Skeleton bars match chip shape.
   return (
     <div
-      className="malika-quick-replies flex gap-2 overflow-x-auto bg-white/80 px-4 py-2.5 backdrop-blur-sm dark:bg-gray-900/80"
+      className="malika-quick-replies grid grid-cols-2 gap-2 bg-white/80 px-4 py-2.5 backdrop-blur-sm dark:bg-gray-900/80 sm:flex sm:flex-wrap sm:gap-1.5"
       role="menu"
       aria-label="Saran pertanyaan"
     >
       {loading && items.length === 0 ? (
         /* Skeleton chips while LLM suggestions are loading */
         <>
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={`skeleton-${i}`}
-              className="inline-flex shrink-0 animate-pulse items-center gap-1.5 rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-800"
-            >
-              <div className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-              <div
-                className="h-3.5 rounded bg-gray-300 dark:bg-gray-600"
-                style={{ width: `${60 + i * 20}px` }}
-              />
-            </div>
+              className="h-8 animate-pulse rounded-full bg-gray-100 dark:bg-white/5"
+            />
           ))}
-          <span className="flex shrink-0 items-center text-xs text-gray-400 dark:text-gray-500">
+          <span className="col-span-2 mt-1 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 sm:col-span-1 sm:mt-0">
             Menyiapkan saran…
           </span>
         </>
@@ -512,10 +508,10 @@ export const MalikaQuickReplies = ({
             type="button"
             role="menuitem"
             onClick={() => onSelect(item)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-200/60 bg-brand-50/80 px-3.5 py-2 text-[13px] font-medium text-brand-700 shadow-sm transition-all duration-150 hover:scale-[1.03] hover:bg-brand-100 hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:border-brand-800/50 dark:bg-brand-950/50 dark:text-brand-300 dark:hover:bg-brand-900/50"
+            className="truncate rounded-full bg-white px-3 py-1.5 text-left text-[12.5px] font-medium text-gray-700 ring-1 ring-gray-200 transition hover:bg-brand-25 hover:text-brand-700 hover:ring-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:bg-gray-900 dark:text-gray-300 dark:ring-white/10 dark:hover:bg-brand-500/5 dark:hover:text-brand-300 dark:hover:ring-brand-500/40 sm:shrink-0"
           >
-            {item.icon && <span aria-hidden="true">{item.icon}</span>}
-            <span>{item.name}</span>
+            {item.icon && <span aria-hidden="true" className="mr-1">{item.icon}</span>}
+            {item.name}
           </button>
         ))
       )}

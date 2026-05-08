@@ -121,12 +121,69 @@ export const LIMITS = {
   chatHistoryLimit: 50,
 } as const;
 
-// Welcome screen example prompts
+// Legacy flat prompt list — kept for any other consumers
 export const WELCOME_PROMPTS = [
   { icon: "📊", label: "Inflasi terbaru Maluku Utara" },
   { icon: "📉", label: "Angka kemiskinan 2025" },
   { icon: "🚢", label: "Data ekspor impor" },
   { icon: "👷", label: "Tingkat pengangguran" },
+] as const;
+
+// Categorized sample queries for the redesigned EmptyState
+// (from Claude Design "Chat MALIKA" handoff bundle, chat-data.jsx)
+export type SampleQueryCategory = {
+  id: "demografi" | "ekonomi" | "sosial" | "inflasi";
+  label: string;
+  iconKey: "users" | "trending" | "heart" | "gauge";
+  color: "sky" | "emerald" | "rose" | "violet";
+  examples: string[];
+};
+
+export const SAMPLE_QUERIES: readonly SampleQueryCategory[] = [
+  {
+    id: "demografi",
+    label: "Demografi",
+    iconKey: "users",
+    color: "sky",
+    examples: [
+      "Berapa jumlah penduduk Maluku Utara terbaru?",
+      "Kepadatan penduduk per kabupaten/kota",
+      "Komposisi umur penduduk Halmahera Utara",
+    ],
+  },
+  {
+    id: "ekonomi",
+    label: "Ekonomi",
+    iconKey: "trending",
+    color: "emerald",
+    examples: [
+      "Pertumbuhan PDRB Maluku Utara 2024",
+      "Sektor utama PDRB Kota Ternate",
+      "Ekspor nikel Maluku Utara per bulan",
+    ],
+  },
+  {
+    id: "sosial",
+    label: "Sosial",
+    iconKey: "heart",
+    color: "rose",
+    examples: [
+      "Tingkat kemiskinan per kabupaten/kota",
+      "IPM Maluku Utara 5 tahun terakhir",
+      "Tingkat pengangguran terbuka",
+    ],
+  },
+  {
+    id: "inflasi",
+    label: "Harga & Inflasi",
+    iconKey: "gauge",
+    color: "violet",
+    examples: [
+      "Inflasi Kota Ternate bulan ini",
+      "Tren inflasi Maluku Utara 2024",
+      "Komoditas penyumbang inflasi terbesar",
+    ],
+  },
 ] as const;
 
 // Contact info (centralized)

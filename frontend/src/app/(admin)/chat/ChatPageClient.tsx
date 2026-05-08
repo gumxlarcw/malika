@@ -26,7 +26,7 @@ import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useChatRating } from "@/hooks/useChatRating";
 import { streamMessage, type StreamCallbacks } from "@/lib/chatTransport";
 import { useChatProcess } from "@/context/ChatProcessContext";
-import { MODEL_ALIASES, WELCOME_PROMPTS } from "@/lib/chatConstants";
+import { MODEL_ALIASES, SAMPLE_QUERIES } from "@/lib/chatConstants";
 
 // Assistant-UI components for mobile-friendly chat
 import {
@@ -55,6 +55,7 @@ const ChatExportModal = dynamic(() => import("@/components/chat/ChatExportModal"
 const ChatRatingModal = dynamic(() => import("@/components/chat/ChatRatingModal"), { ssr: false });
 import { type ProcessStep } from "@/components/chat/UnifiedActivityFeed";
 import { ThinkingFeed } from "@/components/chat/ThinkingFeed";
+import { UnifiedThinkingCard } from "@/components/chat/UnifiedThinkingCard";
 import DnaMetadataSection from "@/components/chat/DnaMetadataSection";
 
 // Extracted helpers — renderMarkdown, BubbleText, TypingText, etc.
@@ -116,6 +117,9 @@ export default function ChatPageClient() {
   // Step list "Lihat detail" toggle — done steps hide under a collapse so the
   // long-running active step doesn't get crowded out visually
   const [stepsExpanded, setStepsExpanded] = useState(false);
+  // Sample-query plumbing: when user clicks a category card from the
+  // !activeThreadId empty state, we createThread() then auto-send this query.
+  const pendingSampleQueryRef = useRef<string | null>(null);
   const [typingStatus, setTypingStatus] = useState<string | undefined>(undefined);
   const [wasStopped, setWasStopped] = useState(false);
   const stoppedMessageRef = useRef<string | null>(null);
@@ -1155,6 +1159,18 @@ export default function ChatPageClient() {
     loadMessages(activeThreadId);
   }, [activeThreadId, loadMessages]);
 
+  // Auto-fire the sample-query queued from the EmptyState category cards.
+  // Runs after activeThreadId lands and loadMessages has resolved (small
+  // delay to let UI settle so the user sees the typing indicator clearly).
+  useEffect(() => {
+    if (!activeThreadId) return;
+    const queued = pendingSampleQueryRef.current;
+    if (!queued) return;
+    pendingSampleQueryRef.current = null;
+    const t = setTimeout(() => sendToBackend(activeThreadId, queued), 250);
+    return () => clearTimeout(t);
+  }, [activeThreadId, sendToBackend]);
+
   // --- Background processing persistence effects ---
 
   // Track current isChatProcessing value via ref for the unmount cleanup
@@ -1385,111 +1401,44 @@ export default function ChatPageClient() {
   }, [exportJsonData, exportFilename]);
 
   const renderMessageContent = useCallback((msg: ChatUiMessage) => {
-    // Typing indicator — streaming process indicator
+    // Typing indicator — unified ThinkingCard from Claude Design handoff
+    // (replaces the prior step-list-card + Berpikir-pill stack).
     if (msg.type === "typing") {
-      return (
-        <div className="space-y-2">
-          {/* Step berpikir — pipeline progress timeline.
-              Done steps collapse under a "▼ N langkah selesai" header when
-              there are 2+ done; the active step stays prominent so the
-              user always sees what's happening right now. */}
-          {processSteps.length > 0 && (() => {
-            const doneSteps = processSteps.filter((s) => s.status === "done");
-            const activeStep = processSteps.find((s) => s.status !== "done");
-            const totalDoneMs = doneSteps.reduce((sum, s) =>
-              sum + (s.doneAt && s.startedAt ? s.doneAt - s.startedAt : 0), 0);
-            const fmtElapsed = (s: typeof processSteps[number]) =>
-              s.doneAt && s.startedAt
-                ? `${((s.doneAt - s.startedAt) / 1000).toFixed(1)}s`
-                : null;
-            const StepRow = ({ step, idx }: { step: typeof processSteps[number]; idx: number }) => (
-              <div key={`${step.stage}-${idx}`} className="flex items-center gap-2 text-xs">
-                {step.status === "done" ? (
-                  <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-violet-500 dark:text-violet-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
-                    <path className="opacity-90" d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  </svg>
-                )}
-                <span className={
-                  step.status === "done"
-                    ? "flex-1 text-gray-600 dark:text-gray-400"
-                    : "flex-1 text-violet-700 dark:text-violet-300 font-medium"
-                }>
-                  {step.message}
-                </span>
-                {fmtElapsed(step) && (
-                  <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{fmtElapsed(step)}</span>
-                )}
-              </div>
-            );
+      const onStopHandler = pendingSendRef.current
+        ? () => {
+            userStoppedRef.current = true;
+            pendingSendRef.current?.abort();
+            pendingSendRef.current = null;
+            setIsTyping(false);
+            setTypingStatus(undefined);
+            markAllStepsDone();
+            setWasStopped(true);
+          }
+        : undefined;
 
-            const collapseDoneSteps = doneSteps.length >= 2;
-            return (
-              <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
-                <div className="space-y-1">
-                  {/* Collapsible done-step header */}
-                  {collapseDoneSteps && (
-                    <button
-                      type="button"
-                      onClick={() => setStepsExpanded((v) => !v)}
-                      className="flex w-full items-center gap-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      aria-expanded={stepsExpanded}
-                    >
-                      <svg
-                        className={`h-3 w-3 shrink-0 transition-transform duration-150 ${stepsExpanded ? "rotate-90" : ""}`}
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path fillRule="evenodd" d="M7.293 4.707a1 1 0 011.414 0L14.414 10l-5.707 5.293a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1z" clipRule="evenodd" />
-                      </svg>
-                      <span className="flex-1 text-left">{doneSteps.length} langkah selesai</span>
-                      {totalDoneMs > 0 && (
-                        <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500">
-                          {(totalDoneMs / 1000).toFixed(1)}s
-                        </span>
-                      )}
-                    </button>
-                  )}
-
-                  {/* Done step rows: always rendered if not collapsed, OR if there's only 1 (no toggle) */}
-                  {(!collapseDoneSteps || stepsExpanded) &&
-                    doneSteps.map((step, i) => <StepRow key={`d-${step.stage}-${i}`} step={step} idx={i} />)
-                  }
-
-                  {/* Active step always visible */}
-                  {activeStep && <StepRow key={`a-${activeStep.stage}`} step={activeStep} idx={-1} />}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Existing typing-pill ("Berpikir..." spinner with elapsed timer) */}
-          <ThinkingFeed
-            thinkingItems={thinkingItems}
-            pipelineText={pipelineText}
-            reasoningText={reasoningText}
+      // While we have any process steps, render the UnifiedThinkingCard.
+      // Fall back to the legacy ThinkingFeed only when steps haven't started yet
+      // (covers the initial gap between user-send and the first 'status' SSE).
+      if (processSteps.length > 0) {
+        return (
+          <UnifiedThinkingCard
+            steps={processSteps}
             isStreaming={isTyping}
-            isThinkingActive={isThinkingActive}
-            onStop={
-              pendingSendRef.current
-                ? () => {
-                    userStoppedRef.current = true;
-                    pendingSendRef.current?.abort();
-                    pendingSendRef.current = null;
-                    setIsTyping(false);
-                    setTypingStatus(undefined);
-                    markAllStepsDone();
-                    setWasStopped(true);
-                  }
-                : undefined
-            }
+            onStop={onStopHandler}
           />
-        </div>
+        );
+      }
+
+      // Bootstrapping state — no status events received yet
+      return (
+        <ThinkingFeed
+          thinkingItems={thinkingItems}
+          pipelineText={pipelineText}
+          reasoningText={reasoningText}
+          isStreaming={isTyping}
+          isThinkingActive={isThinkingActive}
+          onStop={onStopHandler}
+        />
       );
     }
 
@@ -1849,30 +1798,95 @@ export default function ChatPageClient() {
 
           <div className="relative min-h-0 flex-1 overflow-hidden">
             {!activeThreadId ? (
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-                <div className="mb-4 rounded-full bg-brand-50 p-4 dark:bg-brand-950/50">
-                  <svg className="h-12 w-12 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+              // Branded onboarding (no thread selected). Same shape as the
+              // empty-thread state but the sample cards create a new thread
+              // first, then send the query. Matches Claude Design's EmptyState.
+              <div className="malika-welcome-placeholder mx-auto h-full max-w-[680px] overflow-y-auto px-4 py-8 sm:px-6 sm:py-10">
+                <div className="flex flex-col items-center pb-6 text-center sm:pb-8">
+                  <div className="relative mb-4">
+                    <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-lg shadow-brand-500/30 sm:h-16 sm:w-16">
+                      <svg className="h-7 w-7 sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                      </svg>
+                    </div>
+                    <span aria-hidden="true" className="absolute -top-1 -right-1 inline-block h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-gray-950" />
+                  </div>
+                  <h1 className="text-balance text-[22px] font-semibold tracking-tight text-gray-900 dark:text-white sm:text-[26px]">
+                    Halo, saya MALIKA
+                  </h1>
+                  <p className="mt-1.5 max-w-md text-pretty text-[13.5px] leading-relaxed text-gray-600 dark:text-gray-400 sm:text-[14px]">
+                    Asisten data statistik untuk Provinsi Maluku Utara. Tanyakan apa saja tentang penduduk, ekonomi, sosial, dan harga — saya akan menjawab dari publikasi resmi BPS.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={createThread}
+                    disabled={loadingMessages || isTyping}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-[13.5px] font-semibold text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-600 disabled:opacity-60"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    Mulai Chat Baru
+                  </button>
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Selamat datang di Chat MALIKA</h3>
-                <p className="mb-6 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-                  Tanyakan apa saja tentang data statistik Maluku Utara. MALIKA siap membantu!
-                </p>
-                <button
-                  type="button"
-                  onClick={createThread}
-                  disabled={loadingMessages || isTyping}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-600 disabled:opacity-60 dark:bg-brand-600 dark:hover:bg-brand-700"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Mulai Chat Baru
-                </button>
-                <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
-                  Atau buka <button type="button" onClick={() => setMobileHistoryOpen(true)} className="text-brand-500 hover:underline lg:hidden">riwayat chat</button>
-                  <span className="hidden lg:inline">riwayat chat di sidebar</span>
+
+                <h2 className="mb-3 text-[11.5px] font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                  Atau pilih contoh
+                </h2>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {SAMPLE_QUERIES.map((cat) => {
+                    const colorClasses: Record<typeof cat.color, { bg: string; ring: string; icon: string }> = {
+                      sky: { bg: "bg-sky-50 dark:bg-sky-500/10", ring: "ring-sky-100 dark:ring-sky-500/20", icon: "text-sky-600 dark:text-sky-400" },
+                      emerald: { bg: "bg-emerald-50 dark:bg-emerald-500/10", ring: "ring-emerald-100 dark:ring-emerald-500/20", icon: "text-emerald-600 dark:text-emerald-400" },
+                      rose: { bg: "bg-rose-50 dark:bg-rose-500/10", ring: "ring-rose-100 dark:ring-rose-500/20", icon: "text-rose-600 dark:text-rose-400" },
+                      violet: { bg: "bg-brand-50 dark:bg-brand-500/10", ring: "ring-brand-100 dark:ring-brand-500/20", icon: "text-brand-600 dark:text-brand-300" },
+                    };
+                    const c = colorClasses[cat.color];
+                    const iconSvg = (() => {
+                      switch (cat.iconKey) {
+                        case "users":
+                          return <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor" />;
+                        case "trending":
+                          return <path d="M3.5 18.5l6-6.5 4 4L22 6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />;
+                        case "heart":
+                          return <path d="M12 21s-7-4.5-7-10a4 4 0 017-2.65A4 4 0 0119 11c0 5.5-7 10-7 10z" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />;
+                        case "gauge":
+                          return <g fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 14l4-4" /><circle cx={12} cy={14} r={1.5} /><path d="M3 14a9 9 0 0118 0" /></g>;
+                      }
+                    })();
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={async () => {
+                          // Create thread, then queue the sample query.
+                          // pendingSampleQueryRef plumbs the query through to
+                          // the thread-load effect so it sends after thread mounts.
+                          pendingSampleQueryRef.current = cat.examples[0];
+                          await createThread();
+                        }}
+                        disabled={loadingMessages || isTyping}
+                        className="group rounded-xl bg-white p-3.5 text-left ring-1 ring-gray-200/80 transition hover:shadow-sm hover:ring-brand-300 disabled:opacity-50 dark:bg-gray-900 dark:ring-white/10 dark:hover:ring-brand-500/40"
+                      >
+                        <div className="mb-2 flex items-center gap-2.5">
+                          <div className={`grid h-8 w-8 place-items-center rounded-lg ring-1 ${c.bg} ${c.ring}`}>
+                            <svg className={`h-[15px] w-[15px] ${c.icon}`} viewBox="0 0 24 24">{iconSvg}</svg>
+                          </div>
+                          <div className="text-[12px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            {cat.label}
+                          </div>
+                        </div>
+                        <div className="text-[13.5px] font-medium leading-snug text-gray-800 dark:text-gray-200">
+                          {cat.examples[0]}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-6 text-center text-[11px] text-gray-400 dark:text-gray-500 lg:hidden">
+                  Atau buka{" "}
+                  <button type="button" onClick={() => setMobileHistoryOpen(true)} className="text-brand-500 hover:underline">
+                    riwayat chat
+                  </button>
                 </p>
               </div>
             ) : (
@@ -2061,36 +2075,87 @@ export default function ChatPageClient() {
                     </div>
                   </div>
                 }>
-                  {/* Welcome placeholder — shown when chat is empty, centered in viewport */}
+                  {/* Welcome placeholder — branded onboarding from Chat MALIKA design.
+                      Logo + status dot, welcome heading, "data terakhir diperbarui"
+                      badge, 4 colored sample query cards, and a tour CTA. */}
                   {messages.length === 0 && !loadingMessages && !isTyping && (
-                    <div className="malika-welcome-placeholder animate-in fade-in duration-500">
-                      <div className="mb-5 rounded-2xl bg-gradient-to-br from-brand-50 to-blue-50 p-5 dark:from-brand-950/40 dark:to-blue-950/30">
-                        <svg className="h-10 w-10 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                        </svg>
+                    <div className="malika-welcome-placeholder animate-in fade-in mx-auto max-w-[680px] px-4 py-8 duration-500 sm:px-6 sm:py-10">
+                      {/* Hero block */}
+                      <div className="flex flex-col items-center pb-6 text-center sm:pb-8">
+                        <div className="relative mb-4">
+                          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-lg shadow-brand-500/30 sm:h-16 sm:w-16">
+                            <svg className="h-7 w-7 sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                            </svg>
+                          </div>
+                          <span aria-hidden="true" className="absolute -top-1 -right-1 inline-block h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-gray-950" />
+                        </div>
+                        <h1 className="text-balance text-[22px] font-semibold tracking-tight text-gray-900 dark:text-white sm:text-[26px]">
+                          Halo, saya MALIKA
+                        </h1>
+                        <p className="mt-1.5 max-w-md text-pretty text-[13.5px] leading-relaxed text-gray-600 dark:text-gray-400 sm:text-[14px]">
+                          Asisten data statistik untuk Provinsi Maluku Utara. Tanyakan apa saja tentang penduduk, ekonomi, sosial, dan harga — saya akan menjawab dari publikasi resmi BPS.
+                        </p>
+                        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                          <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          Sumber data: publikasi resmi BPS Maluku Utara
+                        </div>
                       </div>
-                      <h3 className="mb-2 text-base font-semibold text-gray-800 dark:text-gray-100">
-                        Ada yang bisa MALIKA bantu?
-                      </h3>
-                      <p className="max-w-xs text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-                        Silakan tanyakan data statistik Maluku Utara yang Anda butuhkan.
-                      </p>
-                      {/* Example prompt cards */}
-                      <div className="mt-5 grid w-full grid-cols-2 gap-2 pointer-events-auto" style={{ maxWidth: 320 }}>
-                        {WELCOME_PROMPTS.map((card) => (
-                          <button
-                            key={card.label}
-                            type="button"
-                            onClick={() => {
-                              if (!activeThreadId || loadingMessages || isTyping) return;
-                              sendToBackend(activeThreadId, card.label);
-                            }}
-                            className="group flex items-start gap-2 rounded-xl border border-gray-200/80 bg-white/60 backdrop-blur-sm px-3 py-2.5 text-left text-[13px] leading-snug text-gray-700 shadow-sm transition-all duration-200 hover:border-brand-200 hover:bg-brand-50/60 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300 dark:hover:border-brand-700 dark:hover:bg-brand-900/20"
-                          >
-                            <span className="text-base leading-none mt-0.5">{card.icon}</span>
-                            <span className="font-medium">{card.label}</span>
-                          </button>
-                        ))}
+
+                      {/* Sample query cards */}
+                      <h2 className="mb-3 text-[11.5px] font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                        Mulai dengan contoh
+                      </h2>
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                        {SAMPLE_QUERIES.map((cat) => {
+                          const colorClasses: Record<typeof cat.color, { bg: string; ring: string; icon: string }> = {
+                            sky: { bg: "bg-sky-50 dark:bg-sky-500/10", ring: "ring-sky-100 dark:ring-sky-500/20", icon: "text-sky-600 dark:text-sky-400" },
+                            emerald: { bg: "bg-emerald-50 dark:bg-emerald-500/10", ring: "ring-emerald-100 dark:ring-emerald-500/20", icon: "text-emerald-600 dark:text-emerald-400" },
+                            rose: { bg: "bg-rose-50 dark:bg-rose-500/10", ring: "ring-rose-100 dark:ring-rose-500/20", icon: "text-rose-600 dark:text-rose-400" },
+                            violet: { bg: "bg-brand-50 dark:bg-brand-500/10", ring: "ring-brand-100 dark:ring-brand-500/20", icon: "text-brand-600 dark:text-brand-300" },
+                          };
+                          const c = colorClasses[cat.color];
+                          // Inline icon by key so we don't pull in another component
+                          const iconSvg = (() => {
+                            switch (cat.iconKey) {
+                              case "users":
+                                return <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor" />;
+                              case "trending":
+                                return <path d="M3.5 18.5l6-6.5 4 4L22 6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />;
+                              case "heart":
+                                return <path d="M12 21s-7-4.5-7-10a4 4 0 017-2.65A4 4 0 0119 11c0 5.5-7 10-7 10z" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />;
+                              case "gauge":
+                                return <g fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 14l4-4" /><circle cx={12} cy={14} r={1.5} /><path d="M3 14a9 9 0 0118 0" /></g>;
+                            }
+                          })();
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                if (!activeThreadId || loadingMessages || isTyping) return;
+                                sendToBackend(activeThreadId, cat.examples[0]);
+                              }}
+                              className="group rounded-xl bg-white p-3.5 text-left ring-1 ring-gray-200/80 transition hover:shadow-sm hover:ring-brand-300 dark:bg-gray-900 dark:ring-white/10 dark:hover:ring-brand-500/40"
+                            >
+                              <div className="mb-2 flex items-center gap-2.5">
+                                <div className={`grid h-8 w-8 place-items-center rounded-lg ring-1 ${c.bg} ${c.ring}`}>
+                                  <svg className={`h-[15px] w-[15px] ${c.icon}`} viewBox="0 0 24 24">{iconSvg}</svg>
+                                </div>
+                                <div className="text-[12px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                  {cat.label}
+                                </div>
+                              </div>
+                              <div className="text-[13.5px] font-medium leading-snug text-gray-800 dark:text-gray-200">
+                                {cat.examples[0]}
+                              </div>
+                              <div className="mt-2 flex items-center gap-1 text-[11.5px] text-brand-600 opacity-0 transition group-hover:opacity-100 dark:text-brand-300">
+                                Tanyakan ini
+                                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 4.707a1 1 0 011.414 0L14.414 10l-5.707 5.293a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1z" clipRule="evenodd" /></svg>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
