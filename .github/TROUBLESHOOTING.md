@@ -101,3 +101,4 @@ Notify step skips with a log line instead of failing the run.
 and `rollback`. Variable `ROLLBACK_ENABLED = true` must be set first. The
 rollback step itself is a stub — wire your actual rollback script into the
 `Rollback` step before relying on it.
+
