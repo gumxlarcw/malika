@@ -438,21 +438,29 @@ export default function ChatPageClient() {
   }, []);
 
   const extractLastAssistantUi = useCallback((rows: BackendMessage[], uiMessages?: ChatUiMessage[]) => {
-    // If we already have converted UI messages, find the last result_table's UI from there
+    // Strip stored suggestions: pre-cleanup messages have hardcoded chips
+    // ("Data penduduk", etc.) baked into their malika_ui blob. Always blank
+    // them out — fresh chips come from the live /suggestions endpoint instead.
+    const stripStoredSuggestions = (ui: any) => {
+      if (!ui || typeof ui !== "object") return ui;
+      // Shallow clone + force suggestions=[] so the skeleton stays visible
+      // until fetchThreadSuggestions populates them.
+      return { ...ui, suggestions: [] };
+    };
+
     if (uiMessages?.length) {
       for (let i = uiMessages.length - 1; i >= 0; i -= 1) {
         const m = uiMessages[i];
         if (m.position === "left" && m.type === "result_table" && m.content?.ui) {
-          return m.content.ui;
+          return stripStoredSuggestions(m.content.ui);
         }
       }
     }
-    // Fallback: parse raw messages (used when uiMessages not yet available)
     for (let i = rows.length - 1; i >= 0; i -= 1) {
       const m = rows[i];
       if (!m || m.role !== "assistant") continue;
       const extracted = extractMalikaUiBlock(String(m.content || ""));
-      if (extracted.ui) return extracted.ui;
+      if (extracted.ui) return stripStoredSuggestions(extracted.ui);
     }
     return null;
   }, []);
@@ -676,16 +684,25 @@ export default function ChatPageClient() {
           setShowThinking(true);
         }
 
-        // Always regenerate fresh context-aware suggestions when loading a thread
+        // Block load completion until LLM-generated suggestions are ready.
+        // User explicitly requested: "load chat jangan selesai sampai
+        // suggestion siap, jadi user langsung tampil suggestion sudah siap".
+        // The loadingMessages skeleton stays up across the LLM call (~15s
+        // cold, instant on cache hit) so the chat surfaces with chips already
+        // populated rather than flashing through stale/empty states.
         if (rows.length > 0) {
-          fetchThreadSuggestions(threadId);
+          await fetchThreadSuggestions(threadId);
         }
       } catch (e: any) {
         if (e?.name === "AbortError") return; // Aborted by newer loadMessages call
         setErrorText(e instanceof Error ? e.message : String(e));
         resetList([]);
       } finally {
-        setLoadingMessages(false);
+        // Only unblock if user is still viewing this thread — otherwise the
+        // newer loadMessages call owns the skeleton.
+        if (activeThreadIdRef.current === threadId) {
+          setLoadingMessages(false);
+        }
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1085,11 +1102,13 @@ export default function ChatPageClient() {
               const ui = extractLastAssistantUi(rows, uiMsgs);
               setLastAssistantUi(ui);
 
-              // Always regenerate fresh context-aware suggestions on session load
+              // Block initial-load completion until LLM-generated chips are
+              // ready (matches the loadMessages flow). For an empty thread,
+              // no fetch is needed.
               if (rows.length > 0) {
-                fetchThreadSuggestions(firstThreadId);
+                await fetchThreadSuggestions(firstThreadId);
               } else {
-                setSuggestionsLoading(false); // No messages = no suggestions to fetch
+                setSuggestionsLoading(false);
               }
             }
           } catch {
@@ -1101,7 +1120,6 @@ export default function ChatPageClient() {
       } finally {
         setLoadingThreads(false);
         setLoadingMessages(false);
-        // If no thread was loaded or no suggestions fetch was triggered, stop skeleton
         if (!activeThreadIdRef.current) {
           setSuggestionsLoading(false);
         }
