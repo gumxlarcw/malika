@@ -57,6 +57,9 @@ module.exports = {
   IndicatorMeta: require('./IndicatorMeta.model'),
   IndicatorMetricMeta: require('./IndicatorMetricMeta.model'),
 
+  // Unified Retrieval (Phase C: replaces in-memory HNSW + JSON-text scan)
+  RetrievalChunk: require('./RetrievalChunk.model'),
+
   // Audit Logs
   AdminAuditLog: require('./AdminAuditLog.model'),
 };

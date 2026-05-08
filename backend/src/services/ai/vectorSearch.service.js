@@ -23,6 +23,10 @@ const USE_ANN_SEARCH = process.env.USE_ANN_SEARCH === 'true';
 let hnswIndex = null;       // HierarchicalNSW instance
 let hnswIdMap = [];          // index position → doc ID mapping
 
+// Phase C7: unified retrieval delegate (opt-in via env var)
+const USE_UNIFIED_RETRIEVAL = process.env.USE_UNIFIED_RETRIEVAL === 'true';
+const { searchRetrieval } = require('./retrieval.service');
+
 // ── STEM MAP: maps query words to related stems for keyword matching ──
 // Solves: "kemiskinan" query should match title containing "miskin"
 // Extended with comprehensive BPS domain coverage
@@ -892,6 +896,58 @@ async function searchForQueryBuilder(query, topN = 5) {
  * @returns {Promise<{results: object[], duration_ms: number}>}
  */
 async function searchKnowledge(query, topN = 5, options = {}) {
+  if (USE_UNIFIED_RETRIEVAL) {
+    const startTime = Date.now();
+    try {
+      const { results: rawResults } = await searchRetrieval(query, {
+        topN: topN * 4, // wider pool for the existing reranker
+        kinds: ['knowledge_doc', 'knowledge_chunk'],
+      });
+      // Adapt to legacy shape consumers expect
+      const adapted = rawResults.map(r => ({
+        id: r.sourceRefId,
+        name: r.title,
+        title: r.title,
+        type: 'knowledge',
+        source: 'knowledge',
+        category: (r.metadata && r.metadata.category) || '',
+        content: r.content,
+        similarity: r.similarity,
+        rawSimilarity: r.similarity,
+        keywordBoost: 0,
+        recencyBoost: 0,
+        parentId: r.parentChunkId || r.sourceRefId,
+        isChunk: r.sourceKind === 'knowledge_chunk',
+      }));
+      // Reuse existing reranker pipeline
+      if (!options.skipRerank && adapted.length >= 3) {
+        const { judgeDocuments } = require('./documentJudge.service');
+        const judgeResult = await judgeDocuments(query, adapted, { topN });
+        return {
+          results: judgeResult.results,
+          reranked: judgeResult.reranked || false,
+          judged: judgeResult.judged || false,
+          rerankReason: judgeResult.reasoning || null,
+          duration_ms: Date.now() - startTime,
+          totalKnowledge: adapted.length,
+          unified: true,
+        };
+      }
+      return {
+        results: adapted.slice(0, topN),
+        reranked: false,
+        judged: false,
+        duration_ms: Date.now() - startTime,
+        totalKnowledge: adapted.length,
+        unified: true,
+      };
+    } catch (err) {
+      // If unified path fails, log and fall through to legacy. This protects production
+      // during the soak window — once we trust the unified path we can throw instead.
+      logger.warn({ err: err.message, query: query.slice(0, 60) }, 'Unified retrieval failed, falling back to legacy');
+    }
+  }
+
   const { skipRerank = false, skipLLMSynonyms = false } = options;
   const startTime = Date.now();
 
