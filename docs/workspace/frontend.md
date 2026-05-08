@@ -1,6 +1,6 @@
 # Frontend PWA — Project Line
 
-> Last updated: 2026-03-02
+> Last updated: 2026-05-08
 
 ## Current State
 - **Framework**: Next.js 16.0.10 + React 19.2.0 + Tailwind CSS v4
@@ -24,6 +24,8 @@ Auth: `/signin`, `/signup`, `/error-404`
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
+| 2026-05-08 | Fix /data page: per-cell `value_code` superscripts (`<sup title>`) were never rendered because Phase 6.3 wired `renderCellWithCode` into orphan `DataTableClient.tsx`. Live render path is in `DataPageClient`. Inlined a wrapper that reuses local `formatCell` (preserves EXIM/numeric formatting) and adds `<sup>` from `row.value_codes`. Deleted orphan component. Added regression e2e. | DataPageClient.tsx, e2e/data-value-codes.spec.ts, DataTableClient.tsx (deleted) |
+| 2026-05-08 | Extend `BPS_VALUE_CODE_LABELS` with `–` ("Data nihil atau tidak ada"), `...` ("Data belum tersedia"), `NA` ("Tidak berlaku") — codes seen in real interop data that previously fell through to the `Catatan: <code>` generic fallback. | lib/cellRender.tsx |
 | 2026-03-02 | Fix 404: apiBase missing `/chat` prefix — `GET /threads` → `GET /chat/threads` | ChatPageClient.tsx:233 |
 | 2026-03-02 | Fix build: install missing npm packages (clsx, @assistant-ui/react, exceljs, jspdf, jspdf-autotable, lottie-web, react-pdf, pdfjs-dist, highlight.js, driver.js, react-markdown, remark-gfm, rehype-highlight, @tanstack/react-virtual) | package.json |
 | 2026-03-02 | Fix build: create 7 missing component/helper files | icons.tsx, TimingBar.tsx, DnaMetadataSection.tsx, ChatExportModal.tsx, ChatRatingModal.tsx, ChatShortcutsModal.tsx, chatHelpers.tsx |

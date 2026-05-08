@@ -6,6 +6,7 @@ import InterpretationPanel, { type InsightResponse } from "@/components/search/I
 import SearchInsightsChart from "@/components/search/SearchInsightsChart";
 import { normalizeTableData, extractUnitFromTitle } from "@/lib/tableRowOrdering";
 import { DATA_INSIGHT_ENABLED } from "@/lib/featureFlags";
+import { getBpsValueCodeLabel } from "@/lib/cellRender";
 
 // Download utilities
 function downloadBlob(blob: Blob, filename: string) {
@@ -458,7 +459,7 @@ export default function DataPageClient({
   // Format cell value
   const formatCell = useCallback((column: string, row: Record<string, unknown>) => {
     const value = row[column];
-    
+
     if (isExim) {
       return eximCellValue(column, value);
     }
@@ -473,6 +474,29 @@ export default function DataPageClient({
 
     return String(value);
   }, [isExim, numericColumns]);
+
+  // Render cell with optional BPS value_code superscript (e.g. "*" for sementara).
+  // Reuses formatCell for the text so EXIM / numeric / placeholder behavior is preserved.
+  // EXIM rows have no per-cell semantics (SUM aggregation) so codes are skipped there.
+  const renderCellWithCode = useCallback((column: string, row: Record<string, unknown>): React.ReactNode => {
+    const text = formatCell(column, row);
+    if (isExim) return text;
+    const codes = (row.value_codes ?? null) as Record<string, string> | null;
+    const code = codes?.[column];
+    if (!code) return text;
+    const label = getBpsValueCodeLabel(code) || code;
+    return (
+      <>
+        {text}
+        <sup
+          className="ml-0.5 text-[0.7em] font-medium text-brand-600 dark:text-brand-400 cursor-help"
+          title={label}
+        >
+          {code}
+        </sup>
+      </>
+    );
+  }, [formatCell, isExim]);
 
   // Format header
   const formatHeader = useCallback((column: string) => {
@@ -845,7 +869,7 @@ export default function DataPageClient({
                               : ''
                           }`}
                         >
-                          {formatCell(c, r)}
+                          {renderCellWithCode(c, r)}
                         </td>
                       ))}
                     </tr>

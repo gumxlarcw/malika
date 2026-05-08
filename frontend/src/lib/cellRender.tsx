@@ -9,6 +9,9 @@ export const BPS_VALUE_CODE_LABELS: Record<string, string> = {
   e: "Angka estimasi",
   p: "Angka proyeksi",
   x: "Data tidak tersedia",
+  "–": "Data nihil atau tidak ada",
+  "...": "Data belum tersedia",
+  NA: "Tidak berlaku",
 };
 
 export function getBpsValueCodeLabel(code: string | null | undefined): string | null {
