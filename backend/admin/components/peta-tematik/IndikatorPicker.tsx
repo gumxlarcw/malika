@@ -52,7 +52,7 @@ export default function IndikatorPicker({ list, value, onChange }: Props) {
                 placeholder="Cari indikator…"
                 value={query}
                 onValueChange={setQuery}
-                className="w-full py-2 text-sm bg-transparent outline-none"
+                className="w-full py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
               />
             </div>
             <Command.List className="max-h-[400px] overflow-y-auto py-2">

@@ -74,7 +74,6 @@ export default function CachePage() {
         return;
       }
 
-      console.log(`Fetching: ${url}`);
       const { data } = await api.get(url);
       setPreviewData(data);
     } catch (e: unknown) {

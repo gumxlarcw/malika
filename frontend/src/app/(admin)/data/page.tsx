@@ -4,6 +4,7 @@ import DataPageClient from "./DataPageClient";
 import EmptyState from "@/components/common/EmptyState";
 import { applyTableRowOrdering } from "@/lib/tableRowOrdering";
 import { fetchParentCategory } from "./_lib/parentCategory";
+import { backendBaseUrl } from "@/lib/backendBaseUrl";
 
 export const metadata: Metadata = {
   title: "Data Statistik",
@@ -40,17 +41,6 @@ type YearData = {
   rows: Array<Record<string, any>>;
   lastUpdate: string | null;
 };
-
-function backendBaseUrl() {
-  return (
-    process.env.BACKEND_BASE_URL ||
-    process.env.BACKEND_INTERNAL_API_URL ||
-    process.env.INTERNAL_BACKEND_API_URL ||
-    process.env.BACKEND_API_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
-    "http://127.0.0.1:5000"
-  );
-}
 
 function normalizeDynamicPeriod(period: string) {
   const m = String(period || "").trim().match(/^(19\d{2}|20\d{2}|2100)$/);

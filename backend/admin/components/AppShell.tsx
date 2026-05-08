@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import FloatingThemeToggle from "@/components/FloatingThemeToggle";
 import { useAuth } from "@/components/AuthProvider";
 import { Menu, LogOut, PanelLeftClose, PanelLeft } from "lucide-react";
+import ErrorBoundary from "./ErrorBoundary";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
@@ -77,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Scrollable content + footer */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
           <Footer />
         </div>

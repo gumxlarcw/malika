@@ -53,14 +53,27 @@ export default function Hero(props: HeroProps) {
       ? `${availableYears[availableYears.length - 1]}–${availableYears[0]}`
       : availableYears[0] ?? "";
 
-  const lastTotal = totalSeries[totalSeries.length - 1];
-  const firstTotal = totalSeries[0];
+  // Use the first / last *valid* (non-NaN) points so a single sparse year at
+  // the edges of the time range doesn't blank the whole sparkline summary card
+  // (audit-finding B1). availableYears is descending; totalSeries is built
+  // ascending in the parent, so we walk indices to recover the year labels.
+  const yearsAsc = availableYears.slice().sort((a, b) => Number(a) - Number(b));
+  const validIdx: number[] = [];
+  totalSeries.forEach((v, i) => {
+    if (Number.isFinite(v) && v !== 0) validIdx.push(i);
+  });
+  const firstValidIdx = validIdx[0];
+  const lastValidIdx = validIdx[validIdx.length - 1];
   const showSparkline =
-    totalSeries.length >= 2 &&
-    Number.isFinite(lastTotal) &&
-    Number.isFinite(firstTotal) &&
-    firstTotal !== 0;
+    validIdx.length >= 2 &&
+    firstValidIdx !== undefined &&
+    lastValidIdx !== undefined &&
+    firstValidIdx !== lastValidIdx;
+  const firstTotal = showSparkline ? totalSeries[firstValidIdx] : 0;
+  const lastTotal = showSparkline ? totalSeries[lastValidIdx] : 0;
   const pct = showSparkline ? ((lastTotal - firstTotal) / Math.abs(firstTotal)) * 100 : 0;
+  const sparkLabelStart = showSparkline ? yearsAsc[firstValidIdx] : "";
+  const sparkLabelEnd = showSparkline ? yearsAsc[lastValidIdx] : "";
 
   // dark variant doesn't expose its own accent — use the icon hue (which is the
   // saturated swatch in the dark palette) so the rail stays visible in dark mode.
@@ -176,8 +189,8 @@ export default function Hero(props: HeroProps) {
                 />
               </div>
               <div className="mt-1 flex justify-between text-[10.5px] tabular-nums text-gray-400 dark:text-gray-500">
-                <span>{availableYears[availableYears.length - 1]}</span>
-                <span>{availableYears[0]}</span>
+                <span>{sparkLabelStart}</span>
+                <span>{sparkLabelEnd}</span>
               </div>
             </div>
           )}
