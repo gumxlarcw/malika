@@ -1,58 +1,49 @@
-import React, { Suspense } from "react";
+import React from "react";
+import { notFound } from "next/navigation";
 import KategoriDetailClient from "./KategoriDetailClient";
+import type { Category } from "../_lib/types";
 
+// Required so notFound() returns a real 404 status under Next 16's PPR/cache model.
+// Without this, the route can be statically optimized and notFound() body is served with 200.
 export const dynamic = "force-dynamic";
 
-// Generate metadata dynamically based on the slug
+async function fetchCategoryBySlug(slug: string): Promise<Category | null> {
+  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
+  try {
+    const res = await fetch(`${backendUrl}/categories`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const list: Category[] = data?.categories ?? [];
+    return list.find((c) => c.slug === slug) ?? null;
+  } catch (err) {
+    console.error("[/kategori/[slug]] fetch error", err);
+    return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  // Convert slug back to a more readable format for the title
   const title = slug
     .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
-
   return {
-    title: `${title} | Kategori Data | MALIKA`,
+    title: `${title} | Kategori Data`,
     description: `Data statistik kategori ${title} - Maluku Utara dalam Angka`,
   };
 }
 
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-        <span className="text-gray-300">/</span>
-        <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="h-14 w-14 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
-        <div>
-          <div className="h-6 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="mt-2 h-4 w-24 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-        </div>
-      </div>
-      <div className="space-y-3">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-16 animate-pulse rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900"
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default function KategoriDetailPage() {
-  return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <KategoriDetailClient />
-    </Suspense>
-  );
+export default async function KategoriDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const category = await fetchCategoryBySlug(slug);
+  if (!category) notFound();
+  return <KategoriDetailClient category={category} />;
 }

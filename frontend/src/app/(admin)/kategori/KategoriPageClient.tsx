@@ -1,502 +1,641 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
-import { getCategoryStyle } from "@/lib/categoryStyles";
+import React, { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  ChartIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  DistributionBar,
+  EmptyState,
+  FolderIcon,
+  SearchIcon,
+  SectionHeader,
+  SortIcon,
+  TypeBadge,
+} from "./_components/atoms";
+import { getCategoryDesign } from "./_lib/categoryIcons";
+import {
+  countByType,
+  emptyTypeCounts,
+  inferTypeFromLink,
+  nfmt,
+  SOURCE_TYPES,
+  SOURCE_TYPE_LABEL,
+  type Category,
+  type Indicator,
+  type SourceType,
+  type TypeCounts,
+} from "./_lib/types";
 
-type CategorySource = {
-  id: number;
-  name: string;
-  type: string;
-};
-
-type Category = {
-  name: string;
-  count: number;
-  slug: string;
-  sources: CategorySource[];
-};
-
-type Indicator = {
-  id: number;
-  name: string;
-  title?: string;  // API search returns title
-  type: string;
-  category: string;
-  score: number;
-  subtitle?: string;
-  link?: string;
-};
-
-type SortOption = "count" | "name";
-
-function CategoryCardSkeleton() {
-  return (
-    <div className="animate-pulse rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800" />
-        <div className="flex-1 min-w-0">
-          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="mt-2 h-3 w-1/4 rounded bg-gray-100 dark:bg-gray-800" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CategoryCard({ category }: { category: Category }) {
-  const style = getCategoryStyle(category.name);
-
-  return (
-    <Link
-      href={`/kategori/${category.slug}`}
-      className="group block rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs transition-all duration-200 hover:scale-[1.02] hover:shadow-lg dark:border-gray-800 dark:bg-gray-900"
-    >
-      <div className="flex items-start gap-4">
-        {/* Icon container */}
-        <div
-          className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${style.bgColor} transition-transform duration-200 group-hover:scale-110`}
-        >
-          <span className="text-2xl" role="img" aria-hidden="true">
-            {style.icon}
-          </span>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 dark:text-white/90 group-hover:text-brand-600 dark:group-hover:text-brand-400">
-            {category.name}
-          </h3>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {category.count} {category.count === 1 ? "indikator" : "indikator"}
-          </p>
-        </div>
-
-        {/* Arrow on hover */}
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <svg
-            className="h-5 w-5 text-gray-400 dark:text-gray-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function IndicatorCard({ indicator }: { indicator: Indicator }) {
-  const typeLabel =
-    indicator.type === "exim"
-      ? "EXIM"
-      : indicator.type === "dynamic"
-        ? "Dinamis"
-        : indicator.type === "interop"
-          ? "Interop"
-          : indicator.type === "static"
-            ? "Statis"
-            : indicator.type;
-
-  const typeBadgeClass =
-    indicator.type === "exim"
-      ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
-      : indicator.type === "dynamic"
-        ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-        : indicator.type === "interop"
-          ? "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400"
-          : "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400";
-
-  // Gunakan link dari API search jika tersedia, fallback ke source_id
-  const href = indicator.link || `/data?source_id=${indicator.id}`;
-  
-  return (
-    <Link
-      href={href}
-      className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition-all duration-200 hover:border-brand-200 hover:bg-brand-50/50 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-800 dark:hover:bg-brand-500/5"
-    >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-          </svg>
-        </div>
-        <div className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-gray-800 truncate group-hover:text-brand-600 dark:text-white/90 dark:group-hover:text-brand-400">
-            {indicator.name}
-          </span>
-          <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
-            {indicator.category || "Lainnya"}
-          </span>
-        </div>
-      </div>
-      <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeBadgeClass}`}>
-          {typeLabel}
-        </span>
-        <svg
-          className="h-5 w-5 text-gray-400 transition-transform duration-200 group-hover:translate-x-1 dark:text-gray-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </Link>
-  );
-}
-
-function IndicatorCardSkeleton() {
-  return (
-    <div className="animate-pulse rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700" />
-        <div className="flex-1 min-w-0">
-          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="mt-1.5 h-3 w-1/3 rounded bg-gray-100 dark:bg-gray-800" />
-        </div>
-      </div>
-    </div>
-  );
-}
+type SortOption = "count" | "abjad";
 
 export default function KategoriPageClient() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [indicators, setIndicators] = useState<Indicator[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingIndicators, setLoadingIndicators] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("count");
 
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortOption>("count");
+
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [hasExactIndicators, setHasExactIndicators] = useState(false);
+  const [loadingIndicators, setLoadingIndicators] = useState(false);
+
+  // Initial categories fetch
   useEffect(() => {
-    const fetchCategories = async () => {
+    let alive = true;
+    (async () => {
       try {
         const res = await fetch("/api/categories", { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to fetch categories");
         const data = await res.json();
-        setCategories(data.categories || []);
+        if (!alive) return;
+        setCategories(data.categories ?? []);
       } catch (err) {
         console.error(err);
-        setError("Gagal memuat kategori. Silakan coba lagi.");
+        if (alive) setError("Gagal memuat kategori. Silakan coba lagi.");
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
+    })();
+    return () => {
+      alive = false;
     };
-
-    fetchCategories();
   }, []);
 
-  // Search indicators with debounce
+  // Debounced indicator search
   useEffect(() => {
     if (!search.trim()) {
       setIndicators([]);
+      setHasExactIndicators(false);
       setLoadingIndicators(false);
       return;
     }
-
-    // Set loading segera saat user mengetik
     setLoadingIndicators(true);
-
-    const timeoutId = setTimeout(async () => {
+    const id = setTimeout(async () => {
       try {
         const res = await fetch(
-          `/api/search?q=${encodeURIComponent(search)}&limit=20`
+          `/api/search?q=${encodeURIComponent(search)}&limit=20`,
         );
-        if (res.ok) {
-          const data = await res.json();
-          // Gabungkan exact dan suggestions datasources
-          const exactDs = data.exact?.datasources || [];
-          const suggestDs = data.suggestions?.datasources || [];
-          // Dedupe by id, prioritize exact
-          const seen = new Set<number>();
-          const merged: Indicator[] = [];
-          for (const ds of [...exactDs, ...suggestDs]) {
-            if (!seen.has(ds.id)) {
-              seen.add(ds.id);
-              // Map to Indicator format
-              merged.push({
-                id: ds.id,
-                name: ds.title || '',
-                title: ds.title,
-                type: inferTypeFromLink(ds.link),
-                category: ds.subtitle || '',
-                score: ds.score || 0,
-                subtitle: ds.subtitle,
-                link: ds.link,
-              });
-            }
+        if (!res.ok) return;
+        const data = await res.json();
+        const exactDs = data.exact?.datasources ?? [];
+        const suggestDs = data.suggestions?.datasources ?? [];
+        const seen = new Set<number>();
+        const merged: Indicator[] = [];
+        for (const ds of [...exactDs, ...suggestDs]) {
+          if (!seen.has(ds.id)) {
+            seen.add(ds.id);
+            merged.push({
+              id: ds.id,
+              name: ds.title ?? "",
+              title: ds.title,
+              type: inferTypeFromLink(ds.link),
+              category: ds.subtitle ?? "",
+              score: ds.score ?? 0,
+              subtitle: ds.subtitle,
+              link: ds.link,
+            });
           }
-          setIndicators(merged.slice(0, 20));
         }
+        setIndicators(merged.slice(0, 20));
+        setHasExactIndicators(exactDs.length > 0);
       } catch (err) {
         console.error("Error searching indicators:", err);
       } finally {
         setLoadingIndicators(false);
       }
-    }, 200);  // Reduced from 300ms for faster response
-
-    return () => clearTimeout(timeoutId);
+    }, 200);
+    return () => clearTimeout(id);
   }, [search]);
 
-  // Helper to infer type from link
-  function inferTypeFromLink(link: string): string {
-    if (!link) return 'dynamic';
-    if (link.includes('type=exim')) return 'exim';
-    if (link.includes('type=interop')) return 'interop';
-    if (link.includes('type=static')) return 'static';
-    return 'dynamic';
-  }
+  // Total composition (across all categories) — used by the hero summary panel
+  const totalIndicators = useMemo(
+    () => categories.reduce((a, c) => a + c.count, 0),
+    [categories],
+  );
+  const totalComposition: TypeCounts = useMemo(() => {
+    const acc = emptyTypeCounts();
+    for (const c of categories) {
+      const tc = countByType(c);
+      for (const t of SOURCE_TYPES) acc[t] += tc[t];
+    }
+    return acc;
+  }, [categories]);
 
   const filteredCategories = useMemo(() => {
-    let result = categories;
-
-    // Filter by search
+    let out = categories;
     if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((c) => c.name.toLowerCase().includes(q));
+      const ql = search.toLowerCase();
+      out = out.filter((c) => c.name.toLowerCase().includes(ql));
     }
+    out = [...out].sort((a, b) =>
+      sort === "abjad" ? a.name.localeCompare(b.name) : b.count - a.count,
+    );
+    return out;
+  }, [categories, search, sort]);
 
-    // Sort
-    if (sortBy === "name") {
-      result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      result = [...result].sort((a, b) => b.count - a.count);
-    }
+  const featured = filteredCategories.slice(0, 4);
+  const secondary = filteredCategories.slice(4);
 
-    return result;
-  }, [categories, search, sortBy]);
-
-  const totalIndicators = useMemo(
-    () => categories.reduce((sum, c) => sum + c.count, 0),
-    [categories]
-  );
+  const showIndicators = !!search.trim() && hasExactIndicators && indicators.length > 0;
+  const noResults =
+    !!search.trim() &&
+    filteredCategories.length === 0 &&
+    indicators.length === 0 &&
+    !loadingIndicators;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
-          Jelajahi Data berdasarkan Kategori
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {loading
-            ? "Memuat..."
-            : `${categories.length} kategori dengan ${totalIndicators} indikator tersedia`}
-        </p>
-      </div>
+    <div className="space-y-0">
+      {/* ── HERO (dark brand band) — full bleed via -mx ──────────────────── */}
+      <Hero
+        catCount={categories.length}
+        totalIndicators={totalIndicators}
+        composition={totalComposition}
+        loading={loading}
+      />
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <svg
-              className="h-5 w-5 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            placeholder="Cari kategori atau indikator..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-800"
-          />
-        </div>
+      {/* ── STICKY FILTER ────────────────────────────────────────────────── */}
+      <div className="sticky top-[76px] z-[5] -mx-4 border-b border-gray-200/60 bg-gray-50/85 px-4 py-3 backdrop-blur-md dark:border-gray-800/60 dark:bg-[#020617]/85 md:-mx-6 md:top-[89px] md:px-6 lg:px-11">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900 lg:max-w-md">
+            <SearchIcon size={15} className="text-gray-400 dark:text-gray-500" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari kategori atau indikator…"
+              className="flex-1 border-0 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-white/95 dark:placeholder:text-gray-500"
+              aria-label="Cari kategori atau indikator"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="flex items-center text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                aria-label="Hapus pencarian"
+              >
+                <CloseIcon size={14} />
+              </button>
+            )}
+          </div>
 
-        {/* Sort */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Urutkan:
-          </span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"
-          >
-            <option value="count">Jumlah Terbanyak</option>
-            <option value="name">Abjad</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Grid / Dual Section */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <CategoryCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
+          {/* sort: compact toggle on mobile, segmented on desktop */}
           <button
             type="button"
-            onClick={() => window.location.reload()}
-            className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+            onClick={() => setSort(sort === "count" ? "abjad" : "count")}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 lg:hidden"
+            aria-label={
+              sort === "count"
+                ? "Urutkan berdasarkan abjad"
+                : "Urutkan berdasarkan jumlah terbanyak"
+            }
           >
-            Coba Lagi
+            <SortIcon size={13} className="text-brand-500 dark:text-brand-400" />
+            {sort === "count" ? "Terbanyak" : "A–Z"}
           </button>
+
+          <div className="hidden gap-1 rounded-lg bg-black/5 p-[3px] dark:bg-white/5 lg:flex">
+            {(
+              [
+                { k: "count" as const, label: "Jumlah Terbanyak" },
+                { k: "abjad" as const, label: "Abjad" },
+              ]
+            ).map((o) => {
+              const active = sort === o.k;
+              return (
+                <button
+                  key={o.k}
+                  type="button"
+                  onClick={() => setSort(o.k)}
+                  className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
+                    active
+                      ? "bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white"
+                      : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hidden flex-1 lg:block" />
+          <div className="hidden text-sm text-gray-500 dark:text-gray-400 lg:block">
+            Menampilkan{" "}
+            <strong className="font-bold text-gray-900 dark:text-white/95">
+              {filteredCategories.length}
+            </strong>{" "}
+            kategori
+          </div>
         </div>
-      ) : search.trim() !== "" ? (
-        // Dual section when searching
-        <div className="space-y-8">
-          {(() => {
-            const hasIndicators = indicators.length > 0;
-            const hasCategories = filteredCategories.length > 0;
-            
-            // Hitung average score indikator (higher score = more relevant)
-            const avgIndicatorScore = hasIndicators
-              ? indicators.reduce((sum, ind) => sum + (ind.score || 0), 0) / indicators.length
-              : 0;
-            
-            // Simple scoring untuk kategori match (1 = ada match, 0 = tidak)
-            const categoryMatchScore = hasCategories ? 1 : 0;
-            
-            // Tampilkan indikator dulu jika score lebih tinggi
-            const showIndicatorsFirst = avgIndicatorScore > categoryMatchScore;
-            
-            const indicatorSection = (
-              <div key="indicators">
-                <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                    📊 Indikator
-                  </h2>
-                  <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                    {indicators.length}
-                  </span>
-                </div>
-                {loadingIndicators ? (
-                  <div className="space-y-3">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <IndicatorCardSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : indicators.length > 0 ? (
-                  <div className="space-y-3">
-                    {indicators.map((indicator) => (
-                      <IndicatorCard key={indicator.id} indicator={indicator} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Tidak ada indikator yang cocok
-                  </p>
-                )}
-              </div>
-            );
-            
-            const categorySection = (
-              <div key="categories">
-                <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                    📁 Kategori
-                  </h2>
-                  <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-400">
-                    {filteredCategories.length}
-                  </span>
-                </div>
-                {filteredCategories.length > 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredCategories.map((category) => (
-                      <CategoryCard key={category.slug} category={category} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Tidak ada kategori yang cocok
-                  </p>
-                )}
-              </div>
-            );
-            
-            // Return sections dengan urutan dinamis
-            // Jika masih loading, tampilkan skeleton
-            if (loadingIndicators) {
-              return (
-                <>
-                  <div key="indicators-loading">
-                    <div className="mb-4 flex items-center gap-2">
-                      <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                        📊 Indikator
-                      </h2>
-                      <span className="animate-pulse rounded-full bg-gray-200 px-4 py-0.5 text-xs dark:bg-gray-700">&nbsp;</span>
-                    </div>
-                    <div className="space-y-3">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <IndicatorCardSkeleton key={i} />
-                      ))}
-                    </div>
-                  </div>
-                  {hasCategories && categorySection}
-                </>
-              );
-            }
-            
-            if (!hasIndicators && !hasCategories) {
-              return (
-                <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Tidak ditemukan indikator atau kategori dengan kata kunci &quot;{search}&quot;
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="mt-4 inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    Hapus Filter
-                  </button>
-                </div>
-              );
-            }
-            
-            if (showIndicatorsFirst) {
-              return (
-                <>
-                  {hasIndicators && indicatorSection}
-                  {hasCategories && categorySection}
-                </>
-              );
-            } else {
-              return (
-                <>
-                  {hasCategories && categorySection}
-                  {hasIndicators && indicatorSection}
-                </>
-              );
-            }
-          })()}
-        </div>
-      ) : filteredCategories.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Tidak ada kategori tersedia.
-          </p>
-        </div>
-      ) : (
-        // Default view: hanya kategori
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredCategories.map((category) => (
-            <CategoryCard key={category.slug} category={category} />
-          ))}
+      </div>
+
+      {/* ── ERROR ────────────────────────────────────────────────────────── */}
+      {error && (
+        <div className="pt-6">
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
+            <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+            >
+              Coba Lagi
+            </button>
+          </div>
         </div>
       )}
+
+      {/* ── LOADING SKELETON ─────────────────────────────────────────────── */}
+      {loading && !error && <ListSkeleton />}
+
+      {/* ── NO-RESULTS ───────────────────────────────────────────────────── */}
+      {!loading && !error && noResults && (
+        <div className="pt-8 lg:pt-12">
+          <EmptyState
+            query={search}
+            onClear={() => setSearch("")}
+            size="md"
+          />
+        </div>
+      )}
+
+      {/* ── INDICATORS-FIRST (when search has exact hits) ────────────────── */}
+      {!loading && showIndicators && (
+        <section className="pt-5 lg:pt-8">
+          <SectionHeader
+            icon={<ChartIcon size={14} />}
+            label="Indikator"
+            count={indicators.length}
+            size="lg"
+          />
+          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-3">
+            {indicators.map((ind) => (
+              <IndicatorRow key={ind.id} ind={ind} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── FEATURED (top-4 color-tinted cards) ──────────────────────────── */}
+      {!loading && filteredCategories.length > 0 && (
+        <section className="pt-5 lg:pt-8">
+          <SectionHeader
+            icon={<FolderIcon size={14} />}
+            label={search ? "Kategori" : "Pilihan Populer"}
+            count={search ? filteredCategories.length : featured.length}
+            subtitle={search ? undefined : "Empat kategori dengan indikator terbanyak"}
+            size="lg"
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+            {featured.map((cat) => (
+              <FeaturedCard key={cat.slug} cat={cat} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── SECONDARY (rest as compact cards) ────────────────────────────── */}
+      {!loading && !search && secondary.length > 0 && (
+        <section className="pt-7 pb-2 lg:pt-10">
+          <SectionHeader
+            icon={<FolderIcon size={14} />}
+            label="Semua Kategori"
+            count={secondary.length}
+            subtitle="Diurutkan berdasarkan jumlah indikator"
+            size="lg"
+          />
+          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3 lg:gap-3">
+            {secondary.map((cat) => (
+              <CompactCard key={cat.slug} cat={cat} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── INDICATOR SUGGESTIONS (after categories when no exact) ───────── */}
+      {!loading && search && !showIndicators && indicators.length > 0 && (
+        <section className="pt-7 pb-2 lg:pt-10">
+          <SectionHeader
+            icon={<ChartIcon size={14} />}
+            label="Indikator Terkait"
+            count={indicators.length}
+            size="lg"
+          />
+          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-3">
+            {indicators.map((ind) => (
+              <IndicatorRow key={ind.id} ind={ind} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// HERO — dark brand band with title, stats, composition donut + breakdown
+// ──────────────────────────────────────────────────────────────────────────
+function Hero({
+  catCount,
+  totalIndicators,
+  composition,
+  loading,
+}: {
+  catCount: number;
+  totalIndicators: number;
+  composition: TypeCounts;
+  loading: boolean;
+}) {
+  return (
+    <section
+      className="relative -mx-4 overflow-hidden text-white md:-mx-6"
+      style={{
+        background:
+          "linear-gradient(120deg, #161950 0%, #252dae 60%, #3641f5 100%)",
+      }}
+    >
+      {/* brand-rail glow (defined globally in globals.css, respects reduce-motion) */}
+      <div
+        aria-hidden
+        className="malika-rail-glow pointer-events-none absolute left-0 right-0 top-0 h-[2px]"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, #7592ff 50%, transparent)",
+        }}
+      />
+      {/* dot pattern + radial spotlight */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={{
+          backgroundImage:
+            "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
+          maskImage:
+            "radial-gradient(ellipse at top right, rgba(0,0,0,0.7), transparent 60%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse at top right, rgba(0,0,0,0.7), transparent 60%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 -top-20 h-[260px] w-[260px] rounded-full lg:h-[380px] lg:w-[380px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(149,178,255,0.32), transparent 60%)",
+        }}
+      />
+
+      <div className="relative px-4 py-7 md:px-6 lg:px-11 lg:py-9">
+        <div className="grid items-end gap-6 lg:grid-cols-[1.4fr_1fr] lg:gap-10">
+          <div>
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-brand-300 lg:text-xs">
+              Katalog Data MALIKA
+            </div>
+            <h1 className="m-0 max-w-[560px] text-balance text-[26px] font-bold leading-[1.13] tracking-tight lg:text-[40px]">
+              Jelajahi Data berdasarkan{" "}
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(120deg, #fff 0%, #c2d6ff 100%)",
+                }}
+              >
+                Kategori
+              </span>
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75 lg:mt-4 lg:text-[15px]">
+              {loading ? (
+                <span className="inline-flex h-4 w-64 animate-pulse rounded bg-white/10" />
+              ) : (
+                <>
+                  <strong className="font-bold text-white">
+                    {catCount} kategori
+                  </strong>{" "}
+                  dengan{" "}
+                  <strong className="font-bold text-white">
+                    {nfmt(totalIndicators)} indikator
+                  </strong>{" "}
+                  tersedia, terdistribusi di empat jenis sumber data.
+                </>
+              )}
+            </p>
+
+            {/* mobile-only compact distribution */}
+            <div className="mt-5 lg:hidden">
+              {!loading && (
+                <DistributionBar
+                  counts={composition}
+                  height={8}
+                  showLegend
+                  palette="dark"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* desktop summary panel: donut + per-type breakdown */}
+          <div className="hidden rounded-2xl border border-white/10 bg-white/[0.07] p-5 backdrop-blur-md lg:block">
+            <div className="mb-3 flex items-baseline justify-between">
+              <div className="text-[11px] font-bold uppercase tracking-[0.05em] text-brand-300">
+                Komposisi Sumber
+              </div>
+              <div className="text-[11px] text-white/60">
+                {nfmt(totalIndicators)} indikator
+              </div>
+            </div>
+            <DistributionBar
+              counts={composition}
+              height={10}
+              palette="dark"
+              showLegend={false}
+            />
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {SOURCE_TYPES.map((t) => (
+                <div
+                  key={t}
+                  className="rounded-lg bg-white/[0.06] px-2.5 py-2"
+                >
+                  <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-white/60">
+                    {SOURCE_TYPE_LABEL[t]}
+                  </div>
+                  <div className="text-[18px] font-bold tabular-nums text-white">
+                    {composition[t]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// FEATURED CARD — large, color-tinted, "populer" badge, distribution bar
+// ──────────────────────────────────────────────────────────────────────────
+function FeaturedCard({ cat }: { cat: Category }) {
+  const design = getCategoryDesign(cat.name);
+  const tc = countByType(cat);
+  const tintVars = {
+    ["--cat-bg-light" as string]: design.light.bg,
+    ["--cat-bg-dark" as string]: design.dark.bg,
+    ["--cat-text-light" as string]: design.light.text,
+    ["--cat-text-dark" as string]: design.dark.text,
+    ["--cat-icon-light" as string]: design.light.icon,
+    ["--cat-icon-dark" as string]: design.dark.icon,
+    ["--cat-accent-light" as string]: design.light.accent,
+    ["--cat-accent-dark" as string]: design.dark.icon,
+  } as CSSProperties;
+
+  return (
+    <Link
+      href={`/kategori/${cat.slug}`}
+      style={tintVars}
+      className="group relative flex min-h-[170px] flex-col gap-3 overflow-hidden rounded-2xl border border-black/[0.04] bg-[var(--cat-bg-light)] p-4 text-[color:var(--cat-text-light)] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_16px_40px_rgba(16,24,40,0.1)] dark:border-white/[0.04] dark:bg-[var(--cat-bg-dark)] dark:text-[color:var(--cat-text-dark)] dark:shadow-none lg:min-h-[200px] lg:p-5"
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-12 -top-12 h-[150px] w-[150px] rounded-full opacity-[0.13] dark:opacity-[0.18] lg:h-[180px] lg:w-[180px]"
+        style={{ background: "var(--cat-accent-light)" }}
+      />
+      <div className="relative flex items-start gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/70 dark:bg-white/[0.08] lg:h-12 lg:w-12">
+          <span className="text-[color:var(--cat-icon-light)] dark:text-[color:var(--cat-icon-dark)]">
+            {design.render(22, "currentColor")}
+          </span>
+        </div>
+        <span className="ml-auto rounded-full bg-white/70 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.05em] dark:bg-white/[0.07]">
+          Populer
+        </span>
+      </div>
+      <div className="relative flex-1">
+        <div className="text-balance text-[15px] font-bold leading-[1.25] tracking-tight lg:text-[17px]">
+          {cat.name}
+        </div>
+      </div>
+      <div className="relative flex items-baseline gap-1.5">
+        <span className="text-[26px] font-bold tabular-nums tracking-tight lg:text-[32px]">
+          {cat.count}
+        </span>
+        <span className="text-[11px] font-semibold opacity-65 lg:text-xs">
+          indikator
+        </span>
+      </div>
+      <div className="relative">
+        <DistributionBar counts={tc} height={4} />
+      </div>
+    </Link>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// COMPACT CARD — for the secondary grid (Indeks-style row with bar)
+// ──────────────────────────────────────────────────────────────────────────
+function CompactCard({ cat }: { cat: Category }) {
+  const design = getCategoryDesign(cat.name);
+  const tc = countByType(cat);
+  const typeCount = SOURCE_TYPES.filter((t) => tc[t] > 0).length;
+
+  return (
+    <Link
+      href={`/kategori/${cat.slug}`}
+      className="group flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 lg:p-4"
+      style={
+        {
+          ["--cat-bg-light" as string]: design.light.bg,
+          ["--cat-bg-dark" as string]: design.dark.bg,
+          ["--cat-icon-light" as string]: design.light.icon,
+          ["--cat-icon-dark" as string]: design.dark.icon,
+        } as CSSProperties
+      }
+    >
+      <div
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--cat-bg-light)] text-[color:var(--cat-icon-light)] dark:bg-[var(--cat-bg-dark)] dark:text-[color:var(--cat-icon-dark)] lg:h-11 lg:w-11"
+      >
+        {design.render(20, "currentColor")}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="line-clamp-1 text-sm font-bold tracking-tight text-gray-900 dark:text-white/95 lg:text-[14px]">
+            {cat.name}
+          </div>
+          <div className="text-sm font-bold tabular-nums text-gray-900 dark:text-white/95 lg:text-[14px]">
+            {cat.count}
+          </div>
+        </div>
+        <div className="mt-2 flex items-center gap-2.5">
+          <div className="min-w-0 flex-1">
+            <DistributionBar counts={tc} height={4} />
+          </div>
+          <span className="whitespace-nowrap text-[10.5px] text-gray-400 dark:text-gray-500">
+            {typeCount} jenis
+          </span>
+        </div>
+      </div>
+      <ChevronRightIcon
+        size={16}
+        className="hidden text-gray-400 transition-transform group-hover:translate-x-0.5 dark:text-gray-500 lg:block"
+      />
+    </Link>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// INDICATOR ROW — for search hits (when /api/search returns datasources)
+// ──────────────────────────────────────────────────────────────────────────
+function IndicatorRow({ ind }: { ind: Indicator }) {
+  const href = ind.link || `/data?source_id=${ind.id}`;
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+    >
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+        <ChartIcon size={16} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover:text-brand-600 dark:text-white/95 dark:group-hover:text-brand-300">
+          {ind.title || ind.name}
+        </div>
+        <div className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-gray-400">
+          {ind.subtitle || ind.category || "Lainnya"}
+        </div>
+      </div>
+      <TypeBadge type={(ind.type as SourceType) || "dynamic"} small />
+      <ChevronRightIcon
+        size={14}
+        className="text-gray-400 transition-transform group-hover:translate-x-0.5 dark:text-gray-500"
+      />
+    </Link>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// LOADING SKELETON
+// ──────────────────────────────────────────────────────────────────────────
+function ListSkeleton() {
+  return (
+    <div className="space-y-6 pt-6 lg:pt-8">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[170px] animate-pulse rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 lg:h-[200px]"
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3 lg:gap-3">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[68px] animate-pulse rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+          />
+        ))}
+      </div>
     </div>
   );
 }

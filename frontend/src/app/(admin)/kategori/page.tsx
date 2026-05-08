@@ -3,12 +3,10 @@ import React, { Suspense } from "react";
 import KategoriPageClient from "./KategoriPageClient";
 
 export const metadata: Metadata = {
-  title: "Kategori Data | MALIKA",
+  title: "Kategori Data",
   description:
     "Jelajahi data statistik berdasarkan kategori - Pertanian, Ekonomi, Pendidikan, Kesehatan, dan lainnya.",
 };
-
-export const dynamic = "force-dynamic";
 
 function LoadingSkeleton() {
   return (

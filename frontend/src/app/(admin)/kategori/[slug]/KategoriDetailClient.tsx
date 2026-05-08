@@ -1,272 +1,338 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { getCategoryStyle } from "@/lib/categoryStyles";
+import React, { useMemo, useState, type CSSProperties } from "react";
+import {
+  ArrowLeftIcon,
+  ChartIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  CompositionDonut,
+  DistributionBar,
+  EmptyState,
+  HomeIcon,
+  SearchIcon,
+  TypeBadge,
+} from "../_components/atoms";
+import { getCategoryDesign } from "../_lib/categoryIcons";
+import {
+  countByType,
+  dominantType,
+  SOURCE_TYPE_LABEL,
+  SOURCE_TYPES,
+  type Category,
+  type CategorySource,
+  type SourceType,
+} from "../_lib/types";
 
-type CategorySource = {
-  id: number;
-  name: string;
-  type: string;
-};
+type Filter = SourceType | "all";
 
-type Category = {
-  name: string;
-  count: number;
-  slug: string;
-  sources: CategorySource[];
-};
+export default function KategoriDetailClient({ category }: { category: Category }) {
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
-function DatasourceCard({ source }: { source: CategorySource }) {
-  const typeLabel =
-    source.type === "exim"
-      ? "EXIM"
-      : source.type === "dynamic"
-        ? "Dinamis"
-        : source.type === "interop"
-          ? "Interop"
-          : source.type === "static"
-            ? "Statis"
-            : source.type;
+  const design = useMemo(() => getCategoryDesign(category.name), [category.name]);
+  const tc = useMemo(() => countByType(category), [category]);
+  const dominant = SOURCE_TYPE_LABEL[dominantType(tc)].toLowerCase();
+  const typeCount = SOURCE_TYPES.filter((t) => tc[t] > 0).length;
 
-  const typeBadgeClass =
-    source.type === "exim"
-      ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
-      : source.type === "dynamic"
-        ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-        : "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400";
+  const filteredSources = useMemo(() => {
+    let out = category.sources;
+    if (filter !== "all") out = out.filter((s) => s.type === filter);
+    if (q) {
+      const ql = q.toLowerCase();
+      out = out.filter((s) => s.name.toLowerCase().includes(ql));
+    }
+    return out;
+  }, [category.sources, filter, q]);
+
+  // CSS vars carry the per-category palette so Tailwind dark: modifiers can switch
+  // between light/dark variants without re-rendering JSX trees.
+  const tintVars: CSSProperties = {
+    ["--cat-bg-light" as string]: design.light.bg,
+    ["--cat-bg-dark" as string]: design.dark.bg,
+    ["--cat-text-light" as string]: design.light.text,
+    ["--cat-text-dark" as string]: design.dark.text,
+    ["--cat-icon-light" as string]: design.light.icon,
+    ["--cat-icon-dark" as string]: design.dark.icon,
+    ["--cat-accent-light" as string]: design.light.accent,
+    ["--cat-accent-dark" as string]: design.dark.icon,
+  };
 
   return (
-    <Link
-      href={`/data?source_id=${source.id}`}
-      className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition-all duration-200 hover:border-brand-200 hover:bg-brand-50/50 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-800 dark:hover:bg-brand-500/5"
-    >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5" />
-          </svg>
+    <div className="space-y-0">
+      {/* ── HERO (color-tinted by category) — full bleed via -mx ─────────── */}
+      <section
+        style={tintVars}
+        className="relative -mx-4 overflow-hidden bg-[var(--cat-bg-light)] text-[color:var(--cat-text-light)] dark:bg-[var(--cat-bg-dark)] dark:text-[color:var(--cat-text-dark)] md:-mx-6"
+      >
+        {/* decorative splash */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-24 h-[280px] w-[280px] rounded-full opacity-[0.13] lg:h-[380px] lg:w-[380px]"
+          style={{ background: "var(--cat-accent-light)" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-24 hidden h-[280px] w-[280px] rounded-full opacity-[0.18] dark:block lg:h-[380px] lg:w-[380px]"
+          style={{ background: "var(--cat-accent-dark)" }}
+        />
+
+        <div className="relative px-4 py-6 md:px-6 lg:px-11 lg:py-9">
+          {/* Breadcrumb */}
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-4 flex items-center gap-1.5 text-xs opacity-80"
+          >
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 hover:opacity-100"
+            >
+              <HomeIcon size={12} />
+              Beranda
+            </Link>
+            <ChevronRightIcon size={11} className="opacity-60" />
+            <Link href="/kategori" className="font-semibold hover:opacity-100">
+              Kategori
+            </Link>
+            <ChevronRightIcon size={11} className="opacity-60" />
+            <span className="truncate font-bold" style={{ maxWidth: 220 }}>
+              {category.name}
+            </span>
+          </nav>
+
+          <div className="grid items-center gap-6 lg:grid-cols-[1fr_auto] lg:gap-10">
+            {/* left column: back button + title + description */}
+            <div className="min-w-0">
+              <Link
+                href="/kategori"
+                className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-white/65 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/85 dark:bg-white/10 dark:hover:bg-white/15"
+              >
+                <ArrowLeftIcon size={14} />
+                Kembali ke Kategori
+              </Link>
+              <div className="flex items-start gap-4 lg:gap-5">
+                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 dark:bg-white/10 lg:h-20 lg:w-20">
+                  <span className="text-[color:var(--cat-icon-light)] dark:text-[color:var(--cat-icon-dark)]">
+                    {design.render(28, "currentColor")}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.05em] opacity-70 lg:text-[11px]">
+                    Sektor Data
+                  </div>
+                  <h1 className="m-0 text-balance text-2xl font-bold leading-[1.15] tracking-tight lg:text-4xl">
+                    {category.name}
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed opacity-80 lg:mt-3 lg:text-[15px]">
+                    <strong className="font-bold">{category.count} indikator</strong>{" "}
+                    dari <strong className="font-bold">{typeCount} jenis sumber</strong>
+                    {dominant && tc[dominantType(tc)] > 0 ? (
+                      <>
+                        , dengan dominasi <strong className="font-bold">{dominant}</strong>{" "}
+                        sebagai sumber utama.
+                      </>
+                    ) : (
+                      "."
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* mobile-only distribution bar — desktop uses donut panel on the right */}
+              <div className="mt-5 lg:hidden">
+                <DistributionBar counts={tc} height={6} showLegend />
+              </div>
+            </div>
+
+            {/* desktop-only donut panel */}
+            <div className="hidden rounded-2xl border border-white/70 bg-white/50 p-4 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 lg:flex lg:items-center lg:gap-5">
+              <CompositionDonut
+                counts={tc}
+                size={160}
+                strokeWidth={22}
+                centerLabel={category.count.toLocaleString("id-ID")}
+                centerSubLabel="INDIKATOR"
+              />
+              <div className="flex min-w-[140px] flex-col gap-1.5">
+                {SOURCE_TYPES.map((t) =>
+                  tc[t] > 0 ? (
+                    <div key={t} className="flex items-center gap-2 text-xs">
+                      <TypeBadge type={t} small />
+                      <span className="ml-auto font-bold tabular-nums">{tc[t]}</span>
+                    </div>
+                  ) : null,
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-        <span className="text-sm font-medium text-gray-800 truncate group-hover:text-brand-600 dark:text-white/90 dark:group-hover:text-brand-400">
-          {source.name}
-        </span>
+      </section>
+
+      {/* ── STICKY FILTER (search + segmented type filter) ───────────────── */}
+      <div className="sticky top-[76px] z-[5] -mx-4 border-b border-gray-200/60 bg-gray-50/85 px-4 py-3 backdrop-blur-md dark:border-gray-800/60 dark:bg-[#020617]/85 md:-mx-6 md:top-[89px] md:px-6 lg:px-11">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900 lg:max-w-md">
+            <SearchIcon size={15} className="text-gray-400 dark:text-gray-500" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={`Cari di ${category.count} sumber data…`}
+              className="flex-1 border-0 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-white/95 dark:placeholder:text-gray-500"
+              aria-label="Cari sumber data"
+            />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="flex items-center text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                aria-label="Hapus pencarian"
+              >
+                <CloseIcon size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="-mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+            <div className="flex gap-1 rounded-lg bg-black/5 p-[3px] dark:bg-white/5">
+              {(
+                [
+                  { k: "all" as const, label: "Semua", n: category.count },
+                  ...SOURCE_TYPES.filter((t) => tc[t] > 0).map((t) => ({
+                    k: t,
+                    label: SOURCE_TYPE_LABEL[t],
+                    n: tc[t],
+                  })),
+                ]
+              ).map((seg) => {
+                const active = filter === seg.k;
+                return (
+                  <button
+                    key={seg.k}
+                    type="button"
+                    onClick={() => setFilter(seg.k)}
+                    className={`flex-shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
+                      active
+                        ? "bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white"
+                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    {seg.label}{" "}
+                    <span className="ml-1 opacity-60">{seg.n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hidden flex-1 lg:block" />
+          <div className="text-xs text-gray-500 dark:text-gray-400 lg:text-sm">
+            <strong className="font-bold text-gray-900 dark:text-white/95">
+              {filteredSources.length}
+            </strong>{" "}
+            sumber{q && ` cocok dengan "${q}"`}
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeBadgeClass}`}>
-          {typeLabel}
-        </span>
-        <svg
-          className="h-5 w-5 text-gray-400 transition-transform duration-200 group-hover:translate-x-1 dark:text-gray-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+
+      {/* ── SOURCE LIST ──────────────────────────────────────────────────── */}
+      <section className="pt-5 lg:pt-8">
+        {filteredSources.length === 0 ? (
+          <EmptyState
+            query={q || filter !== "all" ? q : ""}
+            message={
+              q
+                ? `Tidak ada sumber yang cocok dengan "${q}"`
+                : "Tidak ada sumber pada filter ini."
+            }
+            onClear={() => {
+              setQ("");
+              setFilter("all");
+            }}
+          />
+        ) : (
+          <div
+            className="grid gap-2.5 lg:gap-3"
+            style={{ gridTemplateColumns: "1fr" }}
+          >
+            <SourceGrid sources={filteredSources} accentLight={design.light.icon} accentDark={design.dark.icon} />
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SourceGrid({
+  sources,
+  accentLight,
+  accentDark,
+}: {
+  sources: CategorySource[];
+  accentLight: string;
+  accentDark: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-3">
+      {sources.map((src) => (
+        <SourceRow key={src.id} src={src} accentLight={accentLight} accentDark={accentDark} />
+      ))}
+    </div>
+  );
+}
+
+function SourceRow({
+  src,
+  accentLight,
+  accentDark,
+}: {
+  src: CategorySource;
+  accentLight: string;
+  accentDark: string;
+}) {
+  const t = src.type as SourceType;
+  return (
+    <Link
+      href={`/data?source_id=${src.id}`}
+      className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-all duration-150 hover:-translate-y-[1px] hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 lg:p-4"
+      style={
+        {
+          ["--accent-light" as string]: accentLight,
+          ["--accent-dark" as string]: accentDark,
+        } as CSSProperties
+      }
+    >
+      {/* colored stripe — type-based */}
+      <span
+        aria-hidden
+        className={`h-9 w-1 flex-shrink-0 rounded-full ${stripeFor(t)}`}
+      />
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition-colors dark:bg-brand-500/15 dark:text-brand-300 group-hover:text-[color:var(--accent-light)] dark:group-hover:text-[color:var(--accent-dark)]">
+        <ChartIcon size={16} />
       </div>
+      <div className="min-w-0 flex-1">
+        <div className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition-colors dark:text-white/95 group-hover:text-[color:var(--accent-light)] dark:group-hover:text-[color:var(--accent-dark)]">
+          {src.name}
+        </div>
+        <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+          source · #{src.id}
+        </div>
+      </div>
+      <TypeBadge type={src.type} small />
+      <ChevronRightIcon
+        size={16}
+        className="text-gray-400 transition-transform group-hover:translate-x-0.5 dark:text-gray-500"
+      />
     </Link>
   );
 }
 
-function SkeletonCard() {
-  return (
-    <div className="animate-pulse rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700" />
-        <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700" />
-      </div>
-    </div>
-  );
-}
-
-export default function KategoriDetailClient() {
-  const params = useParams();
-  const slug = typeof params.slug === "string" ? params.slug : "";
-  
-  const [category, setCategory] = useState<Category | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    const fetchCategory = async () => {
-      try {
-        const res = await fetch("/api/categories", { cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        const data = await res.json();
-        const categories: Category[] = data.categories || [];
-        const found = categories.find((c) => c.slug === slug);
-        if (!found) {
-          setError("Kategori tidak ditemukan.");
-        } else {
-          setCategory(found);
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Gagal memuat data. Silakan coba lagi.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (slug) {
-      fetchCategory();
-    }
-  }, [slug]);
-
-  const filteredSources = useMemo(() => {
-    if (!category) return [];
-    if (!search.trim()) return category.sources;
-    const q = search.toLowerCase();
-    return category.sources.filter((s) => s.name.toLowerCase().includes(q));
-  }, [category, search]);
-
-  const style = category ? getCategoryStyle(category.name) : null;
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        {/* Breadcrumb skeleton */}
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-          <span className="text-gray-300">/</span>
-          <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-        </div>
-        {/* Header skeleton */}
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
-          <div>
-            <div className="h-6 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="mt-2 h-4 w-24 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-          </div>
-        </div>
-        {/* List skeleton */}
-        <div className="space-y-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      </div>
-    );
+function stripeFor(t: SourceType | string): string {
+  switch (t) {
+    case "dynamic": return "bg-blue-500 dark:bg-blue-400";
+    case "interop": return "bg-violet-500 dark:bg-violet-400";
+    case "exim":    return "bg-orange-500 dark:bg-orange-400";
+    case "static":  return "bg-gray-500 dark:bg-gray-400";
+    default:        return "bg-gray-300 dark:bg-gray-600";
   }
-
-  if (error || !category) {
-    return (
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            Beranda
-          </Link>
-          <span className="text-gray-300 dark:text-gray-600">/</span>
-          <Link href="/kategori" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            Kategori
-          </Link>
-        </nav>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {error || "Kategori tidak ditemukan."}
-          </p>
-          <Link
-            href="/kategori"
-            className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
-          >
-            Kembali ke Daftar Kategori
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm">
-        <Link href="/" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          Beranda
-        </Link>
-        <span className="text-gray-300 dark:text-gray-600">/</span>
-        <Link href="/kategori" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          Kategori
-        </Link>
-        <span className="text-gray-300 dark:text-gray-600">/</span>
-        <span className="font-medium text-gray-800 dark:text-white/90 truncate max-w-[200px]">
-          {category.name}
-        </span>
-      </nav>
-
-      {/* Header */}
-      <div className="flex items-start gap-4">
-        {style && (
-          <div
-            className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl ${style.bgColor}`}
-          >
-            <span className="text-3xl" role="img" aria-hidden="true">
-              {style.icon}
-            </span>
-          </div>
-        )}
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90 sm:text-2xl">
-            {category.name}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {category.count} indikator tersedia
-          </p>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          <svg
-            className="h-5 w-5 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-        </span>
-        <input
-          type="text"
-          placeholder="Cari indikator..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-11 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-800"
-        />
-      </div>
-
-      {/* List */}
-      {filteredSources.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {search
-              ? `Tidak ditemukan indikator dengan kata kunci "${search}"`
-              : "Tidak ada indikator dalam kategori ini."}
-          </p>
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="mt-4 inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              Hapus Filter
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredSources.map((source) => (
-            <DatasourceCard key={source.id} source={source} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
