@@ -684,25 +684,21 @@ export default function ChatPageClient() {
           setShowThinking(true);
         }
 
-        // Block load completion until LLM-generated suggestions are ready.
-        // User explicitly requested: "load chat jangan selesai sampai
-        // suggestion siap, jadi user langsung tampil suggestion sudah siap".
-        // The loadingMessages skeleton stays up across the LLM call (~15s
-        // cold, instant on cache hit) so the chat surfaces with chips already
-        // populated rather than flashing through stale/empty states.
+        // Fire-and-forget: chat surfaces immediately. The chip area shows
+        // its own skeleton (driven by suggestionsLoading) while the LLM
+        // endpoint runs in the background — see MalikaQuickReplies skeleton
+        // chips at AssistantThread.tsx:489. Stored hardcoded chips are
+        // already stripped in extractLastAssistantUi so nothing flashes
+        // before the real chips arrive.
         if (rows.length > 0) {
-          await fetchThreadSuggestions(threadId);
+          fetchThreadSuggestions(threadId);
         }
       } catch (e: any) {
         if (e?.name === "AbortError") return; // Aborted by newer loadMessages call
         setErrorText(e instanceof Error ? e.message : String(e));
         resetList([]);
       } finally {
-        // Only unblock if user is still viewing this thread — otherwise the
-        // newer loadMessages call owns the skeleton.
-        if (activeThreadIdRef.current === threadId) {
-          setLoadingMessages(false);
-        }
+        setLoadingMessages(false);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1102,11 +1098,10 @@ export default function ChatPageClient() {
               const ui = extractLastAssistantUi(rows, uiMsgs);
               setLastAssistantUi(ui);
 
-              // Block initial-load completion until LLM-generated chips are
-              // ready (matches the loadMessages flow). For an empty thread,
-              // no fetch is needed.
+              // Fire-and-forget: chat appears immediately, chip skeleton
+              // (driven by suggestionsLoading) covers the LLM round-trip.
               if (rows.length > 0) {
-                await fetchThreadSuggestions(firstThreadId);
+                fetchThreadSuggestions(firstThreadId);
               } else {
                 setSuggestionsLoading(false);
               }
