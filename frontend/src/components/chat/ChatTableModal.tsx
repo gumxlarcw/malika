@@ -23,7 +23,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { formatCellValue } from "@/lib/chatUtils";
+import { renderCellWithCode } from "@/lib/cellRender";
 import { CHAT_TEXT } from "@/lib/chatConstants";
 import { CloseIcon, ExternalLinkIcon, DownloadIcon, ChevronDownIcon, CopyIcon, CheckIcon } from "@/components/chat/icons";
 
@@ -285,7 +285,7 @@ function TableRenderer({
             left: cIdx === 0 ? getStickyLeft(0) : undefined,
           }}
         >
-          {formatCellValue(row?.[c], c)}
+          {renderCellWithCode(row, c)}
         </td>
       ))}
     </tr>
@@ -416,7 +416,7 @@ function TableRenderer({
                       left: cIdx === 0 ? getStickyLeft(0) : undefined,
                     }}
                   >
-                    {formatCellValue(row?.[c], c)}
+                    {renderCellWithCode(row, c)}
                   </td>
                 ))}
               </tr>

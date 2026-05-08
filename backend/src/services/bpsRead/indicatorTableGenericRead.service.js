@@ -141,6 +141,7 @@ async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
   const selectDimKey = cols.has('dim_key') ? 'dim_key' : "'' AS dim_key";
   const selectDimValue = cols.has('dim_value') ? 'dim_value' : "'' AS dim_value";
   const selectDimHash = cols.has('dim_hash') ? 'dim_hash' : "'' AS dim_hash";
+  const selectValueCode = cols.has('value_code') ? 'value_code' : 'NULL AS value_code';
   const selectLastUpdate = cols.has('last_update')
     ? 'last_update'
     : cols.has('updated_at')
@@ -159,6 +160,7 @@ async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
       ${selectDimHash},
       metric,
       value,
+      ${selectValueCode},
       ${selectLastUpdate}
     FROM \`${tableName}\`
     WHERE ${where.join(' AND ')}
@@ -221,6 +223,14 @@ async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
         if (existing[metric] === null || existing[metric] === undefined) existing[metric] = parsed;
       } else {
         if (existing[metric] === undefined) existing[metric] = null;
+      }
+
+      const codeRaw = r?.value_code;
+      if (codeRaw != null && String(codeRaw).trim() !== '') {
+        if (!existing.value_codes) existing.value_codes = {};
+        if (existing.value_codes[metric] === undefined) {
+          existing.value_codes[metric] = String(codeRaw).trim();
+        }
       }
     }
 

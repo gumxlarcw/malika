@@ -3,6 +3,7 @@
 import React from "react";
 import { VirtualizedTable } from "@/components/common/VirtualizedTable";
 import EmptyState from "@/components/common/EmptyState";
+import { renderCellWithCode } from "@/lib/cellRender";
 
 interface DataTableClientProps {
   columns: string[];
@@ -59,6 +60,7 @@ export default function DataTableClient({
       rows={rows}
       height="70vh"
       virtualizationThreshold={50}
+      formatCell={(column, row) => renderCellWithCode(row, column)}
       getRowClass={(row, _idx) => {
         if (!hasMonth) return "";
         const monthHit = matchesMonthCell(row[monthKeyCol!], monthNo!);

@@ -27,7 +27,17 @@ AppSetting, DnaCache, index.js
 - `ensureDataSourceHasAliasesColumn()`
 - `ensureAppSettingsTableExists()`
 
+## Per-cell BPS flags (`indikator_NNN.value_code`)
+- Column: `value_code VARCHAR(8) NULL` on every `indikator_NNN` table (added by `ensureIndicatorTable`).
+- Source: `row.variables[colId].value_code` from BPS interop API → `interop.processor` emits `row.value_codes = { [metricKey]: code }` → `replicateMergedToIndicatorTableBps` writes one column per (kode_wilayah, metric_key, dim_key) row.
+- Read shape: `indicatorTableGenericRead.service` attaches `row.value_codes = { [metricKey]: code }` sidecar on each grouped output row.
+- Frontend: `lib/cellRender.tsx` `renderCellWithCode` consumes the sidecar and emits `<sup title="...">code</sup>` next to the value. `BPS_VALUE_CODE_LABELS` maps known codes (`r`, `*`, `**`, `***`, `e`, `p`, `x`).
+- **Render call sites**: `app/(admin)/data/DataTableClient.tsx` (data page) and `components/chat/ChatTableModal.tsx` (chat result modal — both virtualized and non-virtualized branches).
+- **EXIM is excluded**: `indicatorTableRead.service` aggregates with SUM, where per-cell codes have no meaning.
+- **Multi-source chat preview is excluded**: `streaming/dataPreview.service.js` builds merged rows fresh from looked-up values; per-cell codes from source rows have no joined cell to attach to.
+
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
 | 2026-03-02 | Initial audit & documentation | - |
+| 2026-05-08 | Phase 6.3 — `value_code` per-cell flags through live ingestion + render | `replication/indicatorTableBps.service.js`, `processor/interop.processor.js`, `bpsRead/indicatorTableGenericRead.service.js`, `frontend/lib/cellRender.tsx`, `frontend/.../DataTableClient.tsx`, `frontend/components/chat/ChatTableModal.tsx` |

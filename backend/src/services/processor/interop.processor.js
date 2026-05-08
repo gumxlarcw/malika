@@ -35,20 +35,32 @@ module.exports = function processInterop(api) {
 
         const rows = payload.data.map(row => {
             const obj = { Wilayah: row.label };
+            const value_codes = {};
 
             for (const colId of columnIds) {
                 let rawValue = null;
+                let rawCode = null;
 
                 // Format 1: row.variables[colId]
                 if (row.variables && row.variables[colId]) {
                     rawValue = row.variables[colId].value_raw;
+                    rawCode = row.variables[colId].value_code;
                 }
                 // Format 2: row[colId]
                 else if (row[colId]) {
                     rawValue = row[colId].value_raw || row[colId].value;
+                    rawCode = row[colId].value_code;
                 }
 
-                obj[colMeta[colId].nama_variabel] = normalizeValue(rawValue);
+                const metricKey = colMeta[colId].nama_variabel;
+                obj[metricKey] = normalizeValue(rawValue);
+                if (rawCode != null && rawCode !== "") {
+                    value_codes[metricKey] = String(rawCode);
+                }
+            }
+
+            if (Object.keys(value_codes).length > 0) {
+                obj.value_codes = value_codes;
             }
 
             return obj;

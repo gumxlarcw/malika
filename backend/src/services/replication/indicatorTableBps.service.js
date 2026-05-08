@@ -173,6 +173,7 @@ async function ensureIndicatorTable(sequelizeBps, tableName) {
       dim_hash VARCHAR(64) NOT NULL DEFAULT '',
       metric VARCHAR(255) NOT NULL,
       value DECIMAL(30,6) NULL,
+      value_code VARCHAR(8) NULL,
       last_update DATETIME NULL,
       created_at DATETIME NULL,
       updated_at DATETIME NULL,
@@ -266,6 +267,9 @@ async function ensureIndicatorTable(sequelizeBps, tableName) {
     }
     if (!(await colExists('dim_hash'))) {
       await sequelizeBps.query(`ALTER TABLE \`${tableName}\` ADD COLUMN dim_hash VARCHAR(64) NOT NULL DEFAULT '' AFTER dim_value`);
+    }
+    if (!(await colExists('value_code'))) {
+      await sequelizeBps.query(`ALTER TABLE \`${tableName}\` ADD COLUMN value_code VARCHAR(8) NULL AFTER value`);
     }
 
     // Backfill dim_hash for legacy rows so we can safely enforce uniqueness.
@@ -498,6 +502,8 @@ async function replicateMergedToIndicatorTableBps({
       : [];
 
     for (const metric of metricsToWrite) {
+      const codeRaw = row?.value_codes?.[metric];
+      const code = codeRaw == null || codeRaw === '' ? null : String(codeRaw).slice(0, 8);
       records.push({
         source_id: Number(source.id),
         source_name: source.name || null,
@@ -516,6 +522,7 @@ async function replicateMergedToIndicatorTableBps({
         dim_hash: dimHash,
         metric: normalizeMetricKey(metric),
         value: normalizeDecimalValue(row[metric]),
+        value_code: code,
         last_update: lastUpdate ? new Date(lastUpdate) : null,
         created_at: now,
         updated_at: now,
@@ -564,6 +571,7 @@ async function replicateMergedToIndicatorTableBps({
     "dim_hash",
     "metric",
     "value",
+    "value_code",
     "last_update",
     "created_at",
     "updated_at",
@@ -604,6 +612,7 @@ async function replicateMergedToIndicatorTableBps({
         dim_value = VALUES(dim_value),
         dim_hash = VALUES(dim_hash),
         value = VALUES(value),
+        value_code = VALUES(value_code),
         last_update = VALUES(last_update),
         updated_at = VALUES(updated_at);
     `;
