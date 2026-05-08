@@ -7,6 +7,7 @@ router.get('/threads', chatController.listThreads);
 router.post('/threads', chatController.createThread);
 router.get('/threads/:id/messages', chatController.listMessages);
 router.post('/threads/:id/messages', chatController.sendMessage);
+router.get('/threads/:id/suggestions', chatController.getThreadSuggestions);
 
 // Streaming endpoint using SSE
 router.get('/threads/:id/stream', chatController.streamMessage);

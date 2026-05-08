@@ -1,5 +1,14 @@
 const chatService = require('../services/chat/chat.service');
 const streamingService = require('../services/chat/streaming.service');
+const threadSuggestionsService = require('../services/chat/threadSuggestions.service');
+
+const DEFAULT_SUGGESTIONS = [
+  'Data penduduk',
+  'Data kemiskinan',
+  'Data inflasi',
+  'Data pengangguran',
+  'Data PDRB',
+];
 
 async function listThreads(req, res, next) {
   try {
@@ -101,10 +110,39 @@ async function streamMessage(req, res, next) {
   }
 }
 
+/**
+ * Get context-aware suggestion chips for a thread.
+ * GET /chat/threads/:id/suggestions
+ *
+ * Always returns 200 with `{ ok: true, suggestions: [...] }` — falls back
+ * to default chips when LLM generation fails or is disabled, so the UI
+ * never has to handle errors.
+ */
+async function getThreadSuggestions(req, res, next) {
+  try {
+    const ownerId = chatService.getOwnerIdFromReq(req);
+    const threadId = Number(req.params.id);
+    if (!Number.isFinite(threadId) || threadId <= 0) {
+      return res.status(400).json({ ok: false, error: 'invalid_thread_id' });
+    }
+
+    const generated = await threadSuggestionsService.generateForThread(threadId, ownerId);
+    const suggestions = Array.isArray(generated) && generated.length > 0
+      ? generated
+      : DEFAULT_SUGGESTIONS;
+
+    res.json({ ok: true, suggestions });
+  } catch (e) {
+    // Never propagate — endpoint is best-effort
+    res.json({ ok: true, suggestions: DEFAULT_SUGGESTIONS });
+  }
+}
+
 module.exports = {
   listThreads,
   createThread,
   listMessages,
   sendMessage,
   streamMessage,
+  getThreadSuggestions,
 };
