@@ -104,6 +104,11 @@ function detectEximModeFromName(name: string): "impor" | "ekspor" | null {
   return null;
 }
 
+// Metadata keys the backend sometimes leaks into `data.columns` — drop these
+// from the visible column list so they don't render as empty data columns
+// (audit C1, second pass).
+const COLUMN_BLOCKLIST = new Set(["value_codes"]);
+
 // Heuristic match for "provincial total" rows (BPS uses "Maluku Utara" as the total)
 function isProvincialTotalRow(row: Record<string, unknown>, firstCol: string): boolean {
   const v = String(row[firstCol] ?? "").toLowerCase();
@@ -171,7 +176,12 @@ export default function DataPageClient({
 
   const { columns: allColumns, rows: rawRows } = useMemo(() => {
     if (!currentYearData) return { columns: [] as string[], rows: [] as Array<Record<string, unknown>> };
-    const cols = currentYearData.columns;
+    // Drop metadata keys the backend leaks into `data.columns` for some
+    // sources (e.g. `value_codes` on interop indikators 383, 211). Without
+    // this filter the table renders an empty column titled "value_codes" and
+    // any column-position-based heuristic (last-col, first-col) picks the
+    // wrong field (audit C1, second pass).
+    const cols = currentYearData.columns.filter((c) => !COLUMN_BLOCKLIST.has(c));
     const normalized = normalizeTableData(currentYearData.rows, unit);
     let rows: Array<Record<string, unknown>> = normalized.rows;
     if (!isExim) {
@@ -216,26 +226,13 @@ export default function DataPageClient({
     [isExim, numericColumns],
   );
 
-  // Per-row sparkline series across all years (keyed by first column / region label).
-  // Parses values directly via `toNumberLoose` instead of round-tripping through
-  // the locale formatter — that round-trip dropped value-code-suffixed numbers like
-  // "1234 r" to NaN, killing the row's sparkline (audit-finding B2).
-  const buildRowSeries = useCallback(
-    (regionLabel: string): number[] => {
-      const firstCol = allColumns[0];
-      if (!firstCol) return [];
-      const lastDataCol = allColumns[allColumns.length - 1];
-      if (!lastDataCol) return [];
-      const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
-      return yearsAsc.map((yd) => {
-        const row = yd.rows.find((r) => String(r[firstCol] ?? "") === regionLabel);
-        if (!row) return NaN;
-        const parsed = toNumberLoose(row[lastDataCol]);
-        return parsed === null ? NaN : parsed;
-      });
-    },
-    [allColumns, allYearsData],
-  );
+  // ───────────────────────────────────────────────────────────────────────
+  // aggregateColumn (defined below) is the column the hero sparkline tracks.
+  // We declare buildRowSeries AFTER aggregateColumn so they share the same
+  // column choice — keeps row sparklines consistent with the hero summary
+  // and avoids picking metadata columns the position-based heuristic missed
+  // (audit C2, second pass).
+  // ───────────────────────────────────────────────────────────────────────
 
   // Pick the most informative aggregate column for the hero sparkline. The
   // design's mock data was Padi-style (single aggregate column), so just using
@@ -297,6 +294,26 @@ export default function DataPageClient({
       return any ? sum : NaN;
     });
   }, [allColumns, aggregateColumn, allYearsData]);
+
+  // Per-row sparkline series across all years. Now uses `aggregateColumn` so
+  // it agrees with the hero `totalSeries` column choice — without this, sources
+  // whose backend leaks `value_codes` (or any other metadata column) at the
+  // tail of `data.columns` would have all-NaN row sparklines from the old
+  // `lastDataCol` heuristic (audit C2, second pass).
+  const buildRowSeries = useCallback(
+    (regionLabel: string): number[] => {
+      const firstCol = allColumns[0];
+      if (!firstCol || !aggregateColumn) return [];
+      const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
+      return yearsAsc.map((yd) => {
+        const row = yd.rows.find((r) => String(r[firstCol] ?? "") === regionLabel);
+        if (!row) return NaN;
+        const parsed = toNumberLoose(row[aggregateColumn]);
+        return parsed === null ? NaN : parsed;
+      });
+    },
+    [allColumns, aggregateColumn, allYearsData],
+  );
 
   const regionsCount = useMemo(() => {
     const firstCol = allColumns[0];

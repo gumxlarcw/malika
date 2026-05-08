@@ -57,10 +57,12 @@ export default function Hero(props: HeroProps) {
   // the edges of the time range doesn't blank the whole sparkline summary card
   // (audit-finding B1). availableYears is descending; totalSeries is built
   // ascending in the parent, so we walk indices to recover the year labels.
+  // Filter NaN only — genuine zero values (e.g. zero exports in a month) are
+  // real data and shouldn't be silently dropped (audit C4, second pass).
   const yearsAsc = availableYears.slice().sort((a, b) => Number(a) - Number(b));
   const validIdx: number[] = [];
   totalSeries.forEach((v, i) => {
-    if (Number.isFinite(v) && v !== 0) validIdx.push(i);
+    if (Number.isFinite(v)) validIdx.push(i);
   });
   const firstValidIdx = validIdx[0];
   const lastValidIdx = validIdx[validIdx.length - 1];
@@ -71,7 +73,12 @@ export default function Hero(props: HeroProps) {
     firstValidIdx !== lastValidIdx;
   const firstTotal = showSparkline ? totalSeries[firstValidIdx] : 0;
   const lastTotal = showSparkline ? totalSeries[lastValidIdx] : 0;
-  const pct = showSparkline ? ((lastTotal - firstTotal) / Math.abs(firstTotal)) * 100 : 0;
+  // Guard division-by-zero when firstTotal is exactly 0 (audit C3, second pass).
+  // Returns null so callers can render an em-dash instead of "Infinity%".
+  const pct: number | null =
+    showSparkline && firstTotal !== 0
+      ? ((lastTotal - firstTotal) / Math.abs(firstTotal)) * 100
+      : null;
   const sparkLabelStart = showSparkline ? yearsAsc[firstValidIdx] : "";
   const sparkLabelEnd = showSparkline ? yearsAsc[lastValidIdx] : "";
 
@@ -164,14 +171,18 @@ export default function Hero(props: HeroProps) {
             <div className="hidden w-[260px] shrink-0 rounded-xl border border-gray-200 bg-gray-50/60 px-4 py-3 dark:border-gray-800 dark:bg-gray-800/40 lg:block">
               <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 <span>Total provinsi · {unit || "—"}</span>
-                <span
-                  className={`font-semibold tabular-nums ${
-                    pct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                  }`}
-                >
-                  {pct >= 0 ? "+" : ""}
-                  {pct.toFixed(1)}%
-                </span>
+                {pct === null ? (
+                  <span className="font-semibold tabular-nums text-gray-400 dark:text-gray-500">—</span>
+                ) : (
+                  <span
+                    className={`font-semibold tabular-nums ${
+                      pct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    {pct >= 0 ? "+" : ""}
+                    {pct.toFixed(1)}%
+                  </span>
+                )}
               </div>
               <div className="mt-1.5 flex items-end justify-between">
                 <div className="text-[26px] font-semibold leading-none tabular-nums text-gray-900 dark:text-white">
@@ -204,14 +215,16 @@ export default function Hero(props: HeroProps) {
               <strong className="font-bold text-gray-900 dark:text-white">
                 {unit === "Persen" ? lastTotal.toFixed(2) : lastTotal.toLocaleString("id-ID")}
               </strong>{" "}
-              <span
-                className={`tabular-nums ${
-                  pct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                ({pct >= 0 ? "+" : ""}
-                {pct.toFixed(1)}%)
-              </span>
+              {pct !== null && (
+                <span
+                  className={`tabular-nums ${
+                    pct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  ({pct >= 0 ? "+" : ""}
+                  {pct.toFixed(1)}%)
+                </span>
+              )}
             </div>
             <Sparkline
               values={totalSeries}
