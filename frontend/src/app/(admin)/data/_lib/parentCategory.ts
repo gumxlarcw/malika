@@ -2,6 +2,7 @@
 // Used during SSR in page.tsx so the hero can render a category chip + back link
 // without a second client-side fetch.
 
+import { backendBaseUrl } from "@/lib/backendBaseUrl";
 import type { Category } from "../../kategori/_lib/types";
 
 export type ParentCategory = {
@@ -10,9 +11,8 @@ export type ParentCategory = {
 };
 
 export async function fetchParentCategory(sourceId: number): Promise<ParentCategory | null> {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
   try {
-    const res = await fetch(`${backendUrl}/categories`, { cache: "no-store" });
+    const res = await fetch(`${backendBaseUrl()}/categories`, { cache: "no-store" });
     if (!res.ok) return null;
     const data = await res.json();
     const list: Category[] = data?.categories ?? [];

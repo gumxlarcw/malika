@@ -126,16 +126,10 @@ export default function DataTable(props: DataTableProps) {
             <tr className="bg-gray-50 dark:bg-gray-900">
               {isFirstColVisible && (
                 <th
-                  className="sticky left-0 z-20 border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 md:px-4 md:text-[11.5px]"
-                  style={{
-                    minWidth: 140,
-                    boxShadow: "1px 0 0 rgba(229,231,235,1)",
-                  }}
+                  className="sticky left-0 z-20 border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider text-gray-500 shadow-[1px_0_0_rgba(229,231,235,1)] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:shadow-[1px_0_0_rgba(31,41,55,1)] md:px-4 md:text-[11.5px]"
+                  style={{ minWidth: 140 }}
                 >
-                  <span className="dark:hidden" style={{ boxShadow: "none" }}>
-                    {firstCol}
-                  </span>
-                  <span className="hidden dark:inline">{firstCol}</span>
+                  {firstCol}
                 </th>
               )}
               {dataCols.map((c) => (
@@ -176,10 +170,9 @@ export default function DataTable(props: DataTableProps) {
                 >
                   {isFirstColVisible && (
                     <td
-                      className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2.5 font-medium text-gray-900 dark:text-gray-100 md:px-4 ${
+                      className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2.5 font-medium text-gray-900 shadow-[1px_0_0_rgba(229,231,235,1)] dark:text-gray-100 dark:shadow-[1px_0_0_rgba(31,41,55,1)] md:px-4 ${
                         isTotal ? "font-semibold" : ""
                       } ${baseBg || "bg-white group-hover:bg-gray-50/80 dark:bg-gray-900 dark:group-hover:bg-gray-800/40"}`}
-                      style={{ boxShadow: "1px 0 0 rgba(229,231,235,1)" }}
                     >
                       <div className="flex items-center gap-2">
                         {isTotal && (

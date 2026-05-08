@@ -1,5 +1,6 @@
 import React from "react";
 import { notFound } from "next/navigation";
+import { backendBaseUrl } from "@/lib/backendBaseUrl";
 import KategoriDetailClient from "./KategoriDetailClient";
 import type { Category } from "../_lib/types";
 
@@ -8,9 +9,8 @@ import type { Category } from "../_lib/types";
 export const dynamic = "force-dynamic";
 
 async function fetchCategoryBySlug(slug: string): Promise<Category | null> {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
   try {
-    const res = await fetch(`${backendUrl}/categories`, { cache: "no-store" });
+    const res = await fetch(`${backendBaseUrl()}/categories`, { cache: "no-store" });
     if (!res.ok) return null;
     const data = await res.json();
     const list: Category[] = data?.categories ?? [];
