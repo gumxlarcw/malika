@@ -4762,8 +4762,8 @@ async function streamChatResponse({
       { role: 'user', content: effectiveUserQuery },
     ];
 
-    // ── Pipeline progress status: stage 5 of 5 ──
-    sendEvent('status', { message: 'Berpikir & menyusun jawaban…', stage: 'thinking' });
+    // ── Pipeline progress status: stage 5 of 6 ──
+    sendEvent('status', { message: 'Berpikir…', stage: 'thinking' });
 
     // Stream from proxy (tier: COMPLEX — main reasoning path). Routing via
     // llmChat: handles retry, circuit breaker, abort signal propagation.
@@ -4781,7 +4781,13 @@ async function streamChatResponse({
       timeoutMs: 30000,
     });
 
+    // ── Pipeline progress status: stage 6 of 6 — fired on first response chunk
+    let _generatingStatusEmitted = false;
     const fullText = await readLlmChatResponse(response, (content) => {
+      if (!_generatingStatusEmitted) {
+        _generatingStatusEmitted = true;
+        sendEvent('status', { message: 'Menyusun jawaban…', stage: 'generating' });
+      }
       sendEvent('text', { content });
     });
 

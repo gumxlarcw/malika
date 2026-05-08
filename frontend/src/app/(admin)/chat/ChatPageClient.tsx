@@ -113,6 +113,9 @@ export default function ChatPageClient() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const loadMessagesAbortRef = useRef<AbortController | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  // Step list "Lihat detail" toggle — done steps hide under a collapse so the
+  // long-running active step doesn't get crowded out visually
+  const [stepsExpanded, setStepsExpanded] = useState(false);
   const [typingStatus, setTypingStatus] = useState<string | undefined>(undefined);
   const [wasStopped, setWasStopped] = useState(false);
   const stoppedMessageRef = useRef<string | null>(null);
@@ -1386,42 +1389,84 @@ export default function ChatPageClient() {
     if (msg.type === "typing") {
       return (
         <div className="space-y-2">
-          {/* Step berpikir — pipeline progress timeline */}
-          {processSteps.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
-              <div className="space-y-1">
-                {processSteps.map((step, i) => {
-                  const elapsed = step.doneAt && step.startedAt
-                    ? `${((step.doneAt - step.startedAt) / 1000).toFixed(1)}s`
-                    : null;
-                  return (
-                    <div key={`${step.stage}-${i}`} className="flex items-center gap-2 text-xs">
-                      {step.status === "done" ? (
-                        <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-violet-500 dark:text-violet-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
-                          <path className="opacity-90" d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                        </svg>
-                      )}
-                      <span className={
-                        step.status === "done"
-                          ? "flex-1 text-gray-600 dark:text-gray-400"
-                          : "flex-1 text-violet-700 dark:text-violet-300 font-medium"
-                      }>
-                        {step.message}
-                      </span>
-                      {elapsed && (
-                        <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{elapsed}</span>
-                      )}
-                    </div>
-                  );
-                })}
+          {/* Step berpikir — pipeline progress timeline.
+              Done steps collapse under a "▼ N langkah selesai" header when
+              there are 2+ done; the active step stays prominent so the
+              user always sees what's happening right now. */}
+          {processSteps.length > 0 && (() => {
+            const doneSteps = processSteps.filter((s) => s.status === "done");
+            const activeStep = processSteps.find((s) => s.status !== "done");
+            const totalDoneMs = doneSteps.reduce((sum, s) =>
+              sum + (s.doneAt && s.startedAt ? s.doneAt - s.startedAt : 0), 0);
+            const fmtElapsed = (s: typeof processSteps[number]) =>
+              s.doneAt && s.startedAt
+                ? `${((s.doneAt - s.startedAt) / 1000).toFixed(1)}s`
+                : null;
+            const StepRow = ({ step, idx }: { step: typeof processSteps[number]; idx: number }) => (
+              <div key={`${step.stage}-${idx}`} className="flex items-center gap-2 text-xs">
+                {step.status === "done" ? (
+                  <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-violet-500 dark:text-violet-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
+                    <path className="opacity-90" d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                )}
+                <span className={
+                  step.status === "done"
+                    ? "flex-1 text-gray-600 dark:text-gray-400"
+                    : "flex-1 text-violet-700 dark:text-violet-300 font-medium"
+                }>
+                  {step.message}
+                </span>
+                {fmtElapsed(step) && (
+                  <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{fmtElapsed(step)}</span>
+                )}
               </div>
-            </div>
-          )}
+            );
+
+            const collapseDoneSteps = doneSteps.length >= 2;
+            return (
+              <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
+                <div className="space-y-1">
+                  {/* Collapsible done-step header */}
+                  {collapseDoneSteps && (
+                    <button
+                      type="button"
+                      onClick={() => setStepsExpanded((v) => !v)}
+                      className="flex w-full items-center gap-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      aria-expanded={stepsExpanded}
+                    >
+                      <svg
+                        className={`h-3 w-3 shrink-0 transition-transform duration-150 ${stepsExpanded ? "rotate-90" : ""}`}
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path fillRule="evenodd" d="M7.293 4.707a1 1 0 011.414 0L14.414 10l-5.707 5.293a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="flex-1 text-left">{doneSteps.length} langkah selesai</span>
+                      {totalDoneMs > 0 && (
+                        <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500">
+                          {(totalDoneMs / 1000).toFixed(1)}s
+                        </span>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Done step rows: always rendered if not collapsed, OR if there's only 1 (no toggle) */}
+                  {(!collapseDoneSteps || stepsExpanded) &&
+                    doneSteps.map((step, i) => <StepRow key={`d-${step.stage}-${i}`} step={step} idx={i} />)
+                  }
+
+                  {/* Active step always visible */}
+                  {activeStep && <StepRow key={`a-${activeStep.stage}`} step={activeStep} idx={-1} />}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Existing typing-pill ("Berpikir..." spinner with elapsed timer) */}
           <ThinkingFeed
