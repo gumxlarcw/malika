@@ -3,6 +3,7 @@ import React from "react";
 import DataPageClient from "./DataPageClient";
 import EmptyState from "@/components/common/EmptyState";
 import { applyTableRowOrdering } from "@/lib/tableRowOrdering";
+import { fetchParentCategory } from "./_lib/parentCategory";
 
 export const metadata: Metadata = {
   title: "Data Statistik",
@@ -283,7 +284,12 @@ export default async function DataPage({
     }
   });
 
-  const allYearsDataRaw = await Promise.all(fetchPromises);
+  // Parallelize: years data + parent-category resolution (so the hero can render
+  // its category chip + back link without a second client-side fetch).
+  const [allYearsDataRaw, parentCategory] = await Promise.all([
+    Promise.all(fetchPromises),
+    fetchParentCategory(sourceId),
+  ]);
   const allYearsData = allYearsDataRaw.filter((d): d is YearData => d !== null);
 
   if (allYearsData.length === 0) {
@@ -335,10 +341,6 @@ export default async function DataPage({
 
   return (
     <div className="min-w-0">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{sourceName}</h1>
-      </div>
-
       <DataPageClient
         allYearsData={allYearsData}
         sourceId={sourceId}
@@ -351,6 +353,8 @@ export default async function DataPage({
         geoApplied={geoApplied}
         q={q || undefined}
         unit={indicatorUnit}
+        parentCategoryName={parentCategory?.name ?? null}
+        parentCategorySlug={parentCategory?.slug ?? null}
       />
     </div>
   );
