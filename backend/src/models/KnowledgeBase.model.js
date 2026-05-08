@@ -14,20 +14,30 @@ const KnowledgeBase = sequelize.define("KnowledgeBase", {
     },
     
     // Document metadata
-    title: { 
-        type: DataTypes.STRING(255), 
+    title: {
+        type: DataTypes.STRING(500),
         allowNull: false,
         comment: 'Document title'
     },
-    description: { 
-        type: DataTypes.TEXT, 
+    description: {
+        type: DataTypes.TEXT,
         allowNull: true,
         comment: 'Optional description'
     },
-    category: { 
-        type: DataTypes.STRING(100), 
+    category: {
+        type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'Category for organization (metodologi, FAQ, etc)'
+    },
+    keywords: {
+        type: DataTypes.STRING(2000),
+        allowNull: true,
+        comment: 'Comma-separated keywords for hybrid search'
+    },
+    indicator_index: {
+        type: DataTypes.TEXT('medium'),
+        allowNull: true,
+        comment: 'Indicator alias index used by vectorSearch.service.js'
     },
     
     // Source info

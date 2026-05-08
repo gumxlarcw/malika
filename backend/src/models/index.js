@@ -42,10 +42,20 @@ module.exports = {
   ChatFeedback: require('./ChatFeedback.model'),
   ChatMessageFlag: require('./ChatMessageFlag.model'),
   ChatErrorPattern: require('./ChatErrorPattern.model'),
-  
+  UserMemory: require('./UserMemory.model'),
+  DnaCache: require('./DnaCache.model'),
+
+  // Sessions / Activity
+  ActiveSession: require('./ActiveSession.model'),
+  PageView: require('./PageView.model'),
+
   // Knowledge Base / RAG
   KnowledgeBase: require('./KnowledgeBase.model'),
   IndexedBrsPublikasi: require('./IndexedBrsPublikasi.model'),
+
+  // Indicator metadata
+  IndicatorMeta: require('./IndicatorMeta.model'),
+  IndicatorMetricMeta: require('./IndicatorMetricMeta.model'),
 
   // Audit Logs
   AdminAuditLog: require('./AdminAuditLog.model'),

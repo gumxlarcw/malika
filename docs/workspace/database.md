@@ -8,19 +8,26 @@
 - **ORM**: Sequelize 6.37.7
 - **Pool**: max 20, min 5, acquire 30s, idle 10s, slow query 100ms
 
-## Models (26 — backend/src/models/)
+## Models (28 — backend/src/models/)
 User, DataSource, DataPeriod, ProcessedCache, MergedCache, FetchLog,
 ChatThread, ChatMessage, ChatFeedback, ChatMessageFlag, ChatErrorPattern,
 KnowledgeBase, DataSourceSearchTerm, SearchStat, Notification,
 PushSubscription, PushSendLog, AutomationConfig, AutomationRunLog,
 AdminAuditLog, EximPodFilter, IndexedBrsPublikasi, UserMemory,
-AppSetting, DnaCache, index.js
+AppSetting, DnaCache, IndicatorMeta, IndicatorMetricMeta, index.js
 
 ## data_bps Tables
 - 310 `indikator_*` tables (157 dynamic, 150 interop, 1 static, 2 exim)
 - `kodehs_indd` (HS2 lookup)
 - `data_merged_cache`
 - 4 `pressrelease_kw_*` tables
+
+## System pseudo-sources
+`data_sources.type='static'` AND `visible=0` rows do NOT have backing `indikator_NNN` tables in `data_bps`. They are "marker rows" used by automation flows that don't ship public data. Current set:
+- id 176: `System: Publikasi Notifications`
+- id 177: `System: MergedCache Watcher`
+
+Any orphan-detection query over `data_sources ↔ indikator_NNN` must filter these out (`AND visible=1`).
 
 ## Auto-Migrations (server.js)
 - `ensureDataSourceTypeEnumSupportsAllKnownTypes()`
@@ -41,3 +48,4 @@ AppSetting, DnaCache, index.js
 |---|---|---|
 | 2026-03-02 | Initial audit & documentation | - |
 | 2026-05-08 | Phase 6.3 — `value_code` per-cell flags through live ingestion + render | `replication/indicatorTableBps.service.js`, `processor/interop.processor.js`, `bpsRead/indicatorTableGenericRead.service.js`, `frontend/lib/cellRender.tsx`, `frontend/.../DataTableClient.tsx`, `frontend/components/chat/ChatTableModal.tsx` |
+| 2026-05-09 | DB audit fixes Phase A+B+D1/E1/F1 — audit middleware re-wired (5 mounts, 2 router files), 7 model drifts fixed, IndicatorMeta + IndicatorMetricMeta added, kodehs_indd collation aligned, retention cron added, junk source 313 dropped | `backend/app.js`, `backend/src/routes/{auth,errorLearning}.routes.js`, `backend/src/models/*.model.js`, `backend/src/database/migrations/20260508_alter_kodehs_collation.js`, `backend/src/jobs/retention.job.js`, `backend/server.js` |

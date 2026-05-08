@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 
 const { authMiddleware, requireAdmin } = require("./src/middleware/auth.middleware");
 const { csrfMiddleware, getCsrfToken } = require("./src/middleware/csrf.middleware");
+const { createAuditLogMiddleware } = require("./src/middleware/auditLog.middleware");
 
 // ROUTES
 const authRoutes = require("./src/routes/auth.routes");
@@ -166,16 +167,16 @@ const apiLimiter = rateLimit({
 app.use("/auth", authLimiter);
 
 // Apply CSRF protection to admin routes (POST/PUT/PATCH/DELETE require token)
-app.use("/datasource", authMiddleware, csrfMiddleware, apiLimiter, datasourceRoutes);
+app.use("/datasource", authMiddleware, csrfMiddleware, apiLimiter, createAuditLogMiddleware({ resource: 'datasource' }), datasourceRoutes);
 app.use("/period", authMiddleware, csrfMiddleware, apiLimiter, periodRoutes);
 app.use("/period/available", authMiddleware, apiLimiter, periodAvailableRoutes);
 app.use("/period/available", authMiddleware, apiLimiter, periodAvailableMonthRoutes);
 app.use("/summary", authMiddleware, apiLimiter, summaryRoutes);
-app.use("/cache", authMiddleware, csrfMiddleware, apiLimiter, cacheRoutes);
+app.use("/cache", authMiddleware, csrfMiddleware, apiLimiter, createAuditLogMiddleware({ resource: 'cache' }), cacheRoutes);
 // Public PWA: notification tools are callable without user auth.
 // NOTE: destructive actions may require a token (see controller).
 app.use("/notifications/admin", apiLimiter, notificationsAdminRoutes);
-app.use("/automation", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, automationRoutes);
+app.use("/automation", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'automation' }), automationRoutes);
 
 // Admin-only: debug endpoints for search (never log or return raw queries)
 app.use("/search/admin", authMiddleware, apiLimiter, requireAdmin, searchAdminRoutes);
@@ -184,16 +185,16 @@ app.use("/search/admin", authMiddleware, apiLimiter, requireAdmin, searchAdminRo
 app.use("/chat/admin", authMiddleware, apiLimiter, requireAdmin, chatAdminRoutes);
 
 // Admin-only: Knowledge Base / RAG management
-app.use("/knowledge", authMiddleware, csrfMiddleware, apiLimiter, knowledgeRoutes);
+app.use("/knowledge", authMiddleware, csrfMiddleware, apiLimiter, createAuditLogMiddleware({ resource: 'knowledge' }), knowledgeRoutes);
 
 // Error Learning: flag messages (public) + admin management
 app.use("/error-learning", chatLimiter, errorLearningRoutes);
 
 // Admin-only: Fetch logs viewer
-app.use("/logs", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, logsRoutes);
+app.use("/logs", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'logs' }), logsRoutes);
 
 // Admin-only: Peta Tematik (choropleth map data)
-app.use("/peta-tematik", authMiddleware, apiLimiter, requireAdmin, require("./src/routes/peta-tematik.routes"));
+app.use("/peta-tematik", authMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'peta-tematik' }), require("./src/routes/peta-tematik.routes"));
 
 // Global error handler
 // eslint-disable-next-line no-unused-vars

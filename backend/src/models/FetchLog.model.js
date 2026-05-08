@@ -6,6 +6,7 @@ const FetchLog = sequelize.define("FetchLog", {
     source_id: DataTypes.INTEGER,
     status_code: DataTypes.INTEGER,
     message: DataTypes.TEXT,
+    created_at: { type: DataTypes.DATE, allowNull: true },
 }, {
     tableName: "fetch_logs",
     timestamps: false,

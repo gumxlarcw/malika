@@ -159,6 +159,16 @@ const server = app.listen(port, () => {
             console.warn(`[${label}] scheduler init failed:`, e?.message);
         }
     }
+
+    // Daily retention purge — fetch_logs (90d) / automation_run_logs (30d) / admin_audit_logs (365d).
+    // Schedule first so the next run fires in 24h regardless of the on-startup outcome.
+    try {
+        const { runRetention } = require('./src/jobs/retention.job');
+        setInterval(runRetention, 24 * 60 * 60 * 1000);
+        runRetention();
+    } catch (e) {
+        console.warn('[retention] init failed:', e?.message);
+    }
 })();
 
 process.on('SIGTERM', () => {

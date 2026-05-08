@@ -42,6 +42,28 @@ const DataSource = sequelize.define("DataSource", {
         comment: 'When embedding was last generated'
     },
 
+    bps_web_url: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: 'Direct link to BPS web page'
+    },
+    priority: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 3,
+        comment: 'Display priority (lower = higher importance)'
+    },
+    bps_last_metadata_fetch: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Last successful BPS metadata fetch timestamp'
+    },
+    bps_last_metadata_status: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        comment: 'Last metadata fetch outcome (success | error | skipped)'
+    },
+
     created_at: { type: DataTypes.DATE, allowNull: true },
     updated_at: { type: DataTypes.DATE, allowNull: true },
 }, {
