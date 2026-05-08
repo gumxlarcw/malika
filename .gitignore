@@ -60,6 +60,11 @@ junit.xml
 *.backup
 *.bak
 
+# ─── Playwright + Claude Code runtime artifacts ──────────────────────────────
+frontend/test-results/
+frontend/playwright-report/
+.claude/scheduled_tasks.lock
+
 # ─── Project-specific ────────────────────────────────────────────────────────
 # Local archive tables created during destructive ops
 _archive_*/
