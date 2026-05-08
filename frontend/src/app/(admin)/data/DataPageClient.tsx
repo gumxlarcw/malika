@@ -16,53 +16,57 @@ import {
 } from "./_lib/sourceTypePalette";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Number formatting (preserved from original — handles id-ID + comma decimals)
+// Number parsing/formatting (preserved from original — handles id-ID +
+// comma decimals + value-code suffixes like "1234 r"). Hoisted into a
+// reusable `toNumberLoose` so sparkline-series builders can extract numerics
+// without round-tripping through the locale formatter (audit-finding B2).
 // ─────────────────────────────────────────────────────────────────────────────
-function formatNumberId(input: unknown): string | null {
-  const toNumberLoose = (v: unknown): number | null => {
-    if (v === null || v === undefined) return null;
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-    const s = String(v).trim();
-    if (!s) return null;
-    let cleaned = s.replace(/[^0-9,\.\-+]/g, "");
-    if (!cleaned) return null;
-    const hasComma = cleaned.includes(",");
-    const hasDot = cleaned.includes(".");
-    const stripDots = (input: string) => {
-      const idx = input.lastIndexOf(".");
-      if (idx <= 0) return input;
-      return input.slice(0, idx).replace(/\./g, "") + input.slice(idx);
-    };
-    if (hasComma && hasDot) {
-      const lastComma = cleaned.lastIndexOf(",");
-      const lastDot = cleaned.lastIndexOf(".");
-      const decimalSep = lastComma > lastDot ? "," : ".";
-      const thousandSep = decimalSep === "," ? "." : ",";
-      cleaned = cleaned.split(thousandSep).join("");
-      if (decimalSep === ",") cleaned = cleaned.replace(/,/g, ".");
-      cleaned = stripDots(cleaned);
-    } else if (hasComma) {
-      const last = cleaned.lastIndexOf(",");
-      const frac = cleaned.slice(last + 1);
-      if (frac.length >= 1 && frac.length <= 2) {
-        cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
-        cleaned = stripDots(cleaned);
-      } else {
-        cleaned = cleaned.replace(/,/g, "");
-      }
-    } else if (hasDot) {
-      const last = cleaned.lastIndexOf(".");
-      const frac = cleaned.slice(last + 1);
-      if (frac.length >= 1 && frac.length <= 2) {
-        cleaned = cleaned.replace(/,/g, "");
-        cleaned = stripDots(cleaned);
-      } else {
-        cleaned = cleaned.replace(/\./g, "");
-      }
-    }
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : null;
+function toNumberLoose(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const s = String(v).trim();
+  if (!s) return null;
+  let cleaned = s.replace(/[^0-9,\.\-+]/g, "");
+  if (!cleaned) return null;
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+  const stripDots = (input: string) => {
+    const idx = input.lastIndexOf(".");
+    if (idx <= 0) return input;
+    return input.slice(0, idx).replace(/\./g, "") + input.slice(idx);
   };
+  if (hasComma && hasDot) {
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+    const decimalSep = lastComma > lastDot ? "," : ".";
+    const thousandSep = decimalSep === "," ? "." : ",";
+    cleaned = cleaned.split(thousandSep).join("");
+    if (decimalSep === ",") cleaned = cleaned.replace(/,/g, ".");
+    cleaned = stripDots(cleaned);
+  } else if (hasComma) {
+    const last = cleaned.lastIndexOf(",");
+    const frac = cleaned.slice(last + 1);
+    if (frac.length >= 1 && frac.length <= 2) {
+      cleaned = cleaned.replace(/\./g, "").replace(/,/g, ".");
+      cleaned = stripDots(cleaned);
+    } else {
+      cleaned = cleaned.replace(/,/g, "");
+    }
+  } else if (hasDot) {
+    const last = cleaned.lastIndexOf(".");
+    const frac = cleaned.slice(last + 1);
+    if (frac.length >= 1 && frac.length <= 2) {
+      cleaned = cleaned.replace(/,/g, "");
+      cleaned = stripDots(cleaned);
+    } else {
+      cleaned = cleaned.replace(/\./g, "");
+    }
+  }
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatNumberId(input: unknown): string | null {
   const n = toNumberLoose(input);
   if (n === null) return null;
   return new Intl.NumberFormat("id-ID", {
@@ -212,7 +216,10 @@ export default function DataPageClient({
     [isExim, numericColumns],
   );
 
-  // Per-row sparkline series across all years (keyed by first column / region label)
+  // Per-row sparkline series across all years (keyed by first column / region label).
+  // Parses values directly via `toNumberLoose` instead of round-tripping through
+  // the locale formatter — that round-trip dropped value-code-suffixed numbers like
+  // "1234 r" to NaN, killing the row's sparkline (audit-finding B2).
   const buildRowSeries = useCallback(
     (regionLabel: string): number[] => {
       const firstCol = allColumns[0];
@@ -223,45 +230,73 @@ export default function DataPageClient({
       return yearsAsc.map((yd) => {
         const row = yd.rows.find((r) => String(r[firstCol] ?? "") === regionLabel);
         if (!row) return NaN;
-        const v = row[lastDataCol];
-        if (typeof v === "number" && Number.isFinite(v)) return v;
-        const parsed = formatNumberId(v);
-        if (parsed) {
-          const num = Number(parsed.replace(/\./g, "").replace(",", "."));
-          return Number.isFinite(num) ? num : NaN;
-        }
-        return NaN;
+        const parsed = toNumberLoose(row[lastDataCol]);
+        return parsed === null ? NaN : parsed;
       });
     },
     [allColumns, allYearsData],
   );
 
-  // Total provincial series for hero sparkline
+  // Pick the most informative aggregate column for the hero sparkline. The
+  // design's mock data was Padi-style (single aggregate column), so just using
+  // `lastCol` worked. Real tables can have 25+ commodity columns where the
+  // alphabetically-last one (e.g. "Sukun") is sparse — picking it produces a
+  // sparkline of mostly NaN. Instead, score each non-first column by how many
+  // year × row cells have a parseable number, and prefer the column with the
+  // best coverage. Tie-break on rightmost (closer to the design's intent for
+  // clean datasets) (audit-finding B1).
+  const aggregateColumn = useMemo(() => {
+    if (allColumns.length < 2) return null;
+    const firstCol = allColumns[0];
+    type Candidate = { col: string; coverage: number; idx: number };
+    let best: Candidate | null = null;
+    allColumns.forEach((col, idx) => {
+      if (col === firstCol) return;
+      let coverage = 0;
+      for (const yd of allYearsData) {
+        for (const row of yd.rows) {
+          if (toNumberLoose(row[col]) !== null) coverage++;
+        }
+      }
+      // local alias so TS narrows correctly inside the OR chain
+      const cur: Candidate | null = best;
+      if (
+        !cur ||
+        coverage > cur.coverage ||
+        (coverage === cur.coverage && idx > cur.idx)
+      ) {
+        best = { col, coverage, idx };
+      }
+    });
+    return best && (best as Candidate).coverage > 0 ? (best as Candidate).col : null;
+  }, [allColumns, allYearsData]);
+
+  // Total provincial series for hero sparkline. Uses the chosen aggregate col;
+  // returns NaN where no provincial-total row exists, falling back to a sum
+  // across rows for source types where summation is meaningful.
   const totalSeries = useMemo(() => {
     const firstCol = allColumns[0];
-    if (!firstCol) return [];
-    const lastDataCol = allColumns[allColumns.length - 1];
-    if (!lastDataCol) return [];
+    if (!firstCol || !aggregateColumn) return [];
     const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
     return yearsAsc.map((yd) => {
       // Prefer a row labeled "Maluku Utara" / "Total" / "Provinsi"; otherwise sum non-total rows.
       const totalRow = yd.rows.find((r) => isProvincialTotalRow(r, firstCol));
       if (totalRow) {
-        const v = totalRow[lastDataCol];
-        return typeof v === "number" && Number.isFinite(v) ? v : NaN;
+        const parsed = toNumberLoose(totalRow[aggregateColumn]);
+        return parsed === null ? NaN : parsed;
       }
       let sum = 0;
       let any = false;
       for (const r of yd.rows) {
-        const v = r[lastDataCol];
-        if (typeof v === "number" && Number.isFinite(v)) {
-          sum += v;
+        const parsed = toNumberLoose(r[aggregateColumn]);
+        if (parsed !== null) {
+          sum += parsed;
           any = true;
         }
       }
       return any ? sum : NaN;
     });
-  }, [allColumns, allYearsData]);
+  }, [allColumns, aggregateColumn, allYearsData]);
 
   const regionsCount = useMemo(() => {
     const firstCol = allColumns[0];
