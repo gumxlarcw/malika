@@ -32,22 +32,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Deploy (staging)
-        if: ${{ secrets.STAGING_DEPLOY_ENABLED == 'true' }}
+        if: ${{ vars.STAGING_DEPLOY_ENABLED == 'true' }}
         env:
           DEPLOY_ENV: staging
         run: |
           echo "Starting staging deployment"
           ./scripts/deploy-public-pwa.sh
-      - name: Skip (missing secrets)
-        if: ${{ secrets.STAGING_DEPLOY_ENABLED != 'true' }}
+      - name: Skip (missing config)
+        if: ${{ vars.STAGING_DEPLOY_ENABLED != 'true' }}
         run: |
-          echo "Staging deploy skipped — set STAGING_DEPLOY_ENABLED=true to enable."
+          echo "Staging deploy skipped — set repo variable STAGING_DEPLOY_ENABLED=true to enable."
       - name: Notify
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ vars.SLACK_NOTIFY_ENABLED == 'true' }}
+        env:
+          SLACK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          if [ -z "$SLACK_URL" ]; then
+            echo "SLACK_NOTIFY_ENABLED=true but secret SLACK_WEBHOOK_URL is unset — skipping."
+            exit 0
+          fi
           curl -s -X POST -H 'Content-type: application/json' \
-            --data '{"text":"Staging deploy finished: '${{ github.sha }}'"}' \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            --data "{\"text\":\"Staging deploy finished: ${{ github.sha }}\"}" \
+            "$SLACK_URL"
 
   deploy-production:
     if: |
@@ -58,22 +64,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Deploy (production)
-        if: ${{ secrets.PROD_DEPLOY_ENABLED == 'true' }}
+        if: ${{ vars.PROD_DEPLOY_ENABLED == 'true' }}
         env:
           DEPLOY_ENV: production
         run: |
           echo "Starting production deployment"
           ./scripts/deploy-public-pwa.sh
-      - name: Skip (missing secrets)
-        if: ${{ secrets.PROD_DEPLOY_ENABLED != 'true' }}
+      - name: Skip (missing config)
+        if: ${{ vars.PROD_DEPLOY_ENABLED != 'true' }}
         run: |
-          echo "Production deploy skipped — set PROD_DEPLOY_ENABLED=true to enable."
+          echo "Production deploy skipped — set repo variable PROD_DEPLOY_ENABLED=true to enable."
       - name: Notify
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ vars.SLACK_NOTIFY_ENABLED == 'true' }}
+        env:
+          SLACK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          if [ -z "$SLACK_URL" ]; then
+            echo "SLACK_NOTIFY_ENABLED=true but secret SLACK_WEBHOOK_URL is unset — skipping."
+            exit 0
+          fi
           curl -s -X POST -H 'Content-type: application/json' \
-            --data '{"text":"Production deploy finished: '${{ github.sha }}'"}' \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            --data "{\"text\":\"Production deploy finished: ${{ github.sha }}\"}" \
+            "$SLACK_URL"
 
   rollback:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' }}
@@ -82,19 +94,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Rollback
-        if: ${{ secrets.ROLLBACK_ENABLED == 'true' }}
+        if: ${{ vars.ROLLBACK_ENABLED == 'true' }}
         env:
           DEPLOY_ENV: ${{ inputs.environment }}
         run: |
           echo "Rollback requested for $DEPLOY_ENV"
           echo "Implement rollback script and wire it here."
-      - name: Skip (missing secrets)
-        if: ${{ secrets.ROLLBACK_ENABLED != 'true' }}
+      - name: Skip (missing config)
+        if: ${{ vars.ROLLBACK_ENABLED != 'true' }}
         run: |
-          echo "Rollback skipped — set ROLLBACK_ENABLED=true to enable."
+          echo "Rollback skipped — set repo variable ROLLBACK_ENABLED=true to enable."
       - name: Notify
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ vars.SLACK_NOTIFY_ENABLED == 'true' }}
+        env:
+          SLACK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          if [ -z "$SLACK_URL" ]; then
+            echo "SLACK_NOTIFY_ENABLED=true but secret SLACK_WEBHOOK_URL is unset — skipping."
+            exit 0
+          fi
           curl -s -X POST -H 'Content-type: application/json' \
-            --data '{"text":"Rollback finished for '${{ inputs.environment }}': '${{ github.sha }}'"}' \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            --data "{\"text\":\"Rollback finished for ${{ inputs.environment }}: ${{ github.sha }}\"}" \
+            "$SLACK_URL"

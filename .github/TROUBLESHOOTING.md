@@ -48,3 +48,46 @@ workflow files in `.github/workflows/checks.yml` are ready to run as-is.
   effective CI substitute.
 - Run `npm test`, `npm run build`, `npx tsc --noEmit` manually before commits if
   you want CI-equivalent confidence.
+
+---
+
+## Configuring `cd.yml` (deploy / rollback)
+
+`cd.yml` is parser-valid and inert until you opt-in via repo variables. By
+default every job runs the "Skip" branch — no deploy can fire accidentally.
+
+### Why `vars` not `secrets`
+
+GitHub Actions disallows `${{ secrets.X }}` inside step-level `if:` conditions.
+The previous version of `cd.yml` used that pattern and failed at parse time
+(0-second `failure` runs on every push). Repo *variables* (`vars`) are allowed
+in `if:` and are the correct home for boolean toggles. Sensitive values like
+the Slack webhook URL stay in `secrets` and are referenced only inside `run:`
+via an `env:` mapping.
+
+### To enable staging deploy
+
+1. Settings → Secrets and variables → Actions → **Variables** tab → New variable:
+   - `STAGING_DEPLOY_ENABLED = true`
+2. Push to `main` → `deploy-staging` job runs `./scripts/deploy-public-pwa.sh`.
+
+### To enable production deploy
+
+1. Same place → New variable:
+   - `PROD_DEPLOY_ENABLED = true`
+2. Tag the release: `git tag v0.X.Y && git push --tags` → `deploy-production` runs.
+
+### To enable Slack notifications
+
+1. Variables tab → `SLACK_NOTIFY_ENABLED = true`
+2. **Secrets** tab → `SLACK_WEBHOOK_URL = https://hooks.slack.com/...`
+
+If `SLACK_NOTIFY_ENABLED=true` is set but the webhook secret is missing, the
+Notify step skips with a log line instead of failing the run.
+
+### To enable rollback
+
+`workflow_dispatch` only — go to Actions → CD → "Run workflow", pick environment
+and `rollback`. Variable `ROLLBACK_ENABLED = true` must be set first. The
+rollback step itself is a stub — wire your actual rollback script into the
+`Rollback` step before relying on it.
