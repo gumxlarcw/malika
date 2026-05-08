@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import { X } from "lucide-react";
+import { useFocusTrap } from "@/hooks";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
 
@@ -47,6 +48,9 @@ export default function Modal({
     [closeOnEsc, onClose]
   );
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, isOpen);
+
   useEffect(() => {
     if (isOpen) {
       document.addEventListener("keydown", handleEsc);
@@ -66,13 +70,17 @@ export default function Modal({
       onClick={closeOnOverlayClick ? onClose : undefined}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "modal-title" : undefined}
         className={`bg-background rounded-xl shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col m-4 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
-            {title && <h2 className="text-lg font-semibold">{title}</h2>}
+            {title && <h2 id="modal-title" className="text-lg font-semibold">{title}</h2>}
             {showCloseButton && (
               <button
                 onClick={onClose}
