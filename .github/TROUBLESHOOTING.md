@@ -27,6 +27,7 @@ fixed. The phantom workflow now intercepts triggers but always reports startup_f
 - Renaming workflow files (forces re-registration, but phantom still fires alongside)
 - Adding totally-new workflow files (phantom takes precedence over them)
 - Fixing real workflow files so they're parser-valid (phantom now intercepts them entirely — `cd.yml` validates locally and on GitHub's content API but `workflow_dispatch` returns `startup_failure` with zero jobs created)
+- **Disable + re-enable Actions at the repo level** (PUT `/actions/permissions` with `enabled=false` then `enabled=true`). Tested 2026-05-08, commit `426da3b` after the cycle still gets only the phantom run, no real workflow execution. The phantom association is stickier than the workflow registration table.
 
 ### Pathology has worsened
 
