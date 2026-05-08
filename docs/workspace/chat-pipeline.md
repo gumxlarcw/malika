@@ -1,6 +1,6 @@
 # Chat Pipeline — Project Line
 
-> Last updated: 2026-03-02
+> Last updated: 2026-05-08
 
 ## Current State
 - **Protocol**: SSE (Server-Sent Events)
@@ -95,6 +95,8 @@ Layer 3 (stream):   mainAgent + supervisor
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
+| 2026-05-08 | Fix `malika_ui` fence truncation in persisted assistant messages: two `streamingPersist` paths sliced `assistantContent` to 8000 chars, severing the closing ` ``` ` for tables with rich `value_codes` payloads (verified: 11 rows × 26 metric columns ≈ 41 KB). Replay then fell back to raw-code-block render instead of `DataSummaryBubble`. Cap interpretation at 8000 chars only; let uiBlock pass through (DB column is `longtext`). Added e2e regression test. | streaming.service.js (lines 736, 4924), e2e/chat-modal-value-codes.spec.ts |
+| 2026-05-08 | Verified ChatTableModal renders `<sup title>` for per-cell `value_codes` during live streaming (lines 288 + 419 of ChatTableModal.tsx). Both in-whitelist (`*` → "Angka sementara") and extended-whitelist (`–` → "Data nihil atau tidak ada") tooltip paths confirmed in DOM. | (verification only; no code change in this entry) |
 | 2026-03-02 | Pipeline V2 latency optimization (8 changes, 50-90s → 18-30s) | documentJudge, publicationAgent, supervisor, mainAgent, gateAgent, knowledgeSearch, multiStrategySearch, pipeline, chat.validation |
 | 2026-03-02 | Pipeline V2 (Option D) — 3-layer architecture with sub-agents | agents/*, pipelineV2.service.js, config.js, streaming.service.js |
 | 2026-03-02 | Initial audit & documentation | - |

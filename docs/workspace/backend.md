@@ -1,6 +1,6 @@
 # Backend API — Project Line
 
-> Last updated: 2026-03-02
+> Last updated: 2026-05-08
 
 ## Current State
 - **Framework**: Express 5.2.1 + Sequelize 6.37.7
@@ -21,4 +21,5 @@ Admin: `/datasource`, `/period`, `/summary`, `/cache`, `/automation`, `/search/a
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
+| 2026-05-08 | Production chat persistence path is `streaming.service.js`, **not** `chat.service.js:sendMessage`. The latter handles the dormant non-streaming `POST /chat/threads/:id/messages` route (controller line 47); the frontend always uses streaming. Same truncation-cap bug pattern existed in both files but only the streaming sites were live and were fixed. | (note only; see chat-pipeline.md for the fix entry) |
 | 2026-03-02 | Initial audit & documentation | - |
