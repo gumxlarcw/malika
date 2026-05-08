@@ -730,15 +730,17 @@ async function streamGreetingResponse({
   sendEvent('done', { fullText });
   
   const uiBlock = `\n\n\`\`\`malika_ui\n${JSON.stringify(uiMeta)}\n\`\`\``;
-  // Strip any existing malika_ui blocks from LLM output before adding our own
-  const cleanedText = stripMalikaUiBlock(fullText);
-  const assistantContent = `${cleanedText.trim()}${uiBlock}`;
-  
+  // Strip any existing malika_ui blocks from LLM output before adding our own.
+  // Cap the LLM interpretation; let uiBlock pass through intact so chat-history
+  // replay can parse the fenced JSON. DB column is longtext.
+  const cleanedText = stripMalikaUiBlock(fullText).trim().slice(0, 8000);
+  const assistantContent = `${cleanedText}${uiBlock}`;
+
   // Save assistant message
   await ChatMessage.create({
     thread_id: threadId,
     role: 'assistant',
-    content: assistantContent.slice(0, 8000),
+    content: assistantContent,
     model: model || null,
     created_at: now(),
   });
@@ -4906,16 +4908,18 @@ async function saveAssistantMessage(threadId, text, model, intentResult, candida
   // Post-process text: convert WhatsApp numbers to clickable links
   // IMPORTANT: Strip any existing malika_ui blocks from LLM output before adding our own
   const cleanedText = stripMalikaUiBlock(String(text || ''));
-  
+
   // Build context for WhatsApp link pre-fill
   const waContext = {
     threadId,
     userMessage: userMessage || null,
     aiResponse: cleanedText.slice(0, 200), // AI response excerpt
   };
-  const processedText = linkifyWhatsAppNumber(cleanedText.trim(), waContext);
-  
-  const assistantContent = `${processedText}${uiBlock}`.trim().slice(0, 8000);
+  const processedText = linkifyWhatsAppNumber(cleanedText.trim(), waContext).slice(0, 8000);
+
+  // Cap the LLM interpretation; let uiBlock pass through intact so chat-history
+  // replay can parse the fenced JSON. DB column is longtext.
+  const assistantContent = `${processedText}${uiBlock}`.trim();
 
   await ChatMessage.create({
     thread_id: threadId,
