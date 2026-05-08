@@ -3660,6 +3660,9 @@ async function streamChatResponse({
       shouldPreferPrevCandidates = false;
     }
 
+    // ── Pipeline progress status: stage 1 of 5 ──
+    sendEvent('status', { message: 'Mengenali topik & wilayah…', stage: 'normalize' });
+
     // Apply query normalization (abbreviation expansion, typo fix, geo normalization)
     // This helps with search accuracy without changing user's original intent
     let normalizedQuery = effectiveUserQuery;
@@ -3706,10 +3709,13 @@ async function streamChatResponse({
       }
     }
 
+    // ── Pipeline progress status: stage 2 of 5 ──
+    sendEvent('status', { message: 'Mencari sumber data…', stage: 'search' });
+
     // Resolve intent and get candidates using the NORMALIZED query
     let intentResult = null;
     let candidates = [];
-    
+
     // If fast-path matched, use pre-defined datasources
     if (usedFastPath && fastPathIntent?.source_ids?.length > 0) {
       try {
@@ -3898,6 +3904,9 @@ async function streamChatResponse({
         score: c.score || 80,
       }));
     }
+
+    // ── Pipeline progress status: stage 3 of 5 ──
+    sendEvent('status', { message: 'Memuat data tabel terbaru…', stage: 'preview' });
 
     // Try to get data preview
     let dataPreview = null;
@@ -4631,6 +4640,9 @@ async function streamChatResponse({
       return;
     }
 
+    // ── Pipeline progress status: stage 4 of 5 ──
+    sendEvent('status', { message: 'Memuat referensi BRS & publikasi…', stage: 'knowledge' });
+
     // RAG: Search knowledge base for relevant documents
     let knowledgeContext = [];
     try {
@@ -4749,6 +4761,9 @@ async function streamChatResponse({
       }),
       { role: 'user', content: effectiveUserQuery },
     ];
+
+    // ── Pipeline progress status: stage 5 of 5 ──
+    sendEvent('status', { message: 'Berpikir & menyusun jawaban…', stage: 'thinking' });
 
     // Stream from proxy (tier: COMPLEX — main reasoning path). Routing via
     // llmChat: handles retry, circuit breaker, abort signal propagation.

@@ -20,16 +20,17 @@ export type ThinkingEvent = ThinkingItem;
 
 /**
  * SSE events emitted by the live backend.
- * The V2 refactor's richer events (thinking, status, status_detail, tool_call,
- * tool_result, suggestions_update) were never wired into the live pipeline; the
- * backend dead code was removed in commit 9dc176f. The types below were trimmed
- * accordingly. ToolCallEvent/ToolResultEvent are kept because ChatProcessContext
- * still references them as state shape (state remains permanently empty).
- * See docs/workspace/chat-pipeline.md.
+ * `status` was re-wired into streaming.service.js: 5 stages emit progress
+ * updates ("Mengenali topik…" → "Mencari sumber data…" → … → "Berpikir &
+ * menyusun jawaban…") so the chat UI can render a step list.
+ * The V2 refactor's richer events (thinking, status_detail, tool_call,
+ * tool_result, suggestions_update) remain unwired — the matching frontend
+ * components were trimmed in commit b4bde20.
  */
 export type SSEEventType =
   | "text"
   | "chunk"    // V1 legacy format (greeting handler)
+  | "status"
   | "intent"
   | "malika_ui"
   | "user_saved"
@@ -61,11 +62,17 @@ export interface ToolResultEvent {
   elapsedMs: number | null;
 }
 
+export interface StatusEvent {
+  message: string;
+  stage: "normalize" | "search" | "preview" | "knowledge" | "thinking" | string;
+}
+
 export interface StreamCallbacks {
   onUserSaved?: (data: { id: number }) => void;
   onThreadUpdated?: (data: { title: string; topics?: string }) => void;
   onIntent?: (data: IntentEvent) => void;
   onMalikaUi?: (data: any) => void;
+  onStatus?: (data: StatusEvent) => void;
   onText?: (data: { content: string }) => void;
   onDone?: (data: { full_text: string }) => void;
   onError?: (data: { message: string }) => void;
@@ -193,6 +200,9 @@ export function streamMessage(
                 break;
               case "intent":
                 callbacks.onIntent?.(evt.data);
+                break;
+              case "status":
+                callbacks.onStatus?.(evt.data);
                 break;
               case "text":
                 callbacks.onText?.(evt.data);

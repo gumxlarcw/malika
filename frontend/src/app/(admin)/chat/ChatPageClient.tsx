@@ -837,10 +837,30 @@ export default function ChatPageClient() {
           updateMsg(assistantStreamId, { content: { text: assistantText } });
         },
 
-        // Note: V2 pipeline events (status, status_detail, tool_call, tool_result,
-        // thinking) are no longer emitted by the live backend (cleanup commit 9dc176f).
-        // Their handlers were removed; persisted thinkingItems on saved messages
-        // still replay via the ui.thinkingItems path elsewhere in this file.
+        // Pipeline progress: backend emits 5 status events at the major
+        // stages (normalize → search → preview → knowledge → thinking).
+        // Each event updates the typing-pill status text AND pushes a step
+        // into the visible step list. Previous step is marked done when the
+        // next one arrives.
+        onStatus: (data) => {
+          const message = String(data?.message || "").trim();
+          const stage = String(data?.stage || "").trim();
+          if (!message) return;
+          // Option A: typing-pill status text
+          setTypingStatus(message);
+          // Option B: append to step list (skips duplicate stages)
+          if (stage) {
+            pushStep({
+              message,
+              stage,
+              status: "active" as const,
+              startedAt: Date.now(),
+            });
+          }
+        },
+
+        // Note: status_detail, tool_call, tool_result, thinking,
+        // suggestions_update remain unwired (V2 ghost). See chat-pipeline.md.
 
         onDone: (data) => {
           const finalText = String(data?.full_text || "");
@@ -1365,26 +1385,66 @@ export default function ChatPageClient() {
     // Typing indicator — streaming process indicator
     if (msg.type === "typing") {
       return (
-        <ThinkingFeed
-          thinkingItems={thinkingItems}
-          pipelineText={pipelineText}
-          reasoningText={reasoningText}
-          isStreaming={isTyping}
-          isThinkingActive={isThinkingActive}
-          onStop={
-            pendingSendRef.current
-              ? () => {
-                  userStoppedRef.current = true;
-                  pendingSendRef.current?.abort();
-                  pendingSendRef.current = null;
-                  setIsTyping(false);
-                  setTypingStatus(undefined);
-                  markAllStepsDone();
-                  setWasStopped(true);
-                }
-              : undefined
-          }
-        />
+        <div className="space-y-2">
+          {/* Step berpikir — pipeline progress timeline */}
+          {processSteps.length > 0 && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
+              <div className="space-y-1">
+                {processSteps.map((step, i) => {
+                  const elapsed = step.doneAt && step.startedAt
+                    ? `${((step.doneAt - step.startedAt) / 1000).toFixed(1)}s`
+                    : null;
+                  return (
+                    <div key={`${step.stage}-${i}`} className="flex items-center gap-2 text-xs">
+                      {step.status === "done" ? (
+                        <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-violet-500 dark:text-violet-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
+                          <path className="opacity-90" d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                        </svg>
+                      )}
+                      <span className={
+                        step.status === "done"
+                          ? "flex-1 text-gray-600 dark:text-gray-400"
+                          : "flex-1 text-violet-700 dark:text-violet-300 font-medium"
+                      }>
+                        {step.message}
+                      </span>
+                      {elapsed && (
+                        <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{elapsed}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Existing typing-pill ("Berpikir..." spinner with elapsed timer) */}
+          <ThinkingFeed
+            thinkingItems={thinkingItems}
+            pipelineText={pipelineText}
+            reasoningText={reasoningText}
+            isStreaming={isTyping}
+            isThinkingActive={isThinkingActive}
+            onStop={
+              pendingSendRef.current
+                ? () => {
+                    userStoppedRef.current = true;
+                    pendingSendRef.current?.abort();
+                    pendingSendRef.current = null;
+                    setIsTyping(false);
+                    setTypingStatus(undefined);
+                    markAllStepsDone();
+                    setWasStopped(true);
+                  }
+                : undefined
+            }
+          />
+        </div>
       );
     }
 
