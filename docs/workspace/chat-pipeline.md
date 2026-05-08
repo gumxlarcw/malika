@@ -6,7 +6,7 @@
 - **Protocol**: SSE (Server-Sent Events)
 - **Live entry**: `backend/src/services/chat/streaming.service.js` — `streamChatResponse()` at `:3502`
 - **Architecture**: Monolithic. The full pipeline runs inline inside `streaming.service.js` (~5162 lines).
-- **Dead-code graveyard**: `backend/src/services/chat/streaming/` contains ~30 files, but only **two** are actually imported by the live entry — see [Live vs Orphan](#live-vs-orphan-imports) below. A planned 3-layer/agent refactor was started but never wired in.
+- **`streaming/` directory**: 4 files only — `openaiClient.js`, `modelRouter.service.js`, `config.js`, `requestContext.js`. All live. The previous dead-code graveyard (35 files from a stalled V2 refactor) was removed in commit `9dc176f`.
 
 ## Live Pipeline Flow
 
@@ -64,22 +64,16 @@ HTTP /threads/:id/stream
                 ```malika_ui fenced block (longtext column).
 ```
 
-## Live vs Orphan Imports
-
-The only `streaming/*` modules actually wired into the live path:
+## Live Modules in `streaming/`
 
 | Module | Used by | Purpose |
 |---|---|---|
-| `streaming/openaiClient.js` | `streaming.service.js:89` | LLM HTTP client → malika-llm-proxy |
-| `streaming/modelRouter.service.js` | `streaming.service.js:90` | `modelForTier`, `MODEL_TIERS` constants |
+| `streaming/openaiClient.js` | `streaming.service.js`, `chat.service.js`, `persistentMemory.service.js`, `sessionCompaction.service.js`, plus `services/ai/{multiStrategySearch, synonymExpansion, tableUnderstanding}` | LLM HTTP client → malika-llm-proxy |
+| `streaming/modelRouter.service.js` | `streaming.service.js:90` | `modelForTier()`, `MODEL_TIERS` constants |
+| `streaming/config.js` | `services/chat/sessionCompaction.service.js` (plus `openaiClient.js` and `modelRouter.service.js`) | Shared config constants |
+| `streaming/requestContext.js` | `services/chat/sessionCompaction.service.js`, `services/ai/{documentJudge, keywordExtractor, reranker, synonymExpansion, tableUnderstanding}` | Per-request context object passed across services |
 
-Every other `streaming/*.service.js` file has **no live importer** (verified by grep across `src/`):
-
-`gateAgent.service.js`, `pipeline.service.js`, `supervisor.service.js`, `chartAgent.service.js` (only test imports), `toolUse.service.js`, `knowledgeContext.service.js`, `prompt.service.js`, `sse.service.js`, `knowledgeAnalyst.service.js`, `orchestrator.service.js`, `multiSource.service.js`, `previewBuilder.service.js`, `topic.service.js`, `provinsi.service.js`, `queryContext.service.js`, `reconciler.service.js`, `uiMetadata.service.js`, `llmSuggestions.service.js`, `dataPreview.service.js`, `brsPreview.service.js`, `greeting.service.js`, plus `streaming/agents/{datasourceAgent, publicationAgent, nonstatAgent, mainAgent, agentProtocol}.js`.
-
-These represent a stalled extraction refactor. They are kept on disk but **do not affect runtime behavior**.
-
-> Cleanup is available as a follow-up: deleting the orphans + the `agents/` subdir would reduce ~28 files. Defer until a deliberate refactor session — they are misleading but not harmful.
+All four files have at least one importer outside `streaming/`. Verified by `grep -rE "require\\(['\"][^'\"]*streaming/(file)['\"]"` across `backend/src/`.
 
 ## Model Tiers (`streaming/modelRouter.service.js`)
 
@@ -92,7 +86,7 @@ Source defaults vs runtime (production sets `OPENAI_MODEL_CHAT=claude-sonnet-4-6
 | COMPLEX | `claude-sonnet-4-6` | `claude-sonnet-4-6` | 0.2 | adaptive |
 | DEEP | `claude-sonnet-4-6` | `claude-sonnet-4-6` | 0.1 | 16K |
 
-Per-tier knobs override via `MODEL_<TIER>` env vars. Gate model (intent classifier) defaults to `gemini-3-flash-preview` via `GATE_LLM_MODEL` — but the gate file (`gateAgent.service.js`) is currently orphan; live intent uses `services/search/intent.service::resolveSearchIntent` (deterministic, not LLM-based).
+Per-tier knobs override via `MODEL_<TIER>` env vars. Live intent classification uses `services/search/intent.service::resolveSearchIntent` (deterministic keyword/datasource matching, not LLM-based). The previous LLM-based `gateAgent.service.js` was deleted in commit `9dc176f` along with the rest of the V2 refactor.
 
 ## SSE Events
 `user_saved`, `thread_updated`, `intent`, `context`, `status`, `text`, `malika_ui`, `done`, `error`, `heartbeat`
@@ -122,24 +116,30 @@ Per-tier knobs override via `MODEL_<TIER>` env vars. Gate model (intent classifi
 ## Concurrency
 The live path is mostly sequential. The only parallelism inside the request is implicit (multiple awaited promises within preview fetch) — there is **no** `Promise.all` for parallel agent execution in the live flow.
 
-## What WAS Planned but Not Implemented
+## Historical: Pipeline V2 / Option D (Deleted)
 
-The previous version of this doc described a "Pipeline V2 / Option D / 3-Layer Architecture" with agents (datasourceAgent, publicationAgent, nonstatAgent, mainAgent) running in parallel via `pipelineV2.service.js` and `PIPELINE_VERSION` env var routing. **None of that is wired up.** Files exist on disk but have no live importer; no env var is read. The "latency optimization" claims (50-90s → 18-30s, skipRerank chains, supervisor low-risk skip, mainAgent post-stream parallelism) describe behavior of the orphan code, not the live path.
+A 3-layer agent architecture was attempted (datasourceAgent, publicationAgent, nonstatAgent, mainAgent + supervisor + orchestrator) but never wired into `streaming.service.js`. The orchestrator entry that the design called for (`pipelineV2.service.js`) was never written. The 35 files that made up the partial implementation were deleted in commit `9dc176f` (2026-05-08) after a require()-reachability audit confirmed zero live importers.
 
-If/when the refactor resumes, this section should be re-introduced. Until then, treat orphan modules as design notes, not implementation.
+The "latency optimization" claims from 2026-03-02 (50-90s → 18-30s, skipRerank chains, supervisor low-risk skip, mainAgent post-stream parallelism) described behavior of code that never ran in production.
+
+If a similar refactor is attempted in the future, start from the live monolith in `streaming.service.js` and extract incrementally with each step verified by `pm2 reload pds-backend` + smoke test, rather than building a parallel implementation.
 
 ## Deep Doc System (Knowledge Context)
 
-The Deep Doc accuracy work referenced in MEMORY.md (Layer 1 refusal validator, Layer 3 extraction quality score, scoped phrase bonus, indicator-guided extraction) lives in the orphan `knowledgeContext.service.js` and `pipeline.service.js`. These features are **not active in the current live path**. Reproducing the 20/21 Deep Doc accuracy requires either:
-1. Wiring the orphan modules back into `streaming.service.js`, or
-2. Re-implementing the validator/quality-score logic inline.
+The Deep Doc accuracy work referenced in MEMORY.md (Layer 1 refusal validator, Layer 3 extraction quality score, scoped phrase bonus, indicator-guided extraction) was implemented in `knowledgeContext.service.js` and `pipeline.service.js` — both deleted in commit `9dc176f`. These features were **not active in the live path** at the time of deletion (no live importer). The 20/21 Deep Doc accuracy from 2026-03-10 reflects historical behavior, not current.
 
-> This is a known regression risk. Verify against `scripts/test-deep-document.js` before claiming Deep Doc accuracy.
+To restore Deep Doc accuracy:
+1. Recover the relevant logic from git history (`git show 9dc176f^:backend/src/services/chat/streaming/knowledgeContext.service.js`).
+2. Inline the validator/quality-score/extraction logic into `streaming.service.js`'s knowledge retrieval stage (Stage 4) or a new dedicated live module.
+3. Re-run `node scripts/test-deep-document.js` to confirm.
+
+> If anyone asks for "Deep Doc 20/21 accuracy", treat it as a re-implementation request, not a regression report.
 
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
-| 2026-05-08 | **Doc rewrite**: corrected pipeline description to match live monolithic flow in `streaming.service.js`. Marked V2 architecture, sub-agents, supervisor/chartAgent/toolUse, and `pipeline.service.js`-based stage decomposition as orphan/dead-code (no live importer). Flagged Deep Doc system regression risk. | docs/workspace/chat-pipeline.md |
+| 2026-05-08 | **Dead-code cleanup** (commit `9dc176f`): deleted 35 files (17576 lines) from `streaming/` and `__tests__/` after require()-reachability audit confirmed zero live importers. `streaming/` reduced from 32 files + 5 in `agents/` → 4 files (`openaiClient`, `modelRouter`, `config`, `requestContext`). PM2 reload verified clean. Test suite delta: 251/270 pass (19 pre-existing failures, none caused by this change). | streaming/agents/* (deleted dir), streaming/{index, knowledgeAnalyst, assistantMessage, brsPreview, chatHelpers, dataPreview, eximHandler, gateAgent, greeting, knowledgeContext, llmSuggestions, mergeBundles, multiSource, orchestrator, pipeline.service, previewBuilder, prompt.service, provinsi, reconciler, supervisor, toolUse, topicPatterns, topic.service, uiMetadata, chartAgent.service, sse.service, queryContext.service}, __tests__/{chartAgent.service, sse.service, queryContext.service}.test.js |
+| 2026-05-08 | **Doc rewrite**: corrected pipeline description to match live monolithic flow in `streaming.service.js`. Identified V2 architecture, sub-agents, supervisor/chartAgent/toolUse, and `pipeline.service.js`-based stage decomposition as orphan/dead-code (no live importer). Flagged Deep Doc system regression risk. | docs/workspace/chat-pipeline.md |
 | 2026-05-08 | Fix `malika_ui` fence truncation in persisted assistant messages: two `streamingPersist` paths sliced `assistantContent` to 8000 chars, severing the closing ` ``` ` for tables with rich `value_codes` payloads (verified: 11 rows × 26 metric columns ≈ 41 KB). Replay then fell back to raw-code-block render instead of `DataSummaryBubble`. Cap interpretation at 8000 chars only; let uiBlock pass through (DB column is `longtext`). Added e2e regression test. | streaming.service.js (lines 736, 4924), e2e/chat-modal-value-codes.spec.ts |
 | 2026-05-08 | Verified ChatTableModal renders `<sup title>` for per-cell `value_codes` during live streaming (lines 288 + 419 of ChatTableModal.tsx). Both in-whitelist (`*` → "Angka sementara") and extended-whitelist (`–` → "Data nihil atau tidak ada") tooltip paths confirmed in DOM. | (verification only; no code change in this entry) |
 | 2026-03-02 | Pipeline V2 latency optimization (8 changes, 50-90s → 18-30s) **— rolled back / dead code as of 2026-05-08** | documentJudge, publicationAgent, supervisor, mainAgent, gateAgent, knowledgeSearch, multiStrategySearch, pipeline, chat.validation |
