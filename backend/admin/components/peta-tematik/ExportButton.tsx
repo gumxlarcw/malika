@@ -15,7 +15,7 @@ export default function ExportButton({ fileNameSeed, targetId = "peta-tematik-ex
     if (loading) return;
     setLoading(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      const html2canvas = (await import("html2canvas-pro")).default;
       const node = document.getElementById(targetId);
       if (!node) throw new Error("Export area not found");
       const canvas = await html2canvas(node, {
