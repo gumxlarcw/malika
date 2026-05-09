@@ -3,6 +3,15 @@ import { isReachable } from "./utils";
 
 const PWA_BASE_URL = process.env.PWA_BASE_URL || "http://127.0.0.1:3000";
 
+test.beforeEach(async ({ page }) => {
+  // Suppress the onboarding tour SVG overlay (intercepts pointer events otherwise)
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem("malika_tour_completed_v1", "1");
+    } catch { /* ignore */ }
+  });
+});
+
 test("chat conversation flow", async ({ page }) => {
   if (!(await isReachable(`${PWA_BASE_URL}/chat`))) {
     test.skip(true, "PWA not reachable");
@@ -10,7 +19,9 @@ test("chat conversation flow", async ({ page }) => {
 
   await page.goto(`${PWA_BASE_URL}/chat`, { waitUntil: "domcontentloaded" });
 
-  const textarea = page.getByPlaceholder("Tulis pertanyaan...");
+  const textarea = page
+    .locator('textarea[placeholder*="ulis"], textarea[placeholder*="ertanyaan"]')
+    .first();
   if ((await textarea.count()) === 0) test.skip(true, "Chat input not found");
   await expect(textarea).toBeVisible();
   await textarea.fill("halo");

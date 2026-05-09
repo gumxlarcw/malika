@@ -221,29 +221,46 @@ export default function DataTable(props: DataTableProps) {
                     );
                   })}
                   <td className="px-3 py-1.5">
-                    {series.length >= 2 && Number.isFinite(series[0]) && series[0] !== 0 ? (
-                      <div className="flex items-center gap-2">
-                        <Sparkline
-                          values={series}
-                          color={trendUp ? "#10b981" : "#f04438"}
-                          fill={trendUp ? "rgba(16,185,129,.12)" : "rgba(240,68,56,.10)"}
-                          width={68}
-                          height={20}
-                          strokeWidth={1.4}
-                        />
-                        <span
-                          className={`text-[10.5px] tabular-nums ${
-                            trendUp
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-600 dark:text-rose-400"
-                          }`}
-                        >
-                          {(((series[series.length - 1] - series[0]) / Math.abs(series[0])) * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-[10.5px] text-gray-300 dark:text-gray-600">—</span>
-                    )}
+                    {(() => {
+                      // Pick first/last *valid* points so a missing boundary
+                      // year doesn't blank the trend, and guard division by
+                      // zero on `firstValid === 0` (audit C3 + C4, second pass).
+                      const validIdx: number[] = [];
+                      series.forEach((v, i) => {
+                        if (Number.isFinite(v)) validIdx.push(i);
+                      });
+                      if (validIdx.length < 2) {
+                        return <span className="text-[10.5px] text-gray-300 dark:text-gray-600">—</span>;
+                      }
+                      const first = series[validIdx[0]];
+                      const last = series[validIdx[validIdx.length - 1]];
+                      const pct = first !== 0 ? ((last - first) / Math.abs(first)) * 100 : null;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <Sparkline
+                            values={series}
+                            color={trendUp ? "#10b981" : "#f04438"}
+                            fill={trendUp ? "rgba(16,185,129,.12)" : "rgba(240,68,56,.10)"}
+                            width={68}
+                            height={20}
+                            strokeWidth={1.4}
+                          />
+                          {pct !== null ? (
+                            <span
+                              className={`text-[10.5px] tabular-nums ${
+                                trendUp
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-rose-600 dark:text-rose-400"
+                              }`}
+                            >
+                              {pct.toFixed(0)}%
+                            </span>
+                          ) : (
+                            <span className="text-[10.5px] text-gray-300 dark:text-gray-600">—</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               );

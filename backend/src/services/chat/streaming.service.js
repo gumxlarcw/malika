@@ -686,6 +686,7 @@ async function streamGreetingResponse({
       apiKey,
       retries: 2,
       timeoutMs: 15000,
+      extraHeaders: threadId ? { 'X-Chat-Session-Id': String(threadId) } : undefined,
     }); // 2 retries, 15s timeout for greeting
     
     fullText = await readLlmChatResponse(response, (delta) => {
@@ -4779,6 +4780,7 @@ async function streamChatResponse({
       apiKey,
       retries: 2,
       timeoutMs: 30000,
+      extraHeaders: threadId ? { 'X-Chat-Session-Id': String(threadId) } : undefined,
     });
 
     // ── Pipeline progress status: stage 6 of 6 — fired on first response chunk
@@ -5131,6 +5133,7 @@ async function sendMessageNonStreaming({ threadId, userMessage, ownerId }) {
         apiKey,
         retries: 2,
         timeoutMs: 30000,
+        extraHeaders: threadId ? { 'X-Chat-Session-Id': String(threadId) } : undefined,
       });
 
       const data = await response.json();

@@ -40,6 +40,7 @@ type YearData = {
   columns: string[];
   rows: Array<Record<string, any>>;
   lastUpdate: string | null;
+  source: string | null;
 };
 
 function normalizeDynamicPeriod(period: string) {
@@ -268,6 +269,7 @@ export default async function DataPage({
         columns,
         rows,
         lastUpdate: data.last_update || null,
+        source: data.source || null,
       };
     } catch {
       return null;
@@ -297,20 +299,14 @@ export default async function DataPage({
     );
   }
 
-  // Get source name from first successful fetch
-  let sourceName = "Data Statistik";
-  try {
-    const url = buildUrl(selectedYear);
-    const res = await fetch(url, { cache: "no-store" });
-    if (res.ok) {
-      const payload = (await res.json()) as DynamicResponse;
-      if (payload?.data?.source) {
-        sourceName = payload.data.source;
-      }
-    }
-  } catch {
-    // Use default
-  }
+  // Source name is already in `allYearsData` — pull it from the entry matching
+  // the selected year, falling back to the first entry, then to "Data Statistik".
+  // (Audit C5: previously this issued a second identical fetch just to extract
+  // `source`, costing a per-request round-trip.)
+  const sourceName =
+    allYearsData.find((d) => d.year === selectedYear)?.source ??
+    allYearsData[0]?.source ??
+    "Data Statistik";
 
   // Determine source type for client component
   const sourceTypeMap: Record<string, "dynamic" | "interop" | "exim" | "static"> = {

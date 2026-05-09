@@ -1567,10 +1567,13 @@ function buildDbFirstHeader({ intentResult, candidates, latestBySource }) {
   return lines.join('\n').trim();
 }
 
-async function callOpenAIChat({ model, apiKey, messages, timeoutMs }) {
+async function callOpenAIChat({ model, apiKey, messages, timeoutMs, chatSessionId }) {
   // Delegates to the centralized llmChat helper (routes to malika-llm-proxy :3031).
   // llmChat handles retry, timeout, circuit breaker, and abort propagation; here we
   // only parse the response and extract assistant content.
+  // chatSessionId, when supplied, is forwarded as X-Chat-Session-Id so the proxy
+  // can reuse a warm claude-CLI worker for that conversation (see malika-llm-proxy
+  // worker pool, /opt/malika-llm-proxy/src/index.js).
   const res = await llmChat({
     model,
     messages,
@@ -1578,6 +1581,7 @@ async function callOpenAIChat({ model, apiKey, messages, timeoutMs }) {
     apiKey,
     temperature: 0.2,
     timeoutMs,
+    extraHeaders: chatSessionId ? { 'X-Chat-Session-Id': String(chatSessionId) } : undefined,
   });
 
   const text = await res.text();
@@ -3041,6 +3045,7 @@ async function sendMessage(ownerId, threadId, userTextRaw) {
         apiKey,
         messages: openAiMessages,
         timeoutMs: Number(process.env.OPENAI_CHAT_TIMEOUT_MS || '15000'),
+        chatSessionId: threadId,
       });
       latencyMs = Date.now() - t0;
     } catch {
