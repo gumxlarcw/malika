@@ -1,0 +1,64 @@
+# MALIKA — Project-specific Claude Code instructions
+
+This file is auto-loaded by Claude Code at the start of every session in `/var/www/html/project-data-strategis/`.
+
+## Single source of truth (2026-05-09 onward)
+
+**This directory IS the GitHub-tracked repo.** No worktree, no rsync.
+
+```
+/var/www/html/project-data-strategis/        ← live + git-tracked
+└── .git/  → origin = git@github.com:gumxlarcw/malika.git, branch main
+```
+
+**Workflow:** edit → `git add` → `git commit` → `git push origin main`.
+PRs via GitHub UI for review. Branch from main, push, open PR there.
+
+If you hit `fatal: detected dubious ownership` on first git op as root (dir owner is `www-data`):
+```bash
+git config --global --add safe.directory /var/www/html/project-data-strategis
+```
+
+## What gets auto-loaded each session
+
+1. **This file** (`CLAUDE.md`) — always-on instructions
+2. **Auto-memory index** at `/root/.claude/projects/-var-www-html/memory/MEMORY.md` — facts about the project carried across sessions
+3. **SessionStart hook** at `.claude/hooks/session-start.sh` — runs `git fetch origin main` and emits current branch/uncommitted/recent-commits state into the model's session context
+
+So before any work, you already know: latest origin/main commits, current branch, uncommitted file count, where memory lives.
+
+## Workspace docs (read when editing the corresponding area)
+
+- `docs/workspace/backend.md` — backend API: routes, controllers, models, services
+- `docs/workspace/frontend.md` — frontend PWA: pages, components, hooks
+- `docs/workspace/admin.md` — admin panel: pages, components, state
+- `docs/workspace/chat-pipeline.md` — chat streaming SSE, tiers, LLM proxy
+- `docs/workspace/ai-llm.md` — AI/LLM models, proxy, API keys
+- `docs/workspace/database.md` — database models, tables, migrations, retrieval_chunks
+- `docs/workspace/infra.md` — PM2, CI/CD, deployment
+
+Update Change Log in the relevant file after significant changes.
+
+## Architecture quick-ref
+
+- **3 PM2 apps**: pds-backend (:5000), pds-admin (:5050), pds-frontend (:6060)
+- **LLM proxy**: malika-llm-proxy (:3031) — live at `/opt/malika-llm-proxy/{src/index.js,.env}`
+- **Cloudflare Tunnel**: `malika.bpsmalut.com` (PWA), `api-malika.bpsmalut.com` (API + admin)
+- **DB**: MariaDB 11.8 — `project_data_strategis` (primary, 32 tables) + `data_bps` (replica, 320+ tables)
+- **Embeddings**: Self-hosted `Xenova/multilingual-e5-base` @ 768d via `@xenova/transformers` — see `services/bpsMetadata/embedding.service.js`
+- **Retrieval**: Native `VECTOR(768)` cosine HNSW in `retrieval_chunks` table — see `services/ai/retrieval.service.js`. Flag: `USE_UNIFIED_RETRIEVAL=true` in `.env`.
+
+## Always-on rules (per global CLAUDE.md + project preference)
+
+- Always backup before edit: `cp {file} {file}.backup`
+- Read the file first before editing
+- Backend reload: `pm2 reload pds-backend --update-env`
+- **No `Co-Authored-By` trailer in commits** (project preference)
+- Stage only files you intend to commit (`git add <path>`, never `-A` — there are unrelated changes from other dev sessions)
+
+## When in doubt
+
+- Check `docs/workspace/<area>.md` for area-specific rules
+- Check `/root/.claude/projects/-var-www-html/memory/MEMORY.md` for project history & decisions
+- Check `git log --oneline -20` to see recent direction
+- Phase A–F audit fix plan: `docs/superpowers/plans/2026-05-08-db-audit-fixes.md`
