@@ -22,6 +22,21 @@ AppSetting, DnaCache, IndicatorMeta, IndicatorMetricMeta, index.js
 - `data_merged_cache`
 - 4 `pressrelease_kw_*` tables
 
+### `month_no` semantics (BPS sentinel set)
+- `0` = unknown / annual rollup
+- `1`–`12` = January–December (monthly indicators)
+- `31`–`34` = Triwulan I–IV (quarterly sentinel)
+- `35` = Tahunan (annual sentinel)
+- `36`–`37` = semester markers (Maret/September — used for Kemiskinan)
+
+Enforced via `CHECK (month_no IN (0,1,..12,31..37))` on all 310 indikator tables since 2026-05-10.
+
+### `year` constraint
+`CHECK (year BETWEEN 2000 AND 2100)` — accommodates Proyeksi Penduduk projections out to 2050+ while rejecting `year=0` corruption.
+
+### `value_code` (BPS data quality flags)
+Codes seen in production data: `*`, `**`, `***`, `r`, `e`, `p`, `a`, `x`, `–`, `-`, `...`, `NA`. Documented in `frontend/src/lib/cellRender.tsx::BPS_VALUE_CODE_LABELS`. **Limitation**: BPS dynamic API (`webapi.bps.go.id/v1/api/list/...`) returns plain numbers without flags. Only interop API (`webapi.bps.go.id/v1/api/interoperabilitas/...`) exposes per-cell `value_code`. See `docs/reference/BPS_API_LIMITATIONS.md`.
+
 ## System pseudo-sources
 `data_sources.type='static'` AND `visible=0` rows do NOT have backing `indikator_NNN` tables in `data_bps`. They are "marker rows" used by automation flows that don't ship public data. Current set:
 - id 176: `System: Publikasi Notifications`
