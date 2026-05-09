@@ -9,14 +9,14 @@ originSessionId: 37e1fd58-1485-413f-bec5-fe58210c8f74
 > **Why:** User requested an audit of MALIKA's two MariaDB schemas before acting on embedding work. Findings produced by SQL probes against live DB on 2026-05-08.
 > **How to apply:** Use as the punch list when writing the consolidated DB-fix plan. Re-verify each finding against live state before acting — the DB drifts week to week.
 
-## Live State (verified 2026-05-08)
+## Live State (verified 2026-05-08, updated 2026-05-10)
 
-- **MariaDB version:** see live (vector probe will say). Sequelize 6.37.7. Pool max=20.
-- **`project_data_strategis`**: 32 tables, 23 models exported via `models/index.js`.
-- **`data_bps`**: 321 tables (311 `indikator_NNN` + 8 `pressrelease_kw_*` + `kodehs_indd` + `data_merged_cache`).
-- **DataSource breakdown**: dynamic 157, interop 150, static 4, exim 2, pressrelease 0 (313 total, all embedded).
-- **KnowledgeBase**: 28,103 rows (1,331 parents + 26,772 chunks), all embedded.
-- **Embedding dim live**: 3072 × 28,102 + 1536 × 1 (drift from code which exports 1536).
+- **MariaDB 11.8.6** with native VECTOR support. Sequelize 6.37.7. Pool max=20.
+- **`project_data_strategis`**: 32 tables, 27 models exported via `models/index.js` (3 added 2026-05-09: RetrievalChunk, IndicatorMeta, IndicatorMetricMeta).
+- **`data_bps`**: 321 tables (310 `indikator_NNN` + 8 `pressrelease_kw_*` + `kodehs_indd` + `data_merged_cache` + 2 misc).
+- **DataSource breakdown (2026-05-10)**: 311 active visible (157 dynamic + 149 interop + 3 static + 2 exim). Inactive: id=313 (junk hash-name, deleted 2026-05-09), id=415 (BPS endpoint dead, Option B applied 2026-05-10).
+- **retrieval_chunks**: 28,716 rows = 311 datasource + 1331 knowledge_doc + 26772 knowledge_chunk + 302 indicator_meta. All 768d e5-base via @xenova/transformers.
+- **Embedding system unified** to native VECTOR(768) cosine HNSW.
 
 ## P0 — broken / compliance
 
