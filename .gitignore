@@ -74,3 +74,12 @@ _archive_*/
 
 # ─── Sentry ──────────────────────────────────────────────────────────────────
 .sentryclirc
+
+# ─── CLAUDE.md backup convention (added 2026-05-09) ──────────────────────────
+# The "always cp before edit" rule from ~/.claude/CLAUDE.md creates these.
+# They must NEVER reach git — they are scratch only.
+**/*.backup
+backups/
+
+# ─── Temporary scratch ───────────────────────────────────────────────────────
+tmp/
