@@ -8,8 +8,10 @@ export const BPS_VALUE_CODE_LABELS: Record<string, string> = {
   "***": "Angka sangat-sangat sementara",
   e: "Angka estimasi",
   p: "Angka proyeksi",
+  a: "Angka agregat", // BPS introduced 2025 (SAKERNAS Februari 2025)
   x: "Data tidak tersedia",
   "–": "Data nihil atau tidak ada",
+  "-": "Data nihil atau tidak ada", // ASCII hyphen variant of "–"
   "...": "Data belum tersedia",
   NA: "Tidak berlaku",
 };
