@@ -38,4 +38,6 @@ Full build:     ./scripts/build-all.sh
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
+| 2026-05-09 | Repo structure cleanup: 27 root MDs → docs/{archive,runbook,reference}/. Stop hook + scripts/sync-status.sh added. .gitignore hardened against backup/tmp leakage. | CLAUDE.md, .gitignore, .claude/settings.json, .claude/hooks/session-stop.sh, scripts/sync-status.sh, docs/archive/, docs/runbook/, docs/reference/ |
+| 2026-05-09 | GitHub repo consolidation: production tree IS GitHub-tracked (origin: gumxlarcw/malika). malika-fresh worktree deleted (freed 751 MB). | /var/www/html/project-data-strategis/.git, deleted /var/www/html/.worktrees/malika-fresh/ |
 | 2026-03-02 | Initial audit & documentation | - |
