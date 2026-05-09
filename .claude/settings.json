@@ -11,6 +11,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/var/www/html/project-data-strategis/.claude/hooks/session-stop.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
