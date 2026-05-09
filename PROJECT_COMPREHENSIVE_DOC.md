@@ -1032,9 +1032,16 @@ MEMORY_CACHE_PRELOAD=true, MEMORY_CACHE_PRELOAD_LIMIT=20
 │
 ├── ecosystem.config.js                 # PM2 config (3 processes)
 ├── .gitmodules                         # Frontend submodule
+├── CLAUDE.md                           # Claude Code project instructions
+├── README.md                           # Project entrypoint
 ├── REFERENCE.md                        # Quick reference doc
-├── DATA_BPS_SCHEMA.md                  # Database schema doc
-└── *.md                                # 63+ documentation files
+├── PROJECT_COMPREHENSIVE_DOC.md        # This file
+├── docs/
+│   ├── workspace/                      # Per-area living docs (the source of truth)
+│   ├── superpowers/                    # Plans + specs
+│   ├── archive/                        # Frozen historical docs (post-2026-05-09)
+│   ├── runbook/                        # Step-by-step ops guides
+│   └── reference/                      # Technical reference (DATA_BPS_SCHEMA, RAG_IMPLEMENTATION, etc.)
 ```
 
 ---

@@ -39,6 +39,12 @@ So before any work, you already know: latest origin/main commits, current branch
 
 Update Change Log in the relevant file after significant changes.
 
+## Other doc subfolders
+
+- `docs/archive/` — frozen historical docs (checkpoints, completed audits — read for audit trail, not for active reference)
+- `docs/runbook/` — step-by-step ops guides (read before performing the operation)
+- `docs/reference/` — technical reference + schema specs (read on demand for the relevant area)
+
 ## Architecture quick-ref
 
 - **3 PM2 apps**: pds-backend (:5000), pds-admin (:5050), pds-frontend (:6060)
