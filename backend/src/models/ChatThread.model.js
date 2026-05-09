@@ -9,11 +9,7 @@ const ChatThread = sequelize.define(
     title: { type: DataTypes.STRING(255), allowNull: false },
     topics: { type: DataTypes.JSON, allowNull: true, defaultValue: null },
     summary: { type: DataTypes.TEXT('long'), allowNull: true },
-    embedding: {
-      type: DataTypes.TEXT('long'),
-      allowNull: true,
-      comment: 'Thread-level embedding (legacy; will move to retrieval_chunks in Phase C)'
-    },
+    // Embedding column dropped 2026-05-09 — chat_thread embeddings deferred (1 abandoned 1536d row was the only data)
     last_message_at: { type: DataTypes.DATE, allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
     updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },

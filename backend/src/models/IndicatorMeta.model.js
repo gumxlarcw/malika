@@ -58,16 +58,7 @@ const IndicatorMeta = sequelize.define("IndicatorMeta", {
         allowNull: true,
         comment: 'Concatenated searchable text (FULLTEXT index)'
     },
-    embedding: {
-        type: DataTypes.TEXT('long'),
-        allowNull: true,
-        comment: 'JSON array of 768 floats (Gemini text-embedding-004)'
-    },
-    embedding_updated_at: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        comment: 'When embedding was last generated'
-    },
+    // Embedding columns dropped 2026-05-09 — vectors live in retrieval_chunks now (e5-base 768d)
 }, {
     tableName: "indicator_meta",
     timestamps: false,

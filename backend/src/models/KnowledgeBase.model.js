@@ -82,18 +82,8 @@ const KnowledgeBase = sequelize.define("KnowledgeBase", {
         allowNull: true,
         comment: 'Parent document ID for chunks'
     },
-    
-    // Embedding
-    embedding: {
-        type: DataTypes.TEXT('long'),
-        allowNull: true,
-        comment: 'JSON array of 1536 floats (text-embedding-3-small)'
-    },
-    embedding_updated_at: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        comment: 'When embedding was last generated'
-    },
+
+    // Embedding columns dropped 2026-05-09 — vectors live in retrieval_chunks now (e5-base 768d)
     
     // Status
     status: { 
