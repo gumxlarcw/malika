@@ -453,7 +453,9 @@ async function replicateMergedToIndicatorTableBps({
     const monthNo = getMonthNo(monthName);
 
     const yearNum = Number(row.year);
-    if (!Number.isFinite(yearNum)) continue;
+    // Reject NaN, year=0 (corrupt), and out-of-range. Schema CHECK enforces 2000-2100;
+    // matching guard here surfaces the rejection earlier with cleaner error trail.
+    if (!Number.isFinite(yearNum) || yearNum < 2000 || yearNum > 2100) continue;
 
     incomingYears.add(yearNum);
     if (Number.isFinite(monthNo) && monthNo >= 31 && monthNo <= 35) hasQuarterly = true;
