@@ -95,6 +95,17 @@ Setiap aspek punya file tracking sendiri. **Baca file terkait** saat bekerja di 
 - **Source 454 (Kemiskinan)** had a stale `period_value='1979'` PM row from period discovery; the year CHECK constraint correctly rejected the 1979 BPS row, and the orphan PM entry was deleted. Pattern to remember: check for `period_value < 2000 OR > 2100` after period-map rebuilds.
 - **JWT minting shortcut** for admin-only endpoints when login is broken: `node -e "const j=require('jsonwebtoken'); console.log(j.sign({id:1,email:'admin@bps.go.id',role:'admin'}, 'JWT_SECRET_VALUE', {expiresIn:'2h'}))"` from `backend/`. Login route is `POST /auth/login` (no `/api` prefix) and uses `email` field, not `username`.
 
+## BPS API health audit + interop notes fix (2026-05-11)
+- **309/311 active sources fully healthy** — full year coverage + new BPS data flowing. Verified via 40-source spot-check (15 stratified + 25 random) → 100% backfillable, 0 silently dead.
+- **8 BPS-side dead sources** (status=1 visible=1, but BPS API returns `datacontent:[]` empty):
+  - **5 CPI/Inflasi** (id 2, 161, 163, 164, 165) — vars 375-380, 2022=100 series. DB has 24 rows each (2024-2025). BPS likely migrated to Sirusa interop or rebased to 2024=100 with new var IDs. Migration pending; historical data preserved.
+  - **3 Agriculture** (id 368, 371, 412) — Produksi Sayuran/Buah, Luas Panen. DB has 1,078-2,376 rows (2015-2023). BPS dropped the series; `malut.bps.go.id` page shows "Tidak Tersedia". Decision: leave visible since historical data is valid.
+- **1 static source w/ 0 rows** — id 7 (Ibukota Kabupaten/Kota); never ingested because the static processor doesn't route this URL pattern. Low priority.
+- **Interop `catatan` captured 2026-05-11** — commit `6e4657c` added `notes: sanitizeKeepInline(payload.catatan)` in `interop.extractor.js`. Re-extract on 149 interop sources lifted `indicator_meta.notes` coverage from **0/149 → 82/149 (55%)**. Remaining 67 have empty `catatan` at default period 2023 — not a code bug.
+- **BPS API doc landed** at repo root `apibpsdocs.md` (~730 lines, 19 sections). Used to audit our coverage. Currently active endpoints: §4.1 (Dynamic), §4.4 (th list), §6.9 (SIMDASI Detail id=25), §14 (EXIM). Unused-but-useful: §13 Glosarium (def backfill), §11 Strategic Indicators, §7 Static Table, §4.5 Unit list.
+- **Schema correctly handles interop's per-kolom design** — `indicator_meta.unit_id`/`definition` are intentionally null for interop (units live per-column in `indicator_metric_meta`). Earlier read of "0/149 unit_filled" on `indicator_meta` was a false alarm; `indicator_metric_meta` shows 496/1006 unit_filled (49%) and 223/1006 def_filled (22%) for interop metrics.
+- **EXIM `netweight` not persisted** — `apibpsdocs.md` §14 documents `netweight` (Kg) alongside `value` (USD); we only store value. Minor gap, deprioritized.
+
 ## Gotchas
 - [serve -s flag is SPA fallback](serve-spa-flag-trap.md) — drop `-s` for multi-page static sites; otherwise every path returns top-level index.html silently
 - Always backup before edit: `cp {file} {file}.backup` (per CLAUDE.md)
