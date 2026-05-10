@@ -40,7 +40,8 @@ function extractInteropMetadata(api, sourceId) {
     // are extracted into indicator_metric_meta below.
     definition: null,
     utility: null,
-    notes: null,
+    // payload.catatan = HTML table-level footnotes (often diskrepansi statistik / metodologi notes).
+    notes: sanitizeKeepInline(payload.catatan),
     interpretation: null,
     formula_html: null,
     formula_components: null,
