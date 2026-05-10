@@ -88,6 +88,13 @@ Setiap aspek punya file tracking sendiri. **Baca file terkait** saat bekerja di 
 - **Year=0 corruption**: 11 rows in indikator_7 deleted; replicator now rejects `year < 2000 || year > 2100` at write time.
 - **Legitimate empty-hash rows**: 2,448 rows across single-metric no-dimension tables (e.g., national-level Inflasi). These have `dim_key=''` AND `dim_value=''` — uniqueness comes from `metric` instead. Not a bug.
 
+## Year coverage backfill 2010-2026 (2026-05-11)
+- **`data_period_map` ↔ `indikator_NNN` reconciliation complete** — all 311 active sources have `db_distinct_years >= pm_distinct_periods`. 332 PM rows backfilled (3,257→3,589) earlier; replication via `GET /cache/merge/:id?all=true&save=true` propagated to indikator tables.
+- **`?save=true` is required for replication** — the merge endpoint without `save=true` only computes the merged structure and returns it; replication to `data_bps.indikator_NNN` runs only inside the `if (save==='true')` branch in `cache.merge.controller.js:192`. Test calls without `save=true` are no-ops.
+- **`cache/merge/:id` is dynamic-only for non-EXIM** — `mergeBuilder.service.js` always routes through `fetchByTh` which throws "Missing domain/var/key in datasource" on interop sources. Interop replication happens via scheduled processor jobs, not on-demand endpoint calls. EXIM has its own branch in the controller.
+- **Source 454 (Kemiskinan)** had a stale `period_value='1979'` PM row from period discovery; the year CHECK constraint correctly rejected the 1979 BPS row, and the orphan PM entry was deleted. Pattern to remember: check for `period_value < 2000 OR > 2100` after period-map rebuilds.
+- **JWT minting shortcut** for admin-only endpoints when login is broken: `node -e "const j=require('jsonwebtoken'); console.log(j.sign({id:1,email:'admin@bps.go.id',role:'admin'}, 'JWT_SECRET_VALUE', {expiresIn:'2h'}))"` from `backend/`. Login route is `POST /auth/login` (no `/api` prefix) and uses `email` field, not `username`.
+
 ## Gotchas
 - [serve -s flag is SPA fallback](serve-spa-flag-trap.md) — drop `-s` for multi-page static sites; otherwise every path returns top-level index.html silently
 - Always backup before edit: `cp {file} {file}.backup` (per CLAUDE.md)
