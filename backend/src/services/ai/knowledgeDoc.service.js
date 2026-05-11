@@ -469,53 +469,70 @@ async function deleteDocument(id) {
 }
 
 /**
- * Get all knowledge documents with stats
+ * Get all knowledge documents with stats — hasEmbedding sourced from
+ * retrieval_chunks (Phase C 2026-05-09) not the dropped
+ * knowledge_base.embedding_updated_at column.
  */
 async function getAllDocuments() {
+  const sequelize = require('../../config/db');
+  const { Sequelize, Op } = require('sequelize');
+
   const docs = await KnowledgeBase.findAll({
-    where: { parent_id: null }, // Only root documents
+    where: { parent_id: null },
     order: [['created_at', 'DESC']],
-    attributes: ['id', 'title', 'description', 'category', 'source_type', 'source_filename', 
-                 'content_length', 'status', 'embedding_updated_at', 'created_at'],
+    attributes: [
+      'id', 'title', 'description', 'category', 'source_type',
+      'source_filename', 'content_length', 'status', 'created_at',
+    ],
   });
 
-  const { Sequelize, Op } = require('sequelize');
-  
-  // Get chunk counts for each parent
+  // Chunk counts per root.
   const chunkCounts = await KnowledgeBase.findAll({
     where: { parent_id: { [Op.ne]: null } },
     attributes: ['parent_id', [Sequelize.fn('COUNT', Sequelize.col('id')), 'chunks']],
     group: ['parent_id'],
     raw: true,
   });
+  const chunkMap = new Map(chunkCounts.map((c) => [c.parent_id, parseInt(c.chunks, 10)]));
 
-  const chunkMap = new Map(chunkCounts.map(c => [c.parent_id, parseInt(c.chunks, 10)]));
+  const docIds = docs.map((d) => d.id);
+  if (docIds.length === 0) return [];
 
-  // Get total content length for each parent (sum of all chunks including parent itself)
-  // For documents with chunks, sum all related chunk lengths
-  const docIds = docs.map(d => d.id);
+  // Total content length per root (parent + chunks).
   const totalLengthResults = await KnowledgeBase.findAll({
     where: {
       [Op.or]: [
         { id: { [Op.in]: docIds } },
-        { parent_id: { [Op.in]: docIds } }
-      ]
+        { parent_id: { [Op.in]: docIds } },
+      ],
     },
     attributes: [
       [Sequelize.literal('COALESCE(parent_id, id)'), 'root_id'],
-      [Sequelize.fn('SUM', Sequelize.fn('CHAR_LENGTH', Sequelize.col('content'))), 'total_length']
+      [Sequelize.fn('SUM', Sequelize.fn('CHAR_LENGTH', Sequelize.col('content'))), 'total_length'],
     ],
     group: [Sequelize.literal('COALESCE(parent_id, id)')],
     raw: true,
   });
-  
-  const totalLengthMap = new Map(totalLengthResults.map(r => [r.root_id, parseInt(r.total_length || 0, 10)]));
+  const totalLengthMap = new Map(
+    totalLengthResults.map((r) => [r.root_id, parseInt(r.total_length || 0, 10)])
+  );
 
-  return docs.map(d => ({
+  // hasEmbedding + embedding_updated_at from retrieval_chunks (source_kind='knowledge_doc').
+  const [embRows] = await sequelize.query(
+    `SELECT source_ref_id, MAX(embedding_generated_at) AS embedded_at
+     FROM retrieval_chunks
+     WHERE source_kind = 'knowledge_doc' AND source_ref_id IN (?)
+     GROUP BY source_ref_id`,
+    { replacements: [docIds] }
+  );
+  const embMap = new Map(embRows.map((r) => [r.source_ref_id, r.embedded_at]));
+
+  return docs.map((d) => ({
     ...d.toJSON(),
-    chunks: (chunkMap.get(d.id) || 0) + 1, // +1 for the parent itself
-    content_length: totalLengthMap.get(d.id) || d.content_length || 0, // Use total length across all chunks
-    hasEmbedding: !!d.embedding_updated_at,
+    chunks: (chunkMap.get(d.id) || 0) + 1,
+    content_length: totalLengthMap.get(d.id) || d.content_length || 0,
+    hasEmbedding: embMap.has(d.id),
+    embedding_updated_at: embMap.get(d.id) || null,
   }));
 }
 
