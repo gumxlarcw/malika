@@ -146,3 +146,41 @@ describe('autoFlag heuristics', () => {
     })).toEqual(expect.objectContaining({ flag_type: 'context_lost', severity: 'medium' }));
   });
 });
+
+describe('analyzeFlags draft suggestions', () => {
+  beforeEach(() => {
+    ChatMessageFlag.findAll.mockResolvedValue([
+      { flag_type: 'hallucination', user_query: 'berapa proyeksi penduduk halmahera 2024' },
+      { flag_type: 'hallucination', user_query: 'proyeksi penduduk maluku utara' },
+      { flag_type: 'hallucination', user_query: 'angka proyeksi penduduk ternate' },
+      { flag_type: 'formatting_issue', user_query: 'kasih tabel rapi' },
+      { flag_type: 'formatting_issue', user_query: 'tolong tabelnya' },
+    ]);
+  });
+
+  it('emits suggestedDraft for flag types in the drafting set with ≥2 flags', async () => {
+    const res = await errorLearningService.analyzeFlags();
+    expect(res.byType.hallucination.suggestedDraft).toBeDefined();
+    expect(res.byType.hallucination.suggestedDraft).toEqual(expect.objectContaining({
+      pattern_name: expect.stringContaining('hallucination'),
+      pattern_type: 'query_pattern',
+      trigger_keywords: expect.any(Array),
+      fix_type: 'add_to_prompt',
+      fix_content: expect.stringContaining('JANGAN mengarang data'),
+    }));
+    expect(res.byType.hallucination.suggestedDraft.trigger_keywords.length).toBeGreaterThan(0);
+  });
+
+  it('omits suggestedDraft for flag types without a template', async () => {
+    const res = await errorLearningService.analyzeFlags();
+    expect(res.byType.formatting_issue.suggestedDraft).toBeUndefined();
+  });
+
+  it('omits suggestedDraft for clusters smaller than 2', async () => {
+    ChatMessageFlag.findAll.mockResolvedValueOnce([
+      { flag_type: 'hallucination', user_query: 'only one flag' },
+    ]);
+    const res = await errorLearningService.analyzeFlags();
+    expect(res.byType.hallucination.suggestedDraft).toBeUndefined();
+  });
+});

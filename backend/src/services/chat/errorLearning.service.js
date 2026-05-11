@@ -148,6 +148,43 @@ async function matchToPatterns(flag) {
   }
 }
 
+const DRAFT_TEMPLATES = {
+  hallucination: {
+    fix_type: 'add_to_prompt',
+    fix_content: "JANGAN mengarang data. Jika data tidak tersedia untuk pertanyaan ini, katakan eksplisit: 'Data tersebut belum tersedia di sistem MALIKA.'",
+  },
+  incomplete: {
+    fix_type: 'add_to_prompt',
+    fix_content: "Berikan jawaban LENGKAP: data spesifik dengan angka, periode/tahun, dan sumber. Hindari jawaban satu baris.",
+  },
+  context_lost: {
+    fix_type: 'special_handling',
+    fix_content: "Pengguna sedang melanjutkan diskusi sebelumnya. Tetap fokus pada topik yang sama dan jangan ganti subjek.",
+  },
+  irrelevant: {
+    fix_type: 'special_handling',
+    fix_content: "Pertanyaan ini tidak terkait dengan lingkup MALIKA (statistik BPS Maluku Utara). Arahkan pengguna ke topik yang relevan.",
+  },
+};
+
+const MIN_CLUSTER_SIZE_FOR_DRAFT = 2;
+
+function composeDraftPattern(flagType, cluster) {
+  const template = DRAFT_TEMPLATES[flagType];
+  if (!template) return null;
+  if (cluster.count < MIN_CLUSTER_SIZE_FOR_DRAFT) return null;
+  const topKw = (cluster.topKeywords || []).slice(0, 6).map(k => k.word);
+  if (topKw.length === 0) return null;
+  return {
+    pattern_name: `Auto: ${flagType} cluster — '${topKw[0]}'`,
+    pattern_type: 'query_pattern',
+    trigger_keywords: topKw,
+    error_description: `Auto-generated draft from ${cluster.count} pending ${flagType} flags. Top keywords: ${topKw.slice(0,3).join(', ')}.`,
+    fix_type: template.fix_type,
+    fix_content: template.fix_content,
+  };
+}
+
 /**
  * Analyze flagged messages and identify common patterns
  * @returns {Promise<object>}
@@ -191,6 +228,8 @@ async function analyzeFlags() {
         topKeywords: topWords,
         sampleQueries: typeFlags.slice(0, 3).map(f => f.user_query),
       };
+      const draft = composeDraftPattern(type, analysis[type]);
+      if (draft) analysis[type].suggestedDraft = draft;
     }
 
     return {
