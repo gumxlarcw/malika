@@ -11,6 +11,26 @@ const REQUIRED_FIELDS = [
   'lastUpdated',
 ];
 
+const { getDatasourcesWithEmbeddingStatus } = require('../services/ai/embedding.service');
+
+test('getDatasourcesWithEmbeddingStatus returns per-source rows', async () => {
+  const rows = await getDatasourcesWithEmbeddingStatus();
+  expect(Array.isArray(rows)).toBe(true);
+  expect(rows.length).toBeGreaterThan(0);
+  for (const r of rows.slice(0, 5)) {
+    expect(r).toHaveProperty('id');
+    expect(r).toHaveProperty('name');
+    expect(r).toHaveProperty('type');
+    expect(r).toHaveProperty('hasEmbedding');
+    expect(typeof r.hasEmbedding).toBe('boolean');
+    expect(r).toHaveProperty('embeddingUpdatedAt');
+    expect(r).toHaveProperty('textLength');
+    expect(typeof r.textLength).toBe('number');
+  }
+  // At least some sources must show hasEmbedding=true given live retrieval_chunks state.
+  expect(rows.filter((r) => r.hasEmbedding).length).toBeGreaterThan(0);
+});
+
 test('getEmbeddingStats returns the canonical shape', async () => {
   const stats = await getEmbeddingStats();
   for (const f of REQUIRED_FIELDS) {

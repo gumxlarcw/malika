@@ -206,23 +206,35 @@ async function getEmbeddingStats() {
 }
 
 /**
- * Get datasources with embedding status
+ * Get datasources with embedding status — sourced from retrieval_chunks
+ * (Phase C 2026-05-09) not data_sources.embedding (dropped column).
  * @returns {Promise<object[]>}
  */
 async function getDatasourcesWithEmbeddingStatus() {
-  const sources = await DataSource.findAll({
-    where: { status: true },
-    order: [['id', 'ASC']],
-    attributes: ['id', 'name', 'type', 'description', 'aliases', 'embedding', 'embedding_updated_at'],
-  });
+  const sequelize = require('../../config/db');
 
-  return sources.map(s => ({
+  const [rows] = await sequelize.query(
+    `SELECT ds.id, ds.name, ds.type, ds.description, ds.aliases, ds.category,
+            rc.embedding_generated_at AS embedding_updated_at
+     FROM data_sources ds
+     LEFT JOIN retrieval_chunks rc
+       ON rc.source_kind = 'datasource' AND rc.source_ref_id = ds.id
+     WHERE ds.status = 1
+     ORDER BY ds.id ASC`
+  );
+
+  return rows.map((s) => ({
     id: s.id,
     name: s.name,
     type: s.type,
-    hasEmbedding: !!s.embedding,
-    embeddingUpdatedAt: s.embedding_updated_at,
-    textLength: buildEmbeddingText(s).length,
+    hasEmbedding: Boolean(s.embedding_updated_at),
+    embeddingUpdatedAt: s.embedding_updated_at || null,
+    textLength: buildEmbeddingText({
+      name: s.name,
+      description: s.description,
+      aliases: s.aliases,
+      category: s.category,
+    }).length,
   }));
 }
 
