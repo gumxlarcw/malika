@@ -85,3 +85,64 @@ describe('listFlags severity filter (controller behavior)', () => {
       .toEqual({ flag_type: 'hallucination' });
   });
 });
+
+const { detectAutoFlag } = require('../autoFlag.service');
+
+describe('autoFlag heuristics', () => {
+  it('flags refusal when context had candidates', () => {
+    const result = detectAutoFlag({
+      userQuery: 'Berapa IPM Halmahera Barat 2024?',
+      assistantResponse: 'Maaf, saya tidak menemukan data tersebut.',
+      intent: 'COMPLEX',
+      candidates: [{ id: 1 }],
+      dataPreviewRowCount: 5,
+      recentAssistantResponses: [],
+    });
+    expect(result).toEqual(expect.objectContaining({ flag_type: 'hallucination', severity: 'high' }));
+  });
+
+  it('does NOT flag refusal when there were no candidates', () => {
+    expect(detectAutoFlag({
+      userQuery: 'X',
+      assistantResponse: 'Maaf, saya tidak menemukan data tersebut.',
+      intent: 'COMPLEX',
+      candidates: [],
+      dataPreviewRowCount: 0,
+      recentAssistantResponses: [],
+    })).toBeNull();
+  });
+
+  it('flags ultra-short non-greeting response', () => {
+    expect(detectAutoFlag({
+      userQuery: 'Inflasi Ternate?',
+      assistantResponse: 'OK',
+      intent: 'COMPLEX',
+      candidates: [{ id: 1 }],
+      dataPreviewRowCount: 2,
+      recentAssistantResponses: [],
+    })).toEqual(expect.objectContaining({ flag_type: 'incomplete', severity: 'low' }));
+  });
+
+  it('does NOT flag short response for GREETING', () => {
+    expect(detectAutoFlag({
+      userQuery: 'halo',
+      assistantResponse: 'Halo!',
+      intent: 'GREETING',
+      candidates: [],
+      dataPreviewRowCount: 0,
+      recentAssistantResponses: [],
+    })).toBeNull();
+  });
+
+  it('flags repeat assistant response in same thread', () => {
+    const repeat = 'Data IPM tidak tersedia untuk periode tersebut.';
+    expect(detectAutoFlag({
+      userQuery: 'IPM 2024?',
+      assistantResponse: repeat,
+      intent: 'COMPLEX',
+      candidates: [{ id: 1 }],
+      dataPreviewRowCount: 3,
+      recentAssistantResponses: [repeat, repeat],
+    })).toEqual(expect.objectContaining({ flag_type: 'context_lost', severity: 'medium' }));
+  });
+});
