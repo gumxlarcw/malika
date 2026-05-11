@@ -89,7 +89,9 @@ export default function MalikaAnalysisPage() {
   // Flags state
   const [flags, setFlags] = useState<ChatMessageFlag[]>([]);
   const [flagsFilter, setFlagsFilter] = useState<{ type: string; status: string; severity: string }>({ type: "", status: "", severity: "" });
-  
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
+
   // Patterns state
   const [patterns, setPatterns] = useState<ChatErrorPattern[]>([]);
   
@@ -106,13 +108,19 @@ export default function MalikaAnalysisPage() {
       if (flagsFilter.type) params.set("type", flagsFilter.type);
       if (flagsFilter.status) params.set("status", flagsFilter.status);
       if (flagsFilter.severity) params.set("severity", flagsFilter.severity);
-      
+      params.set("page", String(page));
+      params.set("limit", "20");
+
       const res = await api.get(`/error-learning/flags?${params.toString()}`);
       setFlags(res.data.flags || []);
+      setPageInfo({
+        total: res.data.pagination?.total ?? 0,
+        totalPages: res.data.pagination?.totalPages ?? 1,
+      });
     } catch (e) {
       setError(getErrorMessage(e, "Failed to load flags"));
     }
-  }, [flagsFilter]);
+  }, [flagsFilter, page]);
   
   // Fetch patterns
   const fetchPatterns = useCallback(async () => {
@@ -144,7 +152,9 @@ export default function MalikaAnalysisPage() {
     };
     load();
   }, [fetchFlags, fetchPatterns, fetchStats]);
-  
+
+  useEffect(() => { setPage(1); }, [flagsFilter.type, flagsFilter.status, flagsFilter.severity]);
+
   // Update flag status
   const updateFlagStatus = async (flagId: number, status: string, notes?: string) => {
     try {
@@ -346,9 +356,33 @@ export default function MalikaAnalysisPage() {
                 <div className="text-center py-8 text-gray-500">No flags found</div>
               )}
             </div>
+
+            {pageInfo.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 px-2">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Page {page} of {pageInfo.totalPages} ({pageInfo.total} total)
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-3 py-1 border rounded disabled:opacity-40 dark:border-gray-700"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(pageInfo.totalPages, p + 1))}
+                    disabled={page >= pageInfo.totalPages}
+                    className="px-3 py-1 border rounded disabled:opacity-40 dark:border-gray-700"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
-        
+
         {/* Patterns Tab */}
         {activeTab === "patterns" && (
           <div className="space-y-4">
