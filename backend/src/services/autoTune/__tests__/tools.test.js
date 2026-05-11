@@ -17,6 +17,7 @@ jest.mock('../../../config/db', () => ({
   query: jest.fn(),
 }));
 jest.mock('../regression.service', () => ({ runRegression: jest.fn() }));
+jest.mock('../../bpsMetadata/embedding.service', () => ({ embedQuery: jest.fn() }));
 
 const { createToolset } = require('../tools');
 
@@ -44,7 +45,8 @@ describe('Auto Tune tools', () => {
     expect(jobContext.log).toHaveLength(1);
   });
 
-  it('propose_pattern stages with is_active=true and tracks id', async () => {
+  it('propose_pattern stages with is_active=true and tracks id when no dupe', async () => {
+    ChatErrorPattern.findAll.mockResolvedValue([]);   // no existing patterns → no dedupe trigger
     ChatErrorPattern.create = jest.fn().mockResolvedValue({ id: 555 });
     const tools = createToolset(jobContext);
     const out = await tools.propose_pattern({
@@ -55,6 +57,72 @@ describe('Auto Tune tools', () => {
     expect(out.patternId).toBe(555);
     expect(jobContext.stagedPatternIds).toEqual([555]);
     expect(ChatErrorPattern.create).toHaveBeenCalledWith(expect.objectContaining({ is_active: true, canonical_query: 'cq' }));
+  });
+
+  it('propose_pattern rejects duplicates above similarity threshold', async () => {
+    const { embedQuery } = require('../../bpsMetadata/embedding.service');
+    ChatErrorPattern.findAll.mockResolvedValue([
+      { id: 13, pattern_name: 'Existing P', canonical_query: 'cq existing' },
+    ]);
+    // Stub embedQuery: both proposed and existing get the SAME vector → cosine = 1.0
+    embedQuery.mockResolvedValue([1, 0, 0, 0]);
+    ChatErrorPattern.create = jest.fn();
+
+    const tools = createToolset(jobContext);
+    const out = await tools.propose_pattern({
+      name: 'New P', type: 'query_pattern', keywords: ['x'],
+      fix_type: 'add_to_prompt', fix_content: 'FIX', canonical_query: 'cq new but identical embedding',
+    });
+
+    expect(out.ok).toBe(false);
+    expect(out.reason).toBe('duplicate_likely');
+    expect(out.similar_to).toEqual(expect.objectContaining({ id: 13, name: 'Existing P', similarity: 1 }));
+    expect(out.hint).toMatch(/already covers/);
+    expect(ChatErrorPattern.create).not.toHaveBeenCalled();
+    expect(jobContext.stagedPatternIds).toEqual([]);
+  });
+
+  it('propose_pattern still stages when similarity is below threshold', async () => {
+    const { embedQuery } = require('../../bpsMetadata/embedding.service');
+    ChatErrorPattern.findAll.mockResolvedValue([
+      { id: 13, pattern_name: 'Existing P', canonical_query: 'cq existing' },
+    ]);
+    // Orthogonal vectors → cosine = 0
+    embedQuery.mockImplementation((q) =>
+      Promise.resolve(q === 'cq existing' ? [1, 0, 0, 0] : [0, 1, 0, 0])
+    );
+    ChatErrorPattern.create = jest.fn().mockResolvedValue({ id: 600 });
+
+    const tools = createToolset(jobContext);
+    const out = await tools.propose_pattern({
+      name: 'New', type: 'query_pattern', keywords: ['x'],
+      fix_type: 'add_to_prompt', fix_content: 'FIX', canonical_query: 'totally different topic',
+    });
+
+    expect(out.ok).toBe(true);
+    expect(out.patternId).toBe(600);
+    expect(jobContext.stagedPatternIds).toEqual([600]);
+  });
+
+  it('propose_pattern proceeds when dedupe check throws (best-effort)', async () => {
+    const { embedQuery } = require('../../bpsMetadata/embedding.service');
+    ChatErrorPattern.findAll.mockResolvedValue([
+      { id: 13, pattern_name: 'P', canonical_query: 'cq' },
+    ]);
+    embedQuery.mockRejectedValue(new Error('xenova boom'));
+    ChatErrorPattern.create = jest.fn().mockResolvedValue({ id: 700 });
+
+    const tools = createToolset(jobContext);
+    const out = await tools.propose_pattern({
+      name: 'X', type: 'query_pattern', keywords: ['y'],
+      fix_type: 'add_to_prompt', fix_content: 'FIX', canonical_query: 'cq2',
+    });
+
+    expect(out.ok).toBe(true);
+    expect(out.patternId).toBe(700);
+    // dedupe-skipped event was logged
+    const dedupeSkipped = jobContext.log.find((e) => e.tool === 'propose_pattern_dedupe_skipped');
+    expect(dedupeSkipped).toBeDefined();
   });
 
   it('run_regression_and_commit rolls back staged patterns on regression failure', async () => {

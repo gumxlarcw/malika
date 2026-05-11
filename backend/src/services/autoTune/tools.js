@@ -13,6 +13,58 @@ const KnowledgeBase = require('../../models/KnowledgeBase.model');
 const sequelize = require('../../config/db');
 const regressionService = require('./regression.service');
 
+// Dedupe threshold: cosine similarity above this rejects a propose_pattern with
+// a duplicate hint. 0.85 is empirically picked — Pattern #13/#14 share a
+// canonical_query ("bantu saya analisis kondisi ekonomi di malut sepanjang
+// 2025") and would have scored ~1.0, while #15 ("kalau data kabupaten atau
+// kota ada?") scores ~0.3-0.4 against the same. 0.85 catches near-twins
+// while leaving complementary patterns (different angles, same keyword space)
+// alone.
+const DEDUPE_SIMILARITY_THRESHOLD = 0.85;
+
+function cosineSimilarity(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  if (na === 0 || nb === 0) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
+/**
+ * Check whether a proposed canonical_query is a near-duplicate of any existing
+ * active pattern's canonical_query (cosine similarity > threshold).
+ * @returns null if no duplicate, OR { id, name, canonical_query, similarity }
+ */
+async function findDuplicatePattern(proposedQuery) {
+  const candidates = await ChatErrorPattern.findAll({
+    where: { is_active: true },
+    attributes: ['id', 'pattern_name', 'canonical_query'],
+  });
+  const withQueries = candidates.filter((p) => p.canonical_query);
+  if (withQueries.length === 0) return null;
+
+  // Lazy-require to keep xenova load off the module-init path
+  const { embedQuery } = require('../bpsMetadata/embedding.service');
+  const proposedEmb = await embedQuery(proposedQuery);
+
+  let best = null;
+  for (const p of withQueries) {
+    const candEmb = await embedQuery(p.canonical_query);
+    const sim = cosineSimilarity(proposedEmb, candEmb);
+    if (!best || sim > best.similarity) {
+      best = { id: p.id, name: p.pattern_name, canonical_query: p.canonical_query, similarity: sim };
+    }
+  }
+  if (best && best.similarity > DEDUPE_SIMILARITY_THRESHOLD) return best;
+  return null;
+}
+
 function logCall(jobContext, tool, payload) {
   jobContext.log.push({ tool, ts: Date.now(), ...payload });
 }
@@ -108,6 +160,25 @@ function createToolset(jobContext) {
     },
 
     async propose_pattern({ name, type, keywords, fix_type, fix_content, canonical_query }) {
+      // Dedupe gate: if the canonical_query is near-identical to an existing
+      // active pattern, reject with a hint instead of staging a duplicate.
+      try {
+        const dup = await findDuplicatePattern(canonical_query);
+        if (dup) {
+          logCall(jobContext, 'propose_pattern', { duplicate_of: dup.id, similarity: dup.similarity.toFixed(3), name });
+          return {
+            ok: false,
+            reason: 'duplicate_likely',
+            similar_to: dup,
+            hint: `Pattern #${dup.id} ("${dup.name}") already covers a query similar to "${canonical_query}" (cosine ${dup.similarity.toFixed(3)} > ${DEDUPE_SIMILARITY_THRESHOLD}). Either: (a) revise your proposal to target a different angle/canonical_query, or (b) call abandon if no novel fix exists.`,
+          };
+        }
+      } catch (e) {
+        // Dedupe is best-effort. If xenova or DB hiccups, log + proceed —
+        // regression eval still gates final commit, so we don't block on this.
+        logCall(jobContext, 'propose_pattern_dedupe_skipped', { err: e.message });
+      }
+
       const pattern = await ChatErrorPattern.create({
         pattern_name: name,
         pattern_type: type,
