@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const DataSource = require('../../models/DataSource.model');
+const AutomationRunLog = require('../../models/AutomationRunLog.model');
 const { runAutomationForSource } = require('./automationRunner.service');
 
 // In-memory job store (single-node PM2 is fine)
@@ -111,8 +112,46 @@ async function startAutomationRunJob({ sourceId, mode = 'daily', requestedBy = n
   jobs.set(id, job);
   activeJobBySource.set(sid, id);
 
-  // Fire-and-forget execution; state updated in-memory.
+  // Pre-insert a placeholder AutomationRunLog row so the run is durable even
+  // if the process dies before completion. The runner accepts runLogRowId
+  // and will UPDATE this row at terminal state instead of creating a duplicate.
+  const startedAtDate = new Date();
+  let runLogRowId = null;
+  try {
+    const row = await AutomationRunLog.create({
+      source_id: sid,
+      mode,
+      ok: false,
+      started_at: startedAtDate,
+      finished_at: null,
+      error: null,
+      logs: '',
+      created_at: startedAtDate,
+    });
+    runLogRowId = row.id;
+    job.runLogRowId = runLogRowId;
+  } catch (e) {
+    // Non-fatal: in-memory state still works; we just lose durability for this run.
+    job.logs.push(`[${nowIso()}] WARN: failed to insert run-log placeholder: ${e?.message || e}`);
+  }
+
+  // Fire-and-forget execution; state updated in-memory and debounced-flushed to DB.
   (async () => {
+    let flushTimer = null;
+    let dirty = false;
+
+    const flushToDb = async () => {
+      dirty = false;
+      if (!runLogRowId) return;
+      try {
+        const joined = job.logs.join('\n');
+        const capped = joined.length > 50_000 ? joined.slice(joined.length - 50_000) : joined;
+        await AutomationRunLog.update({ logs: capped }, { where: { id: runLogRowId } });
+      } catch {
+        // best-effort
+      }
+    };
+
     const pushLog = (line) => {
       const s = String(line);
       job.logs.push(s);
@@ -120,11 +159,19 @@ async function startAutomationRunJob({ sourceId, mode = 'daily', requestedBy = n
 
       updateProgressFromLog(job, s);
       job.progress.message = s;
+
+      dirty = true;
+      if (!flushTimer) {
+        flushTimer = setTimeout(() => {
+          flushTimer = null;
+          if (dirty) flushToDb();
+        }, 2000);
+      }
     };
 
     try {
       pushLog(`[${nowIso()}] Automation job started id=${id} source_id=${sid} mode=${mode}`);
-      const result = await runAutomationForSource({ sourceId: sid, mode, log: pushLog });
+      const result = await runAutomationForSource({ sourceId: sid, mode, log: pushLog, runLogRowId });
       job.result = result;
       bumpPercent(job, 100);
       // Default: treat runs as OK unless runner explicitly returns ok=false.
@@ -141,6 +188,12 @@ async function startAutomationRunJob({ sourceId, mode = 'daily', requestedBy = n
       pushLog(`[${nowIso()}] Automation job finished ok=false error=${job.error}`);
     } finally {
       if (activeJobBySource.get(sid) === id) activeJobBySource.delete(sid);
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      // Final flush so the persisted row matches in-memory state.
+      // The runner already updated the row via persistRunLog if it ran to
+      // completion; this flush only matters if we threw before the runner
+      // reached its terminal write (rare — keeps the row coherent).
+      await flushToDb();
 
       // Keep only last 20 jobs to avoid memory growth.
       const all = Array.from(jobs.values()).sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));

@@ -210,7 +210,18 @@ async function getRemoteLastUpdateForTh(sourceId, thId) {
   return lu;
 }
 
-async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
+// Writes a run-log row. If runLogRowId is provided (caller already inserted a
+// placeholder at job start for durability), update that row in place so we
+// don't accumulate duplicate rows. Otherwise create a fresh row.
+async function persistRunLog(payload, runLogRowId) {
+  if (runLogRowId) {
+    await AutomationRunLog.update(payload, { where: { id: runLogRowId } });
+  } else {
+    await AutomationRunLog.create(payload);
+  }
+}
+
+async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRowId = null }) {
   const id = Number(sourceId);
   if (!Number.isFinite(id) || id <= 0) throw new Error('Invalid sourceId');
 
@@ -301,7 +312,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
         try {
           const joined = internalLogs.join('\n');
           const capped = joined.length > 50_000 ? joined.slice(joined.length - 50_000) : joined;
-          await AutomationRunLog.create({
+          await persistRunLog({
             source_id: id,
             mode,
             ok: true,
@@ -310,7 +321,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
             error: null,
             logs: capped,
             created_at: finishedAt,
-          });
+          }, runLogRowId);
         } catch {
           // best-effort
         }
@@ -382,7 +393,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
     try {
       const joined = internalLogs.join('\n');
       const capped = joined.length > 50_000 ? joined.slice(joined.length - 50_000) : joined;
-      await AutomationRunLog.create({
+      await persistRunLog({
         source_id: id,
         mode,
         ok,
@@ -391,7 +402,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
         error: replicationError,
         logs: capped,
         created_at: finishedAt,
-      });
+      }, runLogRowId);
     } catch {
       // best-effort
     }
@@ -575,7 +586,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
           try {
             const joined = internalLogs.join('\n');
             const capped = joined.length > 50_000 ? joined.slice(joined.length - 50_000) : joined;
-            await AutomationRunLog.create({
+            await persistRunLog({
               source_id: id,
               mode,
               ok: true,
@@ -584,7 +595,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
               error: null,
               logs: capped,
               created_at: finishedAt,
-            });
+            }, runLogRowId);
           } catch {
             // best-effort
           }
@@ -1107,7 +1118,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
   try {
     const joined = internalLogs.join('\n');
     const capped = joined.length > 50_000 ? joined.slice(joined.length - 50_000) : joined;
-    await AutomationRunLog.create({
+    await persistRunLog({
       source_id: id,
       mode,
       ok,
@@ -1116,7 +1127,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log }) {
       error: replicationError,
       logs: capped,
       created_at: finishedAt,
-    });
+    }, runLogRowId);
   } catch {
     // best-effort
   }
