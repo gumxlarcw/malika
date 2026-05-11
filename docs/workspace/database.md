@@ -58,9 +58,14 @@ Any orphan-detection query over `data_sources ↔ indikator_NNN` must filter the
 - **EXIM is excluded**: `indicatorTableRead.service` aggregates with SUM, where per-cell codes have no meaning.
 - **Multi-source chat preview is excluded**: `streaming/dataPreview.service.js` builds merged rows fresh from looked-up values; per-cell codes from source rows have no joined cell to attach to.
 
+## Schema invariants — automation
+- `automation_configs.source_id` is **UNIQUE** (verified 2026-05-11; protects `findOrCreate` against concurrent scheduler+manual races).
+- EXIM `indikator_NNN` tables have `INDEX(pod)` to keep `SELECT DISTINCT pod ... LIMIT 2000` (EXIM POD options endpoint in `automation.controller.js:336`) off full-scan. Added 2026-05-11 for `indikator_159`, `indikator_160`.
+
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
 | 2026-03-02 | Initial audit & documentation | - |
 | 2026-05-08 | Phase 6.3 — `value_code` per-cell flags through live ingestion + render | `replication/indicatorTableBps.service.js`, `processor/interop.processor.js`, `bpsRead/indicatorTableGenericRead.service.js`, `frontend/lib/cellRender.tsx`, `frontend/.../DataTableClient.tsx`, `frontend/components/chat/ChatTableModal.tsx` |
 | 2026-05-09 | DB audit fixes Phase A+B+D1/E1/F1 — audit middleware re-wired (5 mounts, 2 router files), 7 model drifts fixed, IndicatorMeta + IndicatorMetricMeta added, kodehs_indd collation aligned, retention cron added, junk source 313 dropped | `backend/app.js`, `backend/src/routes/{auth,errorLearning}.routes.js`, `backend/src/models/*.model.js`, `backend/src/database/migrations/20260508_alter_kodehs_collation.js`, `backend/src/jobs/retention.job.js`, `backend/server.js` |
+| 2026-05-11 | Automation invariants — confirmed UNIQUE on `automation_configs(source_id)`; added `idx_pod` on EXIM tables `indikator_159`, `indikator_160` | `data_bps.indikator_159`, `data_bps.indikator_160` |
