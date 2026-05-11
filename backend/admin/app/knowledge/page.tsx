@@ -102,6 +102,21 @@ export default function KnowledgePage() {
   const [searching, setSearching] = useState(false);
   const [searchDuration, setSearchDuration] = useState<number | null>(null);
 
+  // Auto-sync banner state (read from /knowledge/sync/stats)
+  type SyncBannerState = {
+    enabled: boolean;
+    schedule: string;
+    lastRunAt: string | null;
+    nextRunAt: string | null;
+    running: boolean;
+    lastResult: {
+      success: boolean;
+      brs?: { indexed: number; errors: number };
+      publikasi?: { indexed: number; errors: number };
+    } | null;
+  } | null;
+  const [syncBanner, setSyncBanner] = useState<SyncBannerState>(null);
+
   // Filter state
   const [filterEmbedded, setFilterEmbedded] = useState<"all" | "yes" | "no">("all");
   const [filterType, setFilterType] = useState<string>("all");
@@ -323,11 +338,25 @@ export default function KnowledgePage() {
 
   const uniqueTypes = Array.from(new Set(datasources.map((d) => d.type))).sort();
 
+  const fetchSyncBanner = useCallback(async () => {
+    try {
+      const res = await api.get<{ scheduler: SyncBannerState }>("/knowledge/sync/stats");
+      setSyncBanner(res.data?.scheduler || null);
+    } catch {
+      // Banner is best-effort; silent failure is OK (the page works without it).
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSyncBanner();
+  }, [fetchSyncBanner]);
+
   const refreshAll = () => {
     fetchStats();
     fetchDatasources();
     fetchDocStats();
     fetchDocuments();
+    fetchSyncBanner();
   };
 
   return (
@@ -339,6 +368,45 @@ export default function KnowledgePage() {
             Refresh
           </button>
         </div>
+
+        {syncBanner && (
+          <div className="rounded-lg border border-border bg-card p-3 flex items-center justify-between text-sm">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span
+                className={
+                  "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium " +
+                  (syncBanner.enabled
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                    : "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300")
+                }
+              >
+                Auto-sync BRS+Publikasi: {syncBanner.enabled ? "Aktif" : "Nonaktif"}
+              </span>
+              {syncBanner.enabled && (
+                <span className="text-muted-foreground">
+                  {syncBanner.running
+                    ? "Sedang sync..."
+                    : `Jadwal harian ${syncBanner.schedule} WIT`}
+                  {syncBanner.nextRunAt && !syncBanner.running
+                    ? ` · Run berikutnya ${new Date(syncBanner.nextRunAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`
+                    : ""}
+                  {syncBanner.lastRunAt
+                    ? ` · Terakhir ${new Date(syncBanner.lastRunAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`
+                    : " · Belum pernah berjalan"}
+                  {syncBanner.lastResult && syncBanner.lastResult.success
+                    ? ` (BRS +${syncBanner.lastResult.brs?.indexed || 0}, Publikasi +${syncBanner.lastResult.publikasi?.indexed || 0})`
+                    : ""}
+                </span>
+              )}
+            </div>
+            <a
+              href="/backend/knowledge-sync"
+              className="text-primary hover:underline text-xs font-medium whitespace-nowrap"
+            >
+              Kelola →
+            </a>
+          </div>
+        )}
 
         {error && (
           <Alert variant="error">
