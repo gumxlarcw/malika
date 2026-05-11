@@ -213,6 +213,58 @@ const COMMON_TYPOS = {
   'kecamtan': 'kecamatan',
 };
 
+// ============================================================================
+// CONCATENATED-TOKEN SPLITTING
+// ============================================================================
+
+// Curated dictionary of statistical-term concatenations seen in real queries.
+// Each entry maps a no-space form to its space-separated form. Keys are
+// matched case-insensitively but the original case is preserved on output.
+//
+// Adding entries: only add concatenations of words that BOTH appear as
+// independent terms in real BPS indicator names. Don't add general Indonesian
+// word pairs — keep this targeted to statistical vocabulary.
+const CONCATENATIONS = {
+  'pertumbuhanekonomi': 'pertumbuhan ekonomi',
+  'kondisiekonomi': 'kondisi ekonomi',
+  'lajupertumbuhan': 'laju pertumbuhan',
+  'tingkatpengangguran': 'tingkat pengangguran',
+  'tingkatkemiskinan': 'tingkat kemiskinan',
+  'tingkatpartisipasi': 'tingkat partisipasi',
+  'angkaharapan': 'angka harapan',
+  'angkamelek': 'angka melek',
+  'angkakematian': 'angka kematian',
+  'angkapartisipasi': 'angka partisipasi',
+  'jumlahpenduduk': 'jumlah penduduk',
+  'jumlahpekerja': 'jumlah pekerja',
+  'hargakonsumen': 'harga konsumen',
+  'indekspembangunan': 'indeks pembangunan',
+  'indekshargakonsumen': 'indeks harga konsumen',
+  'pendapatanperkapita': 'pendapatan per kapita',
+  'pdrbperkapita': 'pdrb per kapita',
+  'neracadagang': 'neraca dagang',
+  'tenagakerja': 'tenaga kerja',
+  'angkatankerja': 'angkatan kerja',
+};
+
+/**
+ * Split known concatenated statistical terms (case-insensitive).
+ * Returns lowercase result on match — downstream callers (searchDatasources)
+ * already lowercase queries, so case-preservation isn't needed.
+ *
+ * @param {string|null|undefined} query
+ * @returns {string}
+ */
+function splitConcatenated(query) {
+  if (!query) return '';
+  let out = String(query);
+  for (const [joined, split] of Object.entries(CONCATENATIONS)) {
+    const re = new RegExp(`\\b${joined}\\b`, 'gi');
+    out = out.replace(re, split);
+  }
+  return out;
+}
+
 /**
  * Fix common typos in query
  * @param {string} query - Raw user query
@@ -286,8 +338,12 @@ function normalizeQuery(query, options = {}) {
   } = options;
   
   let result = query.trim();
-  
+
   // Order matters:
+  // 0. Split known concatenated tokens FIRST so the typo fixer + geo + abbrev
+  //    can see the word boundaries
+  result = splitConcatenated(result);
+
   // 1. Fix typos first (so abbreviations work on corrected text)
   if (shouldFixTypos) {
     result = fixTypos(result);
@@ -346,15 +402,17 @@ module.exports = {
   normalizeQuery,
   lightNormalize,
   expandForLLM,
-  
+  splitConcatenated,
+
   // Individual processors
   expandAbbreviations,
   normalizeGeoNames,
   fixTypos,
   removeFillers,
-  
+
   // Exports for testing
   ABBREVIATIONS,
   GEO_ALIASES,
   COMMON_TYPOS,
+  CONCATENATIONS,
 };
