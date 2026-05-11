@@ -401,74 +401,54 @@ async function addToKnowledgeBase(flagId, correctionText) {
  */
 async function getStats() {
   try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const [
       totalFlags,
       pendingFlags,
-      byType,
-      byStatus,
-      recentFlags,
-      topPatterns,
+      recentFlagsCount,
+      byTypeRows,
+      byStatusRows,
+      bySeverityRows,
+      totalPatterns,
+      activePatterns,
     ] = await Promise.all([
       ChatMessageFlag.count(),
       ChatMessageFlag.count({ where: { resolution_status: 'pending' } }),
+      ChatMessageFlag.count({ where: { created_at: { [Op.gte]: sevenDaysAgo } } }),
       ChatMessageFlag.findAll({
-        attributes: [
-          'flag_type',
-          [Sequelize.fn('COUNT', '*'), 'count'],
-        ],
+        attributes: ['flag_type', [Sequelize.fn('COUNT', '*'), 'count']],
         group: ['flag_type'],
       }),
       ChatMessageFlag.findAll({
-        attributes: [
-          'resolution_status',
-          [Sequelize.fn('COUNT', '*'), 'count'],
-        ],
+        attributes: ['resolution_status', [Sequelize.fn('COUNT', '*'), 'count']],
         group: ['resolution_status'],
       }),
       ChatMessageFlag.findAll({
-        order: [['created_at', 'DESC']],
-        limit: 10,
+        attributes: ['severity', [Sequelize.fn('COUNT', '*'), 'count']],
+        group: ['severity'],
       }),
-      ChatErrorPattern.findAll({
-        where: { is_active: true },
-        order: [['occurrence_count', 'DESC']],
-        limit: 10,
-      }),
+      ChatErrorPattern.count(),
+      ChatErrorPattern.count({ where: { is_active: true } }),
     ]);
 
+    const tally = (rows, key) => rows.reduce((acc, r) => {
+      acc[r[key]] = parseInt(r.get('count'), 10);
+      return acc;
+    }, {});
+
     return {
-      ok: true,
-      stats: {
-        totalFlags,
-        pendingFlags,
-        byType: byType.reduce((acc, r) => {
-          acc[r.flag_type] = parseInt(r.get('count'), 10);
-          return acc;
-        }, {}),
-        byStatus: byStatus.reduce((acc, r) => {
-          acc[r.resolution_status] = parseInt(r.get('count'), 10);
-          return acc;
-        }, {}),
-        recentFlags: recentFlags.map(f => ({
-          id: f.id,
-          flagType: f.flag_type,
-          severity: f.severity,
-          userQuery: f.user_query?.slice(0, 100),
-          status: f.resolution_status,
-          createdAt: f.created_at,
-        })),
-        topPatterns: topPatterns.map(p => ({
-          id: p.id,
-          name: p.pattern_name,
-          type: p.pattern_type,
-          occurrences: p.occurrence_count,
-          fixType: p.fix_type,
-        })),
-      },
+      totalFlags,
+      pendingFlags,
+      recentFlags: recentFlagsCount,
+      byType: tally(byTypeRows, 'flag_type'),
+      byStatus: tally(byStatusRows, 'resolution_status'),
+      bySeverity: tally(bySeverityRows, 'severity'),
+      totalPatterns,
+      activePatterns,
     };
   } catch (error) {
     console.error('[ErrorLearning] getStats error:', error);
-    return { ok: false, error: error.message };
+    throw error;
   }
 }
 
