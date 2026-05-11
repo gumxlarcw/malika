@@ -126,6 +126,7 @@ export default function MalikaAnalysisPage() {
 
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [promoteDraft, setPromoteDraft] = useState<SuggestedDraft | null>(null);
+  const [autoTuneJob, setAutoTuneJob] = useState<{ jobId: string; flagId: number; status: string; startedAt: number } | null>(null);
 
   // Fetch flags
   const fetchFlags = useCallback(async () => {
@@ -178,6 +179,16 @@ export default function MalikaAnalysisPage() {
     }
   }, []);
 
+  const triggerAutoTune = useCallback(async (flagId: number) => {
+    try {
+      const res = await api.post(`/error-learning/flags/${flagId}/auto-tune`);
+      if (!res.data?.ok) throw new Error(res.data?.error || 'failed');
+      setAutoTuneJob({ jobId: res.data.jobId, flagId, status: 'queued', startedAt: Date.now() });
+    } catch (e) {
+      setError(getErrorMessage(e, 'Auto Tune failed to start'));
+    }
+  }, []);
+
   // Initial load
   useEffect(() => {
     const load = async () => {
@@ -190,6 +201,26 @@ export default function MalikaAnalysisPage() {
   }, [fetchFlags, fetchPatterns, fetchStats, fetchAnalysis]);
 
   useEffect(() => { setPage(1); }, [flagsFilter.type, flagsFilter.status, flagsFilter.severity]);
+
+  useEffect(() => {
+    if (!autoTuneJob) return;
+    if (['committed', 'abandoned', 'failed', 'regression_failed'].includes(autoTuneJob.status)) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/error-learning/auto-tune/${autoTuneJob.jobId}`);
+        const status = res.data?.job?.status;
+        if (!status) return;
+        setAutoTuneJob((j) => (j ? { ...j, status } : j));
+        if (['committed', 'abandoned', 'failed', 'regression_failed'].includes(status)) {
+          clearInterval(interval);
+          await Promise.all([fetchFlags(), fetchStats(), fetchPatterns(), fetchAnalysis()]);
+        }
+      } catch (e) {
+        // keep polling on transient errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [autoTuneJob, fetchFlags, fetchStats, fetchPatterns, fetchAnalysis]);
 
   // Update flag status
   const updateFlagStatus = async (flagId: number, status: string, notes?: string) => {
@@ -376,12 +407,22 @@ export default function MalikaAnalysisPage() {
                         {formatDateTime(flag.created_at)}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => setSelectedFlag(flag)}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-sm"
-                        >
-                          View
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedFlag(flag)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-sm"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => triggerAutoTune(flag.id)}
+                            disabled={Boolean(autoTuneJob && autoTuneJob.flagId === flag.id && !['committed','abandoned','failed','regression_failed'].includes(autoTuneJob.status))}
+                            className="text-purple-600 hover:text-purple-800 dark:text-purple-400 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Run Auto Tune agent on this flag (Anthropic Claude via proxy)"
+                          >
+                            Auto Tune
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -796,6 +837,40 @@ export default function MalikaAnalysisPage() {
                   </div>
                 </form>
               </div>
+            </div>
+          </div>
+        )}
+
+        {autoTuneJob && (
+          <div className="fixed bottom-6 right-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 max-w-sm z-50">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <div className="text-sm font-medium">Auto Tune — flag #{autoTuneJob.flagId}</div>
+                <div className="text-xs text-gray-500 font-mono">job {autoTuneJob.jobId.slice(0, 10)}…</div>
+              </div>
+              <button
+                onClick={() => setAutoTuneJob(null)}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span
+                className={`px-2 py-0.5 rounded font-medium ${
+                  autoTuneJob.status === 'committed'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    : autoTuneJob.status === 'abandoned'
+                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      : ['failed','regression_failed'].includes(autoTuneJob.status)
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                }`}
+              >
+                {autoTuneJob.status}
+              </span>
+              <span className="text-gray-500">{Math.floor((Date.now() - autoTuneJob.startedAt) / 1000)}s</span>
             </div>
           </div>
         )}
