@@ -23,12 +23,14 @@ const { extractAllKeywords } = require('../ai/keywordExtractor.service');
 const { extractIndicatorIndex } = require('../../../scripts/populate-indicator-index');
 
 // ── Run-log capture ─────────────────────────────────────────────────────
-// All info/warn/error calls go to pino AND an in-memory ring buffer. The
-// runDailySyncTracked wrapper resets the buffer at start, snapshots it onto
-// lastResult.logs at finish, and exposes the live buffer via getCurrentRunLogs()
-// so the admin UI can poll progress during a manual sync.
+// Rolling 1000-line buffer that persists across runs (and across PM2 reloads
+// via app_settings). All info/warn/error calls go to pino AND this buffer.
+// Buffer is hydrated from app_settings at first access and re-persisted at
+// each sync-end (success or error). Old lines drop off the front when the cap
+// is reached so we never accumulate beyond 1000.
 const _baseLogger = require('../../utils/logger').child({ service: 'KnowledgeSync' });
-const _runLogs = [];
+let _runLogs = [];
+let _hydrated = false;
 const _MAX_LOG_LINES = 1000;
 
 function _captureLogLine(level, args) {
@@ -53,9 +55,41 @@ const logger = {
   debug: (...args) => _baseLogger.debug(...args),  // not captured (too noisy)
 };
 
-function _resetRunLogs() { _runLogs.length = 0; }
+async function _hydrateRunLogsFromDb() {
+  if (_hydrated) return;
+  _hydrated = true;  // guard set BEFORE await so concurrent callers don't re-load
+  try {
+    const saved = await getJson(STATE_KEY);
+    const persisted = saved?.persistedLogs;
+    if (Array.isArray(persisted) && persisted.length > 0) {
+      _runLogs = persisted.slice(-_MAX_LOG_LINES);
+    }
+  } catch {
+    // best-effort; fresh buffer is acceptable
+  }
+}
+
+async function _persistRunLogs() {
+  try {
+    const state = (await getJson(STATE_KEY)) || {};
+    state.persistedLogs = _runLogs.slice(-_MAX_LOG_LINES);
+    await setJson(STATE_KEY, state);
+  } catch {
+    // best-effort
+  }
+}
+
 function _snapshotRunLogs() { return _runLogs.slice(); }
-function getCurrentRunLogs() { return _runLogs.slice(); }
+
+async function getCurrentRunLogs() {
+  await _hydrateRunLogsFromDb();
+  return _runLogs.slice();
+}
+
+function _pushSeparator(label) {
+  _runLogs.push(`[${new Date().toISOString()}] ────── ${label} ──────`);
+  if (_runLogs.length > _MAX_LOG_LINES) _runLogs.shift();
+}
 
 // Configuration
 const SYNC_CONFIG = {
@@ -444,6 +478,7 @@ function _setNextRunAt(d) {
 
 async function getSchedulerState() {
   const state = await loadState();
+  await _hydrateRunLogsFromDb();  // populate _runLogs on first call after boot
   return {
     name: 'knowledge-sync',
     enabled: Boolean(state.enabled),
@@ -453,8 +488,9 @@ async function getSchedulerState() {
     lastResult: state.lastResult,
     nextRunAt: _nextRunAt ? _nextRunAt.toISOString() : null,
     history: state.history || [],
-    // Live run logs while syncing; cleared at next run start.
-    currentRunLogs: _runningFlag ? _snapshotRunLogs() : [],
+    // Rolling 1000-line buffer covering ALL recent runs (newest last).
+    // Persisted across PM2 reloads via app_settings.persistedLogs.
+    currentRunLogs: _snapshotRunLogs(),
   };
 }
 
@@ -477,45 +513,50 @@ async function runDailySyncTracked() {
     return { skipped: true, reason: 'Already running' };
   }
   _runningFlag = true;
-  _resetRunLogs();
+  // Hydrate the rolling buffer from DB if not yet loaded (first call after boot).
+  await _hydrateRunLogsFromDb();
+  _pushSeparator(`START sync (manual or scheduled)`);
   const startedAt = new Date();
 
   try {
     const result = await runDailySync();
     const state = await loadState();
     const finishedAt = new Date();
+    _pushSeparator(`END sync OK · brs=${result.brs.indexed}/+${result.brs.errors}err · pub=${result.publikasi.indexed}/+${result.publikasi.errors}err · ${result.durationMs}ms`);
+
     const lastResult = {
       success: true,
       brs: { indexed: result.brs.indexed, errors: result.brs.errors },
       publikasi: { indexed: result.publikasi.indexed, errors: result.publikasi.errors },
       durationMs: result.durationMs,
       timestamp: finishedAt.toISOString(),
-      logs: _snapshotRunLogs(),
     };
     const newState = {
       ...state,
       lastRunAt: finishedAt.toISOString(),
       lastResult,
-      // History keeps the lighter result shape (no logs) to keep app_settings row small.
-      history: [{ ...lastResult, logs: undefined }, ...(state.history || [])].slice(0, 5),
+      history: [lastResult, ...(state.history || [])].slice(0, 5),
+      persistedLogs: _runLogs.slice(-_MAX_LOG_LINES),
     };
     await saveState(newState);
     return result;
   } catch (e) {
     const state = await loadState();
     const finishedAt = new Date();
+    _pushSeparator(`END sync FAILED · ${e?.message || String(e)}`);
+
     const lastResult = {
       success: false,
       error: e?.message || String(e),
       durationMs: finishedAt.getTime() - startedAt.getTime(),
       timestamp: finishedAt.toISOString(),
-      logs: _snapshotRunLogs(),
     };
     const newState = {
       ...state,
       lastRunAt: finishedAt.toISOString(),
       lastResult,
-      history: [{ ...lastResult, logs: undefined }, ...(state.history || [])].slice(0, 5),
+      history: [lastResult, ...(state.history || [])].slice(0, 5),
+      persistedLogs: _runLogs.slice(-_MAX_LOG_LINES),
     };
     await saveState(newState);
     throw e;
