@@ -1486,6 +1486,7 @@ export default function ChatPageClient() {
             sourcesSlot={hasSources ? <SourcesSection sources={ui.sources!} /> : undefined}
             KnowledgeCandidateSelector={KnowledgeCandidateSelector}
             ExternalSuggestionsSection={ExternalSuggestionsSection}
+            threadId={activeThreadId ?? undefined}
           />
         );
       }
@@ -1506,7 +1507,7 @@ export default function ChatPageClient() {
 
               {/* Feedback */}
               <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <MessageFeedback messageId={`ref-${ui?.query || "unknown"}`} />
+                <MessageFeedback messageId={`ref-${ui?.query || "unknown"}`} threadId={activeThreadId ?? undefined} />
               </div>
             </div>
           </div>
@@ -1529,7 +1530,7 @@ export default function ChatPageClient() {
 
               {/* Feedback */}
               <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <MessageFeedback messageId={`ref-${ui?.query || "unknown"}`} />
+                <MessageFeedback messageId={`ref-${ui?.query || "unknown"}`} threadId={activeThreadId ?? undefined} />
               </div>
             </div>
           </div>

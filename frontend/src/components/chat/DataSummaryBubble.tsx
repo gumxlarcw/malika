@@ -51,6 +51,8 @@ export interface DataSummaryBubbleProps {
   sourcesSlot?: React.ReactNode;
   /** Render slot for agent recommendations */
   recommendationsSlot?: React.ReactNode;
+  /** Current thread id (forwarded to MessageFeedback for Laporkan flag) */
+  threadId?: string | number;
 }
 
 /**
@@ -88,12 +90,13 @@ function generateTableSummary(table: MalikaUiMetaV1["table"], table2?: MalikaUiM
   return lines.join("\n");
 }
 
-export function DataSummaryBubble({ 
-  ui, 
+export function DataSummaryBubble({
+  ui,
   KnowledgeCandidateSelector,
   ExternalSuggestionsSection,
   sourcesSlot,
   recommendationsSlot,
+  threadId,
 }: DataSummaryBubbleProps) {
   const { isOpen, openModal, closeModal } = useModal();
   const [selectedTableIdx, setSelectedTableIdx] = useState(0);
@@ -462,7 +465,7 @@ export function DataSummaryBubble({
 
         {/* Message feedback */}
         <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-          <MessageFeedback messageId={`data-${ui?.query || "unknown"}`} />
+          <MessageFeedback messageId={`data-${ui?.query || "unknown"}`} threadId={threadId} />
         </div>
       </div>
 
