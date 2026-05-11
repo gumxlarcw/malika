@@ -58,7 +58,11 @@ Update Change Log in the relevant file after significant changes.
 
 - Always backup before edit: `cp {file} {file}.backup`
 - Read the file first before editing
-- Backend reload: `pm2 reload pds-backend --update-env`
+- Backend reload (`.js` changes): `pm2 reload pds-backend --update-env`
+- **Admin / frontend reload (`.tsx`/`.ts` changes) requires a build first**: `pm2 reload` alone does NOT rebuild — PM2 just re-execs the existing `.next` bundle. The full sequence:
+  - Admin: `cd backend/admin && npm run build && pm2 reload pds-admin --update-env`
+  - PWA: `cd frontend && npm run build && pm2 reload pds-frontend --update-env`
+  - Skipping the build means your edits silently don't ship. Confirmed bug-bait 2026-05-11 (admin pagination + flag-route).
 - **No `Co-Authored-By` trailer in commits** (project preference)
 - Stage only files you intend to commit (`git add <path>`, never `-A` — there are unrelated changes from other dev sessions)
 
