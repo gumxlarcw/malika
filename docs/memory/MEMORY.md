@@ -96,15 +96,23 @@ Setiap aspek punya file tracking sendiri. **Baca file terkait** saat bekerja di 
 - **JWT minting shortcut** for admin-only endpoints when login is broken: `node -e "const j=require('jsonwebtoken'); console.log(j.sign({id:1,email:'admin@bps.go.id',role:'admin'}, 'JWT_SECRET_VALUE', {expiresIn:'2h'}))"` from `backend/`. Login route is `POST /auth/login` (no `/api` prefix) and uses `email` field, not `username`.
 
 ## BPS API health audit + interop notes fix (2026-05-11)
-- **309/311 active sources fully healthy** — full year coverage + new BPS data flowing. Verified via 40-source spot-check (15 stratified + 25 random) → 100% backfillable, 0 silently dead.
-- **8 BPS-side dead sources** (status=1 visible=1, but BPS API returns `datacontent:[]` empty):
-  - **5 CPI/Inflasi** (id 2, 161, 163, 164, 165) — vars 375-380, 2022=100 series. DB has 24 rows each (2024-2025). BPS likely migrated to Sirusa interop or rebased to 2024=100 with new var IDs. Migration pending; historical data preserved.
-  - **3 Agriculture** (id 368, 371, 412) — Produksi Sayuran/Buah, Luas Panen. DB has 1,078-2,376 rows (2015-2023). BPS dropped the series; `malut.bps.go.id` page shows "Tidak Tersedia". Decision: leave visible since historical data is valid.
+- **309/309 active sources fully healthy** — full year coverage + new BPS data flowing. Verified via 40-source spot-check (15 stratified + 25 random) → 100% backfillable, 0 silently dead.
+- **5 CPI/Inflasi sources migrated 2026-05-11** to live vars (24 rows each → 612-636 rows each, 17 years 2010-2026):
+  - id=2 (CPI Halmahera Tengah): var 375 → **403 with turvar=681**
+  - id=161 (CPI Maluku Utara): var 377 → **403 with turvar=683**
+  - id=163 (Inflasi Halmahera Tengah): var 376 → **405** (clean 1:1)
+  - id=164 (Inflasi Kota Ternate): var 379 → **406** (clean 1:1)
+  - id=165 (CPI Kota Ternate): var 380 → **403 with turvar=682**
+  - **Pattern: BPS deprecated vars 375-380 but kept the 2022=100 series alive on new var IDs (403, 405, 406).** var=403 is consolidated 3-region (turvar = {681:HT, 682:KT, 683:Provinsi}). Migration workflow: ALTER api_url → `generatePeriodMap(id, 2010, 2026)` → `GET /cache/merge/:id?all=true&save=true` with admin JWT.
+- **3 Agriculture sources still dead at BPS** (id 368, 371, 412) — Produksi Sayuran/Buah, Luas Panen. DB has 1,078-2,376 rows (2015-2023). BPS dropped the series entirely; no replacement var ID exists in BPS var-list. `malut.bps.go.id` page shows "Tidak Tersedia". Decision: leave visible since historical data is valid.
 - **1 static source w/ 0 rows** — id 7 (Ibukota Kabupaten/Kota); never ingested because the static processor doesn't route this URL pattern. Low priority.
 - **Interop `catatan` captured 2026-05-11** — commit `6e4657c` added `notes: sanitizeKeepInline(payload.catatan)` in `interop.extractor.js`. Re-extract on 149 interop sources lifted `indicator_meta.notes` coverage from **0/149 → 82/149 (55%)**. Remaining 67 have empty `catatan` at default period 2023 — not a code bug.
 - **BPS API doc landed** at repo root `apibpsdocs.md` (~730 lines, 19 sections). Used to audit our coverage. Currently active endpoints: §4.1 (Dynamic), §4.4 (th list), §6.9 (SIMDASI Detail id=25), §14 (EXIM). Unused-but-useful: §13 Glosarium (def backfill), §11 Strategic Indicators, §7 Static Table, §4.5 Unit list.
 - **Schema correctly handles interop's per-kolom design** — `indicator_meta.unit_id`/`definition` are intentionally null for interop (units live per-column in `indicator_metric_meta`). Earlier read of "0/149 unit_filled" on `indicator_meta` was a false alarm; `indicator_metric_meta` shows 496/1006 unit_filled (49%) and 223/1006 def_filled (22%) for interop metrics.
-- **EXIM `netweight` not persisted** — `apibpsdocs.md` §14 documents `netweight` (Kg) alongside `value` (USD); we only store value. Minor gap, deprioritized.
+- **EXIM `netweight` IS persisted** — long-format (one row per metric). Verified 2026-05-11: 822 `metric='value'` + 822 `metric='netweight'` rows in indikator_159. Earlier "gap" was misread.
+- **§13 Glosarium deferred** — crawled 20/327 pages (10k entries) before BPS rate-limited with HTTP 500. Quality analysis: only 5.4% of entries have real `definisi` content (>50 chars); `konsep` is empty across the sample. Match rate against our 287 sources: 5 exact + 32 substring (13%). Even with full crawl, expected matches with usable definitions ≈ 30-50. Poor ROI; defer indefinitely.
+- **§11 Strategic Indicators (2026-05-11)** — 13 indicators for domain 8200 (`/v1/api/list/model/indicators/`), all matched to our `bps_var_id`. Updated `data_sources.priority=1` for ids: 1, 9, 10, 11, 12, 13, 14, 15, 16, 19, 20, 162, 170.
+- **§4.5, §7 verified non-issues** — `indicator_meta.unit_id` already stores human labels (not numeric codes); `indikator_7=0 rows` is by design (static-table data lives in `indicator_static_table`, 11 rows correctly parsed).
 
 ## Gotchas
 - [serve -s flag is SPA fallback](serve-spa-flag-trap.md) — drop `-s` for multi-page static sites; otherwise every path returns top-level index.html silently
