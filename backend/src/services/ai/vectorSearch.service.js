@@ -138,6 +138,10 @@ function _ksrcSet(key, value) {
  * @param {boolean} force - Force reload even if cache is fresh
  * @returns {Promise<Map<number, {id: number, name: string, type: string, description: string, embedding: number[]}>>}
  */
+// NOTE: Legacy in-memory cache loader. Reads dropped column data_sources.embedding.
+// Only reachable when USE_UNIFIED_RETRIEVAL=false (production runs with true).
+// Kept for the fallback branch of searchAll/searchKnowledge; will throw at
+// runtime since the column was dropped in Phase C 2026-05-09. Do not call.
 async function loadEmbeddings(force = false) {
   // Return cached if fresh
   if (!force && embeddingsCache && cacheLoadedAt) {
@@ -185,6 +189,11 @@ async function loadEmbeddings(force = false) {
 
 /**
  * Load knowledge document embeddings into memory cache
+ *
+ * NOTE: Legacy in-memory cache loader. Reads dropped column knowledge_base.embedding.
+ * Only reachable when USE_UNIFIED_RETRIEVAL=false (production runs with true).
+ * Kept for the fallback branch of searchAll/searchKnowledge; will throw at
+ * runtime since the column was dropped in Phase C 2026-05-09. Do not call.
  */
 async function loadKnowledgeEmbeddings(force = false) {
   if (!force && knowledgeCache && knowledgeCacheLoadedAt) {
@@ -696,21 +705,60 @@ function calculateKeywordBoost(query, name, description = '') {
  * NOTE: LLM Synonym Expansion is ALWAYS called before embedding
  */
 async function searchAll(query, topN = 10, options = {}) {
+  if (USE_UNIFIED_RETRIEVAL) {
+    const startTime = Date.now();
+    try {
+      const { results: rawResults } = await searchRetrieval(query, {
+        topN: topN * 4,
+        kinds: ['datasource', 'knowledge_doc', 'knowledge_chunk', 'indicator_meta'],
+      });
+      const results = rawResults.slice(0, topN).map((r) => ({
+        id: r.sourceRefId,
+        name: r.title,
+        title: r.title,
+        type: r.sourceKind === 'datasource'
+          ? (r.metadata && r.metadata.type) || 'datasource'
+          : r.sourceKind,
+        source: r.sourceKind === 'datasource' ? 'datasource' : 'knowledge',
+        category: (r.metadata && r.metadata.category) || '',
+        description: r.content,
+        content: r.content,
+        similarity: r.similarity,
+        rawSimilarity: r.similarity,
+        keywordBoost: 0,
+        recencyBoost: 0,
+        parentId: r.parentChunkId || r.sourceRefId,
+        isChunk: r.sourceKind === 'knowledge_chunk',
+      }));
+      return {
+        results,
+        reranked: false,
+        rerankReason: null,
+        duration_ms: Date.now() - startTime,
+        totalDatasources: rawResults.filter((r) => r.sourceKind === 'datasource').length,
+        totalKnowledge: rawResults.filter((r) => r.sourceKind !== 'datasource').length,
+        unified: true,
+      };
+    } catch (err) {
+      logger.warn({ err: err.message, query: query.slice(0, 60) }, 'Unified retrieval failed in searchAll, falling back to legacy');
+    }
+  }
+
   const { useKeywordBoost = true } = options;
   const startTime = Date.now();
-  
+
   // Step 1: Static expansion (abbreviations, typos)
   const staticExpanded = expandQuery(query);
-  
+
   // Step 2: LLM synonym expansion on ORIGINAL query (not static-expanded)
   // Static expansion already handles domain synonyms; LLM adds novel/creative synonyms
   const llmExpanded = await expandQueryWithLLM(query);
-  
+
   // Combine: static synonyms + LLM synonyms (deduped via embedding input)
   const combinedExpanded = llmExpanded !== query
     ? staticExpanded + ' ' + llmExpanded.split(/\s+/).filter(w => !staticExpanded.includes(w)).join(' ')
     : staticExpanded;
-  
+
   // Generate embedding from fully expanded query
   const queryEmbedding = await generateEmbedding(combinedExpanded);
 
