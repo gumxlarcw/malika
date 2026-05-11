@@ -189,6 +189,7 @@ app.use("/knowledge", authMiddleware, csrfMiddleware, apiLimiter, createAuditLog
 
 // Error Learning: flag messages (public) + admin management
 app.use("/error-learning", chatLimiter, errorLearningRoutes);
+app.use("/error-learning", require("./src/routes/autoTune.routes"));
 
 // Admin-only: Fetch logs viewer
 app.use("/logs", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'logs' }), logsRoutes);
