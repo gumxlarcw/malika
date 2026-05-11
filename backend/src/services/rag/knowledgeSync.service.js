@@ -343,7 +343,7 @@ async function runDailySync() {
 }
 
 /**
- * Get sync statistics
+ * Get sync statistics — merged with scheduler state for the admin UI.
  * @returns {Promise<object>}
  */
 async function getSyncStats() {
@@ -354,26 +354,148 @@ async function getSyncStats() {
     `SELECT COUNT(*) as cnt FROM indexed_brs_publikasi WHERE doc_type = 'publication'`
   );
   const [kbCount] = await KnowledgeBase.sequelize.query(
-    `SELECT category, COUNT(*) as cnt, MAX(created_at) as latest 
-     FROM knowledge_base WHERE category IN ('BRS', 'Publikasi') 
+    `SELECT category, COUNT(*) as cnt, MAX(created_at) as latest
+     FROM knowledge_base WHERE category IN ('BRS', 'Publikasi')
      GROUP BY category`
   );
-  
+
+  const scheduler = await getSchedulerState();
+
   return {
     indexed: {
       brs: brsCount[0]?.cnt || 0,
       publikasi: pubCount[0]?.cnt || 0,
     },
     knowledgeBase: kbCount,
+    scheduler,
   };
+}
+
+// ── Scheduler state ─────────────────────────────────────────────────────
+const { getJson, setJson } = require('../settings/appSettings.service');
+
+const STATE_KEY = 'scheduler:knowledge-sync';
+const DEFAULT_STATE = {
+  enabled: true,
+  hour: 6,
+  minute: 0,
+  lastRunAt: null,
+  lastResult: null,
+  history: [],
+};
+
+let _runningFlag = false;
+let _nextRunAt = null;
+
+async function loadState() {
+  const saved = await getJson(STATE_KEY);
+  return { ...DEFAULT_STATE, ...(saved || {}) };
+}
+
+async function saveState(state) {
+  await setJson(STATE_KEY, state);
+}
+
+function isRunning() {
+  return _runningFlag;
+}
+
+function getNextRunAt() {
+  return _nextRunAt;
+}
+
+function _setNextRunAt(d) {
+  _nextRunAt = d;
+}
+
+async function getSchedulerState() {
+  const state = await loadState();
+  return {
+    name: 'knowledge-sync',
+    enabled: Boolean(state.enabled),
+    schedule: `${String(state.hour).padStart(2, '0')}:${String(state.minute).padStart(2, '0')}`,
+    running: _runningFlag,
+    lastRunAt: state.lastRunAt,
+    lastResult: state.lastResult,
+    nextRunAt: _nextRunAt ? _nextRunAt.toISOString() : null,
+    history: state.history || [],
+  };
+}
+
+async function updateSchedule({ enabled, hour, minute } = {}) {
+  const state = await loadState();
+  const next = { ...state };
+  if (typeof enabled === 'boolean') next.enabled = enabled;
+  if (Number.isFinite(hour) && hour >= 0 && hour <= 23) next.hour = Number(hour);
+  if (Number.isFinite(minute) && minute >= 0 && minute <= 59) next.minute = Number(minute);
+  await saveState(next);
+  return next;
+}
+
+/**
+ * Wrapper around runDailySync that updates persistent state.
+ * Rejects (resolves with { skipped: true }) if another run is in flight.
+ */
+async function runDailySyncTracked() {
+  if (_runningFlag) {
+    return { skipped: true, reason: 'Already running' };
+  }
+  _runningFlag = true;
+  const startedAt = new Date();
+
+  try {
+    const result = await runDailySync();
+    const state = await loadState();
+    const finishedAt = new Date();
+    const lastResult = {
+      success: true,
+      brs: { indexed: result.brs.indexed, errors: result.brs.errors },
+      publikasi: { indexed: result.publikasi.indexed, errors: result.publikasi.errors },
+      durationMs: result.durationMs,
+      timestamp: finishedAt.toISOString(),
+    };
+    const newState = {
+      ...state,
+      lastRunAt: finishedAt.toISOString(),
+      lastResult,
+      history: [lastResult, ...(state.history || [])].slice(0, 5),
+    };
+    await saveState(newState);
+    return result;
+  } catch (e) {
+    const state = await loadState();
+    const finishedAt = new Date();
+    const lastResult = {
+      success: false,
+      error: e?.message || String(e),
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      timestamp: finishedAt.toISOString(),
+    };
+    const newState = {
+      ...state,
+      lastRunAt: finishedAt.toISOString(),
+      lastResult,
+      history: [lastResult, ...(state.history || [])].slice(0, 5),
+    };
+    await saveState(newState);
+    throw e;
+  } finally {
+    _runningFlag = false;
+  }
 }
 
 module.exports = {
   runDailySync,
+  runDailySyncTracked,
   syncBrs,
   syncPublikasi,
   isAlreadyIndexed,
   indexSingleDocument,
   getSyncStats,
+  getSchedulerState,
+  updateSchedule,
+  isRunning,
+  getNextRunAt,
+  _setNextRunAt,
   SYNC_CONFIG,
 };
