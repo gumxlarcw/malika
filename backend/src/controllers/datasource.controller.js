@@ -17,6 +17,42 @@ const {
   reindexSearchMetadataFromCacheForAll,
 } = require('../services/search/metadataReindex.service');
 
+// Fields whose change should trigger a re-embed (the text that feeds buildEmbeddingText).
+const EMBED_RELEVANT_FIELDS = ['name', 'description', 'aliases', 'category'];
+
+/**
+ * Fire-and-forget xenova embed of the datasource. Logs failures to console
+ * so the response is not blocked on indexing. Idempotent — DELETE+INSERT
+ * inside embedDatasource() handles re-embed of existing rows safely.
+ */
+function queueAutoEmbed(sourceId, context) {
+  setImmediate(async () => {
+    try {
+      const { embedDatasource } = require('../services/ai/embedding.service');
+      const result = await embedDatasource(sourceId);
+      console.log(`[datasource auto-embed] ${context} id=${sourceId} ok=${result.ok}: ${result.message}`);
+    } catch (e) {
+      console.warn(`[datasource auto-embed] ${context} id=${sourceId} FAILED:`, e?.message || String(e));
+    }
+  });
+}
+
+/**
+ * Delete the retrieval_chunks row for this datasource (called on soft remove).
+ * Fire-and-forget; never blocks the response.
+ */
+function queueAutoEmbedCleanup(sourceId, context) {
+  setImmediate(async () => {
+    try {
+      const { clearEmbedding } = require('../services/ai/embedding.service');
+      await clearEmbedding(sourceId);
+      console.log(`[datasource auto-embed] ${context} id=${sourceId} cleared retrieval_chunks`);
+    } catch (e) {
+      console.warn(`[datasource auto-embed] ${context} id=${sourceId} cleanup FAILED:`, e?.message || String(e));
+    }
+  });
+}
+
 function normalizeNameForMatch(name) {
   return String(name || "").trim().replace(/\s+/g, " ");
 }
@@ -147,6 +183,11 @@ exports.create = async (req, res) => {
       updated_at: now,
     });
 
+    // New datasource → auto-embed so it's discoverable via chat/search immediately.
+    if (row.status) {
+      queueAutoEmbed(row.id, 'create');
+    }
+
     res.status(201).json(row);
   } catch (err) {
     res.status(500).json({ message: err.message || String(err) });
@@ -187,6 +228,9 @@ exports.hardRemove = async (req, res) => {
     } catch (e) {
       console.warn("[hardRemove] best-effort cleanup data_bps failed:", e?.message || String(e));
     }
+
+    // Drop the retrieval_chunks row too so chat doesn't surface a vanished source.
+    queueAutoEmbedCleanup(id, 'hard-remove');
 
     return res.json({ ok: true, deleted: { id } });
   } catch (err) {
@@ -235,7 +279,22 @@ exports.update = async (req, res) => {
       return res.status(400).json({ message: "api_url wajib diisi" });
     }
 
+    // Snapshot embed-relevant fields BEFORE update so we can detect actual changes.
+    const before = EMBED_RELEVANT_FIELDS.reduce((acc, k) => { acc[k] = row[k]; return acc; }, {});
+    const wasActive = Boolean(row.status);
+
     await row.update(patch);
+    const isActive = Boolean(row.status);
+
+    // Re-embed when embed-relevant fields changed or the source flipped active.
+    // Clean up when the source flipped inactive.
+    const embedChanged = EMBED_RELEVANT_FIELDS.some((k) => before[k] !== row[k]);
+    if (isActive && (embedChanged || (!wasActive && isActive))) {
+      queueAutoEmbed(row.id, embedChanged ? 'update-text' : 'update-reactivate');
+    } else if (wasActive && !isActive) {
+      queueAutoEmbedCleanup(row.id, 'update-deactivate');
+    }
+
     res.json(row);
   } catch (err) {
     res.status(500).json({ message: err.message || String(err) });
@@ -256,6 +315,9 @@ exports.remove = async (req, res) => {
       status: false,
       updated_at: new Date(),
     });
+
+    // Clean up retrieval_chunks so the inactive source no longer surfaces in chat/search.
+    queueAutoEmbedCleanup(id, 'soft-remove');
 
     res.json({ ok: true });
   } catch (err) {
