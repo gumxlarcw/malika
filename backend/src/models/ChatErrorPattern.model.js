@@ -32,6 +32,16 @@ const ChatErrorPattern = sequelize.define('ChatErrorPattern', {
     type: DataTypes.JSON,
     allowNull: true,
     comment: 'Keywords/phrases that trigger this error pattern',
+    get() {
+      const raw = this.getDataValue('trigger_keywords');
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      try { return JSON.parse(raw); } catch { return []; }
+    },
+    set(val) {
+      this.setDataValue('trigger_keywords',
+        Array.isArray(val) ? JSON.stringify(val) : (val || null));
+    },
   },
   trigger_regex: {
     type: DataTypes.TEXT,
