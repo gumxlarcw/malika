@@ -377,7 +377,7 @@
           "website|bps.go.id|wa|whatsapp|datang|kantor"
         ],
         "shouldNotContain": [
-          "tidak tersedia"
+          "Mohon maaf"
         ],
         "minLength": 30,
         "maxLatencyMs": 30000
