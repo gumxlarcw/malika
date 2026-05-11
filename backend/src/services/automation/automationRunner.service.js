@@ -221,7 +221,7 @@ async function persistRunLog(payload, runLogRowId) {
   }
 }
 
-async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRowId = null }) {
+async function runAutomationForSource({ sourceId, mode = 'daily', log, progress, runLogRowId = null }) {
   const id = Number(sourceId);
   if (!Number.isFinite(id) || id <= 0) throw new Error('Invalid sourceId');
 
@@ -233,6 +233,12 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
 
   try {
   const externalLog = typeof log === 'function' ? log : null;
+  const externalProgress = typeof progress === 'function' ? progress : null;
+  const reportProgress = (stage, percent, message) => {
+    if (externalProgress) {
+      try { externalProgress({ stage, percent, message }); } catch { /* best-effort */ }
+    }
+  };
   const internalLogs = [];
   const emit = (m) => {
     const line = `[${formatJayapuraTimestamp()}] ${m}`;
@@ -273,10 +279,12 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
   });
 
   info(`Config updated: mode=${mode}`);
+  reportProgress('config_updated', 5, `Config updated: mode=${mode}`);
 
   // "smart" mode: supported for dynamic (BPS th_id availability) and exim (update last active year only)
   if (mode === 'smart' && dsType === 'dynamic') {
     info('Smart mode: checking latest BPS update before full refresh');
+    reportProgress('smart_check', 10, 'Smart mode: checking latest BPS update');
     
     // Refresh period map from BPS availability API (best-effort, append-only via upsert)
     // This ensures new periods (e.g., 2026) are added to data_period_map automatically.
@@ -291,13 +299,16 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
     const latestThId = await getLatestAvailableThId(id);
     if (latestThId) {
       info(`Latest th_id detected: ${latestThId}`);
+      reportProgress('latest_th_detected', 12, `Latest th_id: ${latestThId}`);
       const remoteLu = await getRemoteLastUpdateForTh(id, latestThId);
       info(`Remote last_update (latest th_id): ${remoteLu ? remoteLu.toISOString() : 'null'}`);
+      reportProgress('remote_last_update', 15, 'Remote last_update checked');
       const saved = await MergedCache.findOne({ where: { source_id: id, signature: 'all' } });
       const savedLu = saved?.last_update ? new Date(saved.last_update) : null;
       info(`Saved merged_cache last_update (signature=all): ${savedLu ? savedLu.toISOString() : 'null'}`);
       if (remoteLu && savedLu && remoteLu <= savedLu) {
         info('No newer update; skipping full refresh');
+        reportProgress('smart_skip', 100, 'No newer BPS update; skipped');
         const finishedAt = new Date();
         await cfg.update({
           last_pull_finished_at: finishedAt,
@@ -389,6 +400,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
     });
 
     info(ok ? 'Automation config updated: SUCCESS' : 'Automation config updated: FAILED');
+    reportProgress('automation_cfg_updated', 98, ok ? 'Automation config updated: SUCCESS' : 'Automation config updated: FAILED');
 
     try {
       const joined = internalLogs.join('\n');
@@ -433,6 +445,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
   if (dsType === 'dynamic') {
     // Full refresh: always all years available
     info('Full refresh: fetching all years available (all=true)');
+    reportProgress('full_refresh_start', 20, 'Full refresh: fetching all years');
     ({ structured, signature, lastUpdate, metrics, periods } = await buildMergedProcessed({
       sourceId: id,
       datasource: ds,
@@ -441,6 +454,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
     }));
   } else if (dsType === 'interop') {
     info('Full refresh (interop): pulling years from data_period_map');
+    reportProgress('full_refresh_start', 20, 'Full refresh (interop): pulling years');
 
     // Safe improvement: in "smart" mode, attempt to refresh the period map first
     // by probing interop ketersediaan_tahun. This is append-only via upsert
@@ -1029,6 +1043,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
   }
 
   info(`Available periods count: ${periods?.length || 0}`);
+  reportProgress('periods_available', 70, `Available periods: ${periods?.length || 0}`);
   info(`Merged signature: ${signature}`);
   info(`Merged last_update: ${lastUpdate.toISOString()}`);
   info(`Metrics count: ${metrics?.length || 0}`);
@@ -1053,6 +1068,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
   }
 
   info(`Saved primary: project_data_strategis.data_merged_cache (signature=${signature || 'all'})`);
+  reportProgress('saved_primary', 80, 'Saved primary cache');
 
   // Replicate to data_bps (cache + per-indicator table)
   let replicated_bps_cache = false;
@@ -1067,6 +1083,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
     if (sequelizeBps && MergedCacheBps) {
       replicationAttempted = true;
       info('Replicating to data_bps...');
+      reportProgress('replicating', 85, 'Replicating to data_bps');
       await sequelizeBps.authenticate();
       await sequelizeBps.sync();
       await MergedCacheBps.upsert({
@@ -1078,6 +1095,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
       });
       replicated_bps_cache = true;
       info(`Saved replica: data_bps.data_merged_cache (signature=${signature || 'all'})`);
+      reportProgress('saved_replica', 90, 'Saved replica cache');
 
       const { replicateMergedToIndicatorTableBps } = require('../replication/indicatorTableBps.service');
       const eximPodAllowlist = String(signature || '').startsWith('exim:') ? await getEximPodAllowlist(id) : [];
@@ -1093,6 +1111,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
       });
       replicated_bps_indicator = true;
       info(`Upserted production table: data_bps.indikator_${id}`);
+      reportProgress('upserted_production', 95, `Upserted indikator_${id}`);
     }
   } catch (e) {
     // Replication failure should mark the run as FAILED in the UI.
@@ -1113,6 +1132,7 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, runLogRow
   });
 
   info(ok ? 'Automation config updated: SUCCESS' : 'Automation config updated: FAILED');
+  reportProgress('automation_cfg_updated', 98, ok ? 'Automation config updated: SUCCESS' : 'Automation config updated: FAILED');
 
   // Persist last run logs (success or failure)
   try {

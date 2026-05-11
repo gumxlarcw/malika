@@ -169,9 +169,19 @@ async function startAutomationRunJob({ sourceId, mode = 'daily', requestedBy = n
       }
     };
 
+    // Structured-progress consumer. Mirrors updateProgressFromLog targets
+    // but driven by explicit milestones instead of log-string matching.
+    // Log-string fallback in pushLog still runs, so legacy paths that
+    // don't yet emit progress events are unaffected.
+    const onProgress = ({ stage, percent, message }) => {
+      if (Number.isFinite(percent)) bumpPercent(job, percent);
+      if (message) job.progress.message = String(message);
+      if (stage) job.progress.stage = String(stage);
+    };
+
     try {
       pushLog(`[${nowIso()}] Automation job started id=${id} source_id=${sid} mode=${mode}`);
-      const result = await runAutomationForSource({ sourceId: sid, mode, log: pushLog, runLogRowId });
+      const result = await runAutomationForSource({ sourceId: sid, mode, log: pushLog, progress: onProgress, runLogRowId });
       job.result = result;
       bumpPercent(job, 100);
       // Default: treat runs as OK unless runner explicitly returns ok=false.
