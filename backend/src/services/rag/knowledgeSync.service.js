@@ -16,11 +16,11 @@ const { fetchPublicationList } = require('./publicationFetcher.service');
 const { extractTextFromUrl } = require('./pdfExtractor.service');
 const KnowledgeBase = require('../../models/KnowledgeBase.model');
 const IndexedBrsPublikasi = require('../../models/IndexedBrsPublikasi.model');
-const { generateEmbedding } = require('../ai/embedding.service');
-const { rechunkDocument } = require('../ai/knowledgeDoc.service');
+// Phase C 2026-05-11: embeddings flow through the migrated knowledgeDoc.service
+// helpers, which write to retrieval_chunks via xenova multilingual-e5-base.
+const { chunkText, processEmbeddings, MAX_CHUNK_SIZE, CHUNK_OVERLAP } = require('../ai/knowledgeDoc.service');
 const { extractAllKeywords } = require('../ai/keywordExtractor.service');
 const { extractIndicatorIndex } = require('../../../scripts/populate-indicator-index');
-const vectorSearch = require('../ai/vectorSearch.service');
 const logger = require('../../utils/logger').child({ service: 'KnowledgeSync' });
 
 // Configuration
@@ -65,49 +65,38 @@ async function isAlreadyIndexed(docType, externalId) {
 async function indexSingleDocument(doc, docType) {
   const externalId = docType === 'brs' ? doc.brs_id : doc.pub_id;
   const pdfUrl = doc.pdf_url || doc.pdf;
-  
+
   try {
-    // Build base content from abstract
+    // Build base content from abstract; augment with PDF if available.
     let content = `${doc.title}\n\n${doc.abstract || doc.description || ''}`;
     let indexMode = 'abstract';
     let pdfExtracted = false;
-    
-    // Try to fetch PDF content if URL is available
+
     if (pdfUrl && SYNC_CONFIG.INDEX_MODE.includes('pdf')) {
       try {
-        logger.debug({ externalId, docType, pdfUrl }, 'Fetching PDF content');
-        const pdfResult = await extractTextFromUrl(pdfUrl, { 
-          timeout: SYNC_CONFIG.PDF_TIMEOUT_MS 
+        const pdfResult = await extractTextFromUrl(pdfUrl, {
+          timeout: SYNC_CONFIG.PDF_TIMEOUT_MS,
         });
-        
         if (pdfResult && pdfResult.text && pdfResult.text.length > 100) {
-          // Combine abstract with PDF content
           content = `${doc.title}\n\n${doc.abstract || doc.description || ''}\n\n--- PDF Content ---\n\n${pdfResult.text}`;
           indexMode = 'abstract+pdf';
           pdfExtracted = true;
-          
-          logger.info({
-            externalId,
-            docType,
-            pdfPages: pdfResult.pages,
-            textLength: pdfResult.text.length,
-          }, 'PDF content extracted');
+          logger.info({ externalId, docType, pdfPages: pdfResult.pages, textLength: pdfResult.text.length }, 'PDF content extracted');
         }
       } catch (pdfErr) {
         logger.warn({ externalId, docType, error: pdfErr.message }, 'PDF extraction failed, using abstract only');
-        // Continue with abstract only
       }
     }
-    
-    // Extract year from release_date
+
+    // Year from release_date
     let year = null;
     const releaseDate = doc.release_date || doc.rl_date;
     if (releaseDate) {
       const match = String(releaseDate).match(/(\d{4})/);
       if (match) year = parseInt(match[1]);
     }
-    
-    // Create knowledge base entry
+
+    // 1) Create parent KnowledgeBase row.
     const kbDoc = await KnowledgeBase.create({
       title: doc.title,
       description: `${docType === 'brs' ? 'BRS' : 'Publikasi'} - ${releaseDate || 'Unknown'} [${indexMode}]`,
@@ -118,13 +107,13 @@ async function indexSingleDocument(doc, docType) {
       content_length: content.length,
       status: 'pending',
     });
-    
-    // Extract statistical keywords via LLM (title + deep content)
+
+    // 2) Keywords (best-effort, parent only).
     try {
       const keywords = await extractAllKeywords(
         doc.title,
         doc.abstract || doc.description,
-        content,  // pass full content for deep TOC extraction
+        content,
       );
       if (keywords) {
         await kbDoc.update({ keywords });
@@ -133,31 +122,51 @@ async function indexSingleDocument(doc, docType) {
     } catch (kwErr) {
       logger.warn({ externalId, docType, error: kwErr.message }, 'Keyword extraction failed (non-fatal)');
     }
-    
-    // Generate embedding
-    let embeddingSuccess = false;
-    try {
-      // Use first 5500 chars for embedding (API limit)
-      const textToEmbed = `${doc.title}\n${doc.abstract || doc.description || ''}\n${content.slice(0, 5500)}`;
-      const embedding = await generateEmbedding(textToEmbed);
-      
-      if (embedding && embedding.length > 0) {
-        await kbDoc.update({
-          embedding: JSON.stringify(embedding),
-          embedding_updated_at: new Date(),
-          status: 'ready',
-        });
-        embeddingSuccess = true;
+
+    // 3) Indicator index for large docs (TOC extraction).
+    let indicatorEntries = 0;
+    if (content.length > 10000) {
+      try {
+        const category = docType === 'brs' ? 'BRS' : 'Publikasi';
+        const indicatorIndex = extractIndicatorIndex(content, category);
+        if (indicatorIndex && indicatorIndex.length > 10) {
+          await kbDoc.update({ indicator_index: indicatorIndex });
+          indicatorEntries = indicatorIndex.split('\n').length;
+          logger.info({ externalId, docType, entries: indicatorEntries }, 'Indicator index extracted');
+        }
+      } catch (idxErr) {
+        logger.warn({ externalId, docType, error: idxErr.message }, 'Indicator index extraction failed (non-fatal)');
       }
-    } catch (embedErr) {
-      logger.warn({ externalId, docType, error: embedErr.message }, 'Embedding generation failed');
-      await kbDoc.update({
-        status: 'error',
-        error_message: embedErr.message,
-      });
     }
-    
-    // Track in indexed table
+
+    // 4) Chunk the body and create child rows.
+    const chunkIds = [];
+    if (content.length > MAX_CHUNK_SIZE) {
+      const chunks = chunkText(content, MAX_CHUNK_SIZE, CHUNK_OVERLAP);
+      for (let i = 0; i < chunks.length; i++) {
+        const child = await KnowledgeBase.create({
+          title: `${doc.title} (${i + 1}/${chunks.length})`,
+          category: kbDoc.category,
+          source_type: 'text',
+          source_url: pdfUrl,
+          content: chunks[i],
+          content_length: chunks[i].length,
+          chunk_index: i,
+          parent_id: kbDoc.id,
+          status: 'pending',
+        });
+        chunkIds.push(child.id);
+      }
+    }
+
+    // 5) Embed parent + chunks via xenova -> retrieval_chunks.
+    await processEmbeddings([kbDoc.id, ...chunkIds]);
+
+    // 6) Read back lifecycle status (processEmbeddings flips it).
+    await kbDoc.reload();
+    const embeddingSuccess = kbDoc.status === 'ready';
+
+    // 7) Audit row in indexed_brs_publikasi.
     await IndexedBrsPublikasi.create({
       doc_type: docType,
       external_id: String(externalId),
@@ -169,73 +178,20 @@ async function indexSingleDocument(doc, docType) {
       content_length: content.length,
       pdf_url: pdfUrl,
       status: embeddingSuccess ? 'success' : 'error',
+      error_message: embeddingSuccess ? null : (kbDoc.error_message || 'Embedding failed'),
       created_at: new Date(),
       updated_at: new Date(),
     });
-    
-    // Chunk long documents for deep-content vector coverage
-    // Parent keeps full content + first-6K embedding; children get 4K overlapping chunks
-    let chunksCreated = 0;
-    if (embeddingSuccess && content.length > 4000) {
-      try {
-        const chunkResult = await rechunkDocument(kbDoc.id, { embedChunks: true });
-        chunksCreated = chunkResult.chunksCreated || 0;
-        if (chunksCreated > 0) {
-          logger.info({
-            externalId,
-            docType,
-            parentId: kbDoc.id,
-            chunksCreated,
-            chunksEmbedded: chunkResult.chunksEmbedded,
-          }, 'Document chunked for deep-content search');
-        }
-      } catch (chunkErr) {
-        // Non-fatal: parent doc still works, just won't have deep-content chunks
-        logger.warn({ externalId, docType, error: chunkErr.message }, 'Chunking failed (parent doc preserved)');
-      }
-    }
-    
-    // Extract indicator_index (DAFTAR TABEL / DAFTAR ISI) for large documents
-    // This enables indicator-guided extraction in the chat pipeline
-    let indicatorEntries = 0;
-    if (embeddingSuccess && content.length > 10000) {
-      try {
-        const category = docType === 'brs' ? 'BRS' : 'Publikasi';
-        const indicatorIndex = extractIndicatorIndex(content, category);
-        if (indicatorIndex && indicatorIndex.length > 10) {
-          await KnowledgeBase.update({ indicator_index: indicatorIndex }, { where: { id: kbDoc.id } });
-          // Propagate to chunks
-          if (chunksCreated > 0) {
-            await KnowledgeBase.update({ indicator_index: indicatorIndex }, { where: { parent_id: kbDoc.id } });
-          }
-          indicatorEntries = indicatorIndex.split('\n').length;
-          logger.info({ externalId, docType, entries: indicatorEntries }, 'Indicator index extracted');
-        }
-      } catch (idxErr) {
-        logger.warn({ externalId, docType, error: idxErr.message }, 'Indicator index extraction failed (non-fatal)');
-      }
-    }
 
     logger.info({
-      docType,
-      externalId,
-      title: doc.title?.slice(0, 50),
-      indexMode,
-      contentLength: content.length,
-      pdfExtracted,
-      embeddingSuccess,
-      chunksCreated,
-      indicatorEntries,
+      docType, externalId, title: doc.title?.slice(0, 50),
+      indexMode, contentLength: content.length, pdfExtracted,
+      embeddingSuccess, chunksCreated: chunkIds.length, indicatorEntries,
     }, 'Document indexed');
 
-    return { success: true, id: kbDoc.id, pdfExtracted };
+    return { success: embeddingSuccess, id: kbDoc.id, pdfExtracted, chunksCreated: chunkIds.length };
   } catch (error) {
-    logger.error({
-      docType,
-      externalId,
-      error: error.message,
-    }, 'Failed to index document');
-    
+    logger.error({ docType, externalId, error: error.message }, 'Failed to index document');
     return { success: false, error: error.message };
   }
 }
@@ -355,20 +311,12 @@ async function runDailySync() {
   // Sync Publikasi
   const pubStats = await syncPublikasi();
   
-  // Invalidate vector search cache if any new docs were indexed
+  // No vector cache to invalidate — unified retrieval (USE_UNIFIED_RETRIEVAL=true)
+  // queries retrieval_chunks live. The legacy in-memory cache was retired in
+  // Phase C 2026-05-09.
   let cacheInvalidated = false;
   if (brsStats.indexed > 0 || pubStats.indexed > 0) {
-    try {
-      if (vectorSearch.loadKnowledgeEmbeddings) {
-        await vectorSearch.loadKnowledgeEmbeddings(true); // force reload
-        cacheInvalidated = true;
-        logger.info('Vector search cache invalidated');
-      }
-    } catch (e) {
-      logger.warn({ error: e.message }, 'Cache invalidation failed');
-    }
-
-    // Refresh keyword index so new KB keywords are discoverable immediately
+    // Refresh keyword index so new KB keywords are discoverable immediately.
     try {
       const { refreshIndex } = require('../chat/datasourceKeywordIndex.service');
       await refreshIndex();
