@@ -7,7 +7,7 @@ const ChatMessageFlag = require('../../models/ChatMessageFlag.model');
 const ChatErrorPattern = require('../../models/ChatErrorPattern.model');
 const ChatMessage = require('../../models/ChatMessage.model');
 const KnowledgeBase = require('../../models/KnowledgeBase.model');
-const { generateEmbedding } = require('../ai/embedding.service');
+const { processEmbeddings } = require('../ai/knowledgeDoc.service');
 const { Op, Sequelize } = require('sequelize');
 
 /**
@@ -359,7 +359,7 @@ async function addToKnowledgeBase(flagId, correctionText) {
 
     // Create knowledge base entry
     const title = `Koreksi: ${flag.user_query?.slice(0, 100) || 'Pertanyaan tanpa judul'}`;
-    
+
     const kb = await KnowledgeBase.create({
       title,
       description: `Auto-generated dari flag ID ${flagId}`,
@@ -370,16 +370,16 @@ async function addToKnowledgeBase(flagId, correctionText) {
       status: 'pending',
     });
 
-    // Generate embedding
-    try {
-      const embedding = await generateEmbedding(`${title}. ${correctionText}`);
-      await kb.update({
-        embedding: JSON.stringify(embedding),
-        embedding_updated_at: new Date(),
-        status: 'ready',
-      });
-    } catch (e) {
-      console.warn('[ErrorLearning] Embedding failed:', e.message);
+    // Embed via xenova → retrieval_chunks (Phase C unified store).
+    // processEmbeddings handles status lifecycle (processing → ready/error)
+    // and DELETE+INSERTs into retrieval_chunks with source_kind='knowledge_doc'.
+    await processEmbeddings([kb.id]);
+
+    // Re-read to check final status set by processEmbeddings.
+    await kb.reload();
+    if (kb.status !== 'ready') {
+      console.warn(`[ErrorLearning] embed failed for flag=${flagId} kb=${kb.id}:`, kb.error_message);
+      return { ok: false, error: `Indexing failed: ${kb.error_message || 'unknown error'}`, knowledgeId: kb.id };
     }
 
     // Update flag status
