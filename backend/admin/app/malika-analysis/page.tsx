@@ -543,6 +543,16 @@ export default function MalikaAnalysisPage() {
                   </div>
                   
                   <div>
+                    <div className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-1">Correction Text (added to knowledge base):</div>
+                    <textarea
+                      className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                      rows={4}
+                      placeholder="Tulis koreksi/jawaban yang benar — akan diindeks ke retrieval_chunks dan dipakai untuk pertanyaan serupa di chat MALIKA."
+                      id="correction-text"
+                    />
+                  </div>
+
+                  <div>
                     <div className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-1">Correction Notes:</div>
                     <textarea
                       className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
@@ -582,13 +592,22 @@ export default function MalikaAnalysisPage() {
                       Ignore
                     </button>
                     <button
-                      onClick={() => {
-                        const notes = (document.getElementById("correction-notes") as HTMLTextAreaElement)?.value;
-                        updateFlagStatus(selectedFlag.id, "training_added", notes);
+                      onClick={async () => {
+                        const text = (document.getElementById("correction-text") as HTMLTextAreaElement)?.value?.trim();
+                        if (!text) { setError("Correction text required"); return; }
+                        try {
+                          const res = await api.post(`/error-learning/flags/${selectedFlag.id}/add-to-knowledge`, { correction_text: text });
+                          if (!res.data?.ok) throw new Error(res.data?.error || 'failed');
+                          await fetchFlags();
+                          await fetchStats();
+                          setSelectedFlag(null);
+                        } catch (e) {
+                          setError(getErrorMessage(e, "Failed to add to knowledge base"));
+                        }
                       }}
                       className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm"
                     >
-                      Add to Training
+                      Add to Knowledge
                     </button>
                   </div>
                   
