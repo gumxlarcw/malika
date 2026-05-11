@@ -100,7 +100,33 @@ export default function MalikaAnalysisPage() {
   
   // Selected flag for detail view
   const [selectedFlag, setSelectedFlag] = useState<ChatMessageFlag | null>(null);
-  
+
+  // Pattern suggestions (auto-drafted from flag clusters)
+  type SuggestedDraft = {
+    pattern_name: string;
+    pattern_type: string;
+    trigger_keywords: string[];
+    error_description: string;
+    fix_type: string;
+    fix_content: string;
+  };
+
+  type AnalysisCluster = {
+    count: number;
+    topKeywords: { word: string; count: number }[];
+    sampleQueries: (string | null)[];
+    suggestedDraft?: SuggestedDraft;
+  };
+
+  type AnalysisResponse = {
+    ok: boolean;
+    totalPending: number;
+    byType: Record<string, AnalysisCluster>;
+  };
+
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+  const [promoteDraft, setPromoteDraft] = useState<SuggestedDraft | null>(null);
+
   // Fetch flags
   const fetchFlags = useCallback(async () => {
     try {
@@ -141,17 +167,27 @@ export default function MalikaAnalysisPage() {
       console.warn("Stats fetch failed:", e);
     }
   }, []);
-  
+
+  // Fetch analysis (pattern suggestions)
+  const fetchAnalysis = useCallback(async () => {
+    try {
+      const res = await api.get('/error-learning/analyze');
+      setAnalysis(res.data);
+    } catch (e) {
+      console.warn('Analyze fetch failed:', e);
+    }
+  }, []);
+
   // Initial load
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
-      await Promise.all([fetchFlags(), fetchPatterns(), fetchStats()]);
+      await Promise.all([fetchFlags(), fetchPatterns(), fetchStats(), fetchAnalysis()]);
       setLoading(false);
     };
     load();
-  }, [fetchFlags, fetchPatterns, fetchStats]);
+  }, [fetchFlags, fetchPatterns, fetchStats, fetchAnalysis]);
 
   useEffect(() => { setPage(1); }, [flagsFilter.type, flagsFilter.status, flagsFilter.severity]);
 
@@ -497,6 +533,58 @@ export default function MalikaAnalysisPage() {
                   ))}
               </div>
             </div>
+
+            {/* Pattern Suggestions (auto-drafted from flag clusters) */}
+            {analysis && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <h3 className="font-medium mb-1">Pattern Suggestions</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Drafts auto-generated from pending flag clusters. Review and Promote to add as live patterns.
+                </p>
+                <div className="space-y-3">
+                  {Object.entries(analysis.byType)
+                    .filter(([, cluster]) => cluster.suggestedDraft)
+                    .sort(([, a], [, b]) => b.count - a.count)
+                    .map(([type, cluster]) => (
+                      <div key={type} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${FLAG_TYPE_COLORS[type] || ""}`}>{type}</span>
+                              <span className="text-xs text-gray-500">{cluster.count} flag{cluster.count === 1 ? '' : 's'}</span>
+                            </div>
+                            <div className="text-sm font-medium mb-1">{cluster.suggestedDraft!.pattern_name}</div>
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {cluster.suggestedDraft!.trigger_keywords.slice(0, 6).map((kw) => (
+                                <span key={kw} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">{kw}</span>
+                              ))}
+                            </div>
+                            <details className="text-xs text-gray-500">
+                              <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">Sample queries ({cluster.sampleQueries.filter(Boolean).length})</summary>
+                              <ul className="mt-1 pl-4 space-y-0.5">
+                                {cluster.sampleQueries.filter((q): q is string => Boolean(q)).map((q, i) => (
+                                  <li key={i} className="truncate" title={q}>• {q.slice(0, 100)}{q.length > 100 ? '…' : ''}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          </div>
+                          <button
+                            onClick={() => setPromoteDraft(cluster.suggestedDraft!)}
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 whitespace-nowrap"
+                          >
+                            Promote
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  {Object.values(analysis.byType).filter((c) => c.suggestedDraft).length === 0 && (
+                    <div className="text-sm text-gray-500 py-4 text-center">
+                      No flag clusters meet draft criteria (≥2 flags of a draftable type). Existing patterns may be covering things, or you may need to wait for more flag data.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
         
@@ -612,10 +700,101 @@ export default function MalikaAnalysisPage() {
                   </div>
                   
                   <div className="text-xs text-gray-500">
-                    Thread: {selectedFlag.thread_id} | Message: {selectedFlag.message_id} | 
+                    Thread: {selectedFlag.thread_id} | Message: {selectedFlag.message_id} |
                     Created: {formatDateTime(selectedFlag.created_at)}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Promote Pattern Modal */}
+        {promoteDraft && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-xl font-bold">Promote to Pattern</h2>
+                  <button onClick={() => setPromoteDraft(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">✕</button>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">Review and edit before creating. This pattern will be active immediately.</p>
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget as HTMLFormElement;
+                    const fd = new FormData(form);
+                    const keywordsRaw = String(fd.get('trigger_keywords') || '');
+                    const keywords = keywordsRaw.split(',').map(s => s.trim()).filter(Boolean);
+                    const body = {
+                      pattern_name: String(fd.get('pattern_name') || ''),
+                      pattern_type: String(fd.get('pattern_type') || 'query_pattern'),
+                      trigger_keywords: keywords,
+                      error_description: String(fd.get('error_description') || ''),
+                      fix_type: String(fd.get('fix_type') || ''),
+                      fix_content: String(fd.get('fix_content') || ''),
+                    };
+                    try {
+                      const res = await api.post('/error-learning/patterns', body);
+                      if (!res.data?.ok) throw new Error(res.data?.error || 'failed');
+                      await Promise.all([fetchPatterns(), fetchAnalysis(), fetchStats()]);
+                      setPromoteDraft(null);
+                    } catch (e) {
+                      setError(getErrorMessage(e, "Failed to create pattern"));
+                    }
+                  }}
+                  className="space-y-3"
+                >
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Pattern Name</label>
+                    <input name="pattern_name" defaultValue={promoteDraft.pattern_name} required
+                      className="w-full border rounded p-2 text-sm dark:bg-gray-900 dark:border-gray-700" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Pattern Type</label>
+                    <select name="pattern_type" defaultValue={promoteDraft.pattern_type}
+                      className="w-full border rounded p-2 text-sm dark:bg-gray-900 dark:border-gray-700">
+                      <option value="query_pattern">query_pattern</option>
+                      <option value="data_pattern">data_pattern</option>
+                      <option value="context_pattern">context_pattern</option>
+                      <option value="hallucination_pattern">hallucination_pattern</option>
+                      <option value="prompt_issue">prompt_issue</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Trigger Keywords (comma-separated)</label>
+                    <input name="trigger_keywords" defaultValue={promoteDraft.trigger_keywords.join(', ')} required
+                      className="w-full border rounded p-2 text-sm dark:bg-gray-900 dark:border-gray-700" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Error Description</label>
+                    <textarea name="error_description" defaultValue={promoteDraft.error_description} rows={2} required
+                      className="w-full border rounded p-2 text-sm dark:bg-gray-900 dark:border-gray-700" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Fix Type</label>
+                    <select name="fix_type" defaultValue={promoteDraft.fix_type}
+                      className="w-full border rounded p-2 text-sm dark:bg-gray-900 dark:border-gray-700">
+                      <option value="add_to_prompt">add_to_prompt</option>
+                      <option value="special_handling">special_handling</option>
+                      <option value="add_to_knowledge">add_to_knowledge</option>
+                      <option value="data_fix">data_fix</option>
+                      <option value="cannot_fix">cannot_fix</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Fix Content</label>
+                    <textarea name="fix_content" defaultValue={promoteDraft.fix_content} rows={4} required
+                      className="w-full border rounded p-2 text-sm dark:bg-gray-900 dark:border-gray-700" />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <button type="button" onClick={() => setPromoteDraft(null)}
+                      className="px-4 py-2 border rounded text-sm dark:border-gray-700">Cancel</button>
+                    <button type="submit"
+                      className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Create Pattern</button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
