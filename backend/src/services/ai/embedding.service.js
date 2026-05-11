@@ -77,45 +77,76 @@ function buildEmbeddingText(source) {
   return parts.join('. ');
 }
 
+// ── Live embedding pipeline (Phase C 2026-05-09) ──────────────────────────
+// Writes to project_data_strategis.retrieval_chunks (VECTOR(768)) via
+// xenova multilingual-e5-base. Replaces the OpenAI 1536d → dropped column
+// path that lived here before.
+const sequelize_pds = require('../../config/db');
+const { embedPassage } = require('../bpsMetadata/embedding.service');
+
+const LIVE_EMBEDDING_MODEL = 'Xenova/multilingual-e5-base';
+
+async function upsertDatasourceChunk(source) {
+  const text = buildEmbeddingText(source);
+  if (!text) return { ok: false, message: 'No text to embed' };
+
+  const emb = await embedPassage(text);
+  const metadata = { category: source.category || null, type: source.type || null };
+
+  await sequelize_pds.query(
+    `DELETE FROM retrieval_chunks
+     WHERE source_kind = 'datasource' AND source_ref_id = ?`,
+    { replacements: [source.id] }
+  );
+  await sequelize_pds.query(
+    `INSERT INTO retrieval_chunks
+       (source_kind, source_ref_id, chunk_index, title, content_text, metadata,
+        embedding, embedding_model, embedding_generated_at)
+     VALUES ('datasource', ?, 0, ?, ?, ?, VEC_FromText(?), ?, NOW())`,
+    {
+      replacements: [
+        source.id,
+        source.name,
+        source.description || '',
+        JSON.stringify(metadata),
+        JSON.stringify(emb),
+        LIVE_EMBEDDING_MODEL,
+      ],
+    }
+  );
+
+  return { ok: true, message: `Embedded ${text.length} chars via ${LIVE_EMBEDDING_MODEL}` };
+}
+
 /**
- * Embed a single datasource
- * @param {number} sourceId - Datasource ID
+ * Embed a single datasource — writes to retrieval_chunks.
+ * @param {number} sourceId
  * @returns {Promise<{ok: boolean, message: string}>}
  */
 async function embedDatasource(sourceId) {
   const source = await DataSource.findByPk(sourceId);
   if (!source) {
-    throw new Error(`Datasource ${sourceId} not found`);
+    const err = new Error(`Datasource ${sourceId} not found`);
+    err.statusCode = 404;
+    throw err;
   }
-
-  const text = buildEmbeddingText(source);
-  if (!text) {
-    return { ok: false, message: 'No text to embed' };
-  }
-
-  const embedding = await generateEmbedding(text);
-  
-  // Store as JSON string
-  await source.update({
-    embedding: JSON.stringify(embedding),
-    embedding_updated_at: new Date(),
-  });
-
-  return { ok: true, message: `Embedded ${text.length} chars` };
+  return upsertDatasourceChunk(source);
 }
 
 /**
- * Embed all datasources that don't have embeddings yet
- * @param {object} options - Options
- * @param {boolean} options.force - Re-embed even if already embedded
- * @param {function} options.onProgress - Progress callback
- * @returns {Promise<{total: number, embedded: number, skipped: number, errors: number, errorDetails: string[]}>}
+ * Embed all active datasources. Skips already-indexed sources unless force=true.
+ * @param {{force?: boolean, onProgress?: function}} options
  */
 async function embedAllDatasources({ force = false, onProgress } = {}) {
   const sources = await DataSource.findAll({
     where: { status: true },
     order: [['id', 'ASC']],
   });
+
+  const [existingRows] = await sequelize_pds.query(
+    `SELECT source_ref_id FROM retrieval_chunks WHERE source_kind='datasource'`
+  );
+  const existing = new Set(existingRows.map((r) => Number(r.source_ref_id)));
 
   const result = {
     total: sources.length,
@@ -127,35 +158,18 @@ async function embedAllDatasources({ force = false, onProgress } = {}) {
 
   for (let i = 0; i < sources.length; i++) {
     const source = sources[i];
-    
     if (onProgress) {
       onProgress({ current: i + 1, total: sources.length, name: source.name });
     }
 
-    // Skip if already embedded (unless force)
-    if (!force && source.embedding) {
+    if (!force && existing.has(Number(source.id))) {
       result.skipped++;
       continue;
     }
-
     try {
-      const text = buildEmbeddingText(source);
-      if (!text) {
-        result.skipped++;
-        continue;
-      }
-
-      const embedding = await generateEmbedding(text);
-      await source.update({
-        embedding: JSON.stringify(embedding),
-        embedding_updated_at: new Date(),
-      });
-      result.embedded++;
-      
-      // Small delay to avoid rate limiting
-      if (i < sources.length - 1) {
-        await new Promise(r => setTimeout(r, 100));
-      }
+      const r = await upsertDatasourceChunk(source);
+      if (r.ok) result.embedded++;
+      else result.skipped++;
     } catch (e) {
       result.errors++;
       result.errorDetails.push(`ID ${source.id}: ${e.message}`);
@@ -239,18 +253,15 @@ async function getDatasourcesWithEmbeddingStatus() {
 }
 
 /**
- * Clear embedding for a datasource
- * @param {number} sourceId 
+ * Clear embedding for a datasource — removes the retrieval_chunks row.
+ * @param {number} sourceId
  */
 async function clearEmbedding(sourceId) {
-  const source = await DataSource.findByPk(sourceId);
-  if (!source) {
-    throw new Error(`Datasource ${sourceId} not found`);
-  }
-  await source.update({
-    embedding: null,
-    embedding_updated_at: null,
-  });
+  await sequelize_pds.query(
+    `DELETE FROM retrieval_chunks
+     WHERE source_kind = 'datasource' AND source_ref_id = ?`,
+    { replacements: [sourceId] }
+  );
   return { ok: true };
 }
 
