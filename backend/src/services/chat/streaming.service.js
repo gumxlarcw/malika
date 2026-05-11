@@ -4733,9 +4733,18 @@ async function streamChatResponse({
     // Build OpenAI messages with context-aware system prompt
     // Get dynamic prompt fixes from error learning patterns (matched to user query)
     let promptFixes = [];
+    let specialHandling = null;
     try {
       if (errorLearningService?.getPromptFixes) {
         promptFixes = await errorLearningService.getPromptFixes(effectiveUserQuery);
+      }
+      if (errorLearningService?.checkQueryPattern) {
+        specialHandling = await errorLearningService.checkQueryPattern(effectiveUserQuery);
+        if (specialHandling?.fixContent) {
+          // Special-handling patterns get appended to promptFixes with a clear prefix
+          promptFixes.push(`[SPECIAL HANDLING — ${specialHandling.patternName}]\n${specialHandling.fixContent}`);
+          console.log(`[StreamChat] Special handling pattern matched: ${specialHandling.patternName}`);
+        }
       }
     } catch (e) {
       console.warn('[StreamChat] Failed to get prompt fixes:', e.message);
