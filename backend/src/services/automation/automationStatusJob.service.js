@@ -261,24 +261,35 @@ async function startAutomationStatusJob({ requestedBy = null } = {}) {
         error: bpsError,
       };
 
-      for (const ds of datasources) {
+      // Batched indikator existence lookup — 1 query instead of N.
+      // We still issue real COUNT/MAX queries per source for actual row stats,
+      // but skip the per-source information_schema probe entirely.
+      const existingIndikator = new Set();
+      if (sequelizeBps && bps?.dbName) {
+        try {
+          const [rows] = await sequelizeBps.query(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = ? AND table_name LIKE 'indikator\\_%'",
+            { replacements: [bps.dbName] }
+          );
+          for (const r of rows) existingIndikator.add(String(r.table_name).toLowerCase());
+        } catch (e) {
+          pushLog(`WARN: batched indikator listing failed: ${e?.message || String(e)}`);
+        }
+      }
+
+      const defaultProd = (sid) => ({
+        tableName: `indikator_${sid}`,
+        exists: false,
+        rows: 0,
+        last_update: null,
+        last_pulled_at: null,
+        error: null,
+      });
+
+      function buildItem(ds, prod) {
         const sid = Number(ds.id);
         const cfg = cfgBySource.get(sid);
-
-        let prod = { tableName: `indikator_${sid}`, exists: false, rows: 0, last_update: null, last_pulled_at: null, error: null };
-        if (sequelizeBps && bps?.dbName) {
-          try {
-            if (String(ds.type || '') === 'pressrelease') {
-              prod = await getPressreleaseTableStatus(sequelizeBps, bps.dbName, ds);
-            } else {
-              prod = await getIndicatorTableStatus(sequelizeBps, bps.dbName, sid);
-            }
-          } catch (e) {
-            prod.error = e?.message || String(e);
-          }
-        }
-
-        job.data.items.push({
+        return {
           source: { id: sid, name: ds.name || null },
           datasource: { type: ds.type || 'dynamic' },
           production: prod,
@@ -318,11 +329,62 @@ async function startAutomationStatusJob({ requestedBy = null } = {}) {
                 last_signature: null,
                 last_error: null,
               },
-        });
+        };
+      }
 
-        job.progress.loaded += 1;
-        job.progress.message = `Loaded ${job.progress.loaded}/${job.progress.total}`;
-        updateProgress();
+      async function aggregateOne(ds) {
+        const sid = Number(ds.id);
+        const tableName = `indikator_${sid}`;
+        if (String(ds.type || '') === 'pressrelease') {
+          try {
+            return await getPressreleaseTableStatus(sequelizeBps, bps.dbName, ds);
+          } catch (e) {
+            return { ...defaultProd(sid), error: e?.message || String(e) };
+          }
+        }
+        if (!existingIndikator.has(tableName.toLowerCase())) {
+          return defaultProd(sid);
+        }
+        try {
+          const [aggRows] = await sequelizeBps.query(
+            `SELECT
+              COUNT(*) AS row_count,
+              DATE_FORMAT(MAX(last_update), '%Y-%m-%dT%H:%i:%s') AS last_update,
+              DATE_FORMAT(MAX(updated_at), '%Y-%m-%dT%H:%i:%s') AS last_pulled_at
+            FROM \`${tableName}\``
+          );
+          return {
+            tableName,
+            exists: true,
+            rows: Number(aggRows?.[0]?.row_count || 0),
+            last_update: aggRows?.[0]?.last_update || null,
+            last_pulled_at: aggRows?.[0]?.last_pulled_at || null,
+            error: null,
+          };
+        } catch (e) {
+          return { tableName, exists: true, rows: 0, last_update: null, last_pulled_at: null, error: e?.message || String(e) };
+        }
+      }
+
+      const CHUNK = 10;
+      if (sequelizeBps && bps?.dbName) {
+        for (let i = 0; i < datasources.length; i += CHUNK) {
+          const slice = datasources.slice(i, i + CHUNK);
+          const prods = await Promise.all(slice.map(aggregateOne));
+          for (let k = 0; k < slice.length; k++) {
+            job.data.items.push(buildItem(slice[k], prods[k]));
+            job.progress.loaded += 1;
+            job.progress.message = `Loaded ${job.progress.loaded}/${job.progress.total}`;
+            updateProgress();
+          }
+        }
+      } else {
+        for (const ds of datasources) {
+          job.data.items.push(buildItem(ds, defaultProd(Number(ds.id))));
+          job.progress.loaded += 1;
+          job.progress.message = `Loaded ${job.progress.loaded}/${job.progress.total}`;
+          updateProgress();
+        }
       }
 
       job.status = 'done';
