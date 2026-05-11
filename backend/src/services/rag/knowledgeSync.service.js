@@ -21,7 +21,41 @@ const IndexedBrsPublikasi = require('../../models/IndexedBrsPublikasi.model');
 const { chunkText, processEmbeddings, MAX_CHUNK_SIZE, CHUNK_OVERLAP } = require('../ai/knowledgeDoc.service');
 const { extractAllKeywords } = require('../ai/keywordExtractor.service');
 const { extractIndicatorIndex } = require('../../../scripts/populate-indicator-index');
-const logger = require('../../utils/logger').child({ service: 'KnowledgeSync' });
+
+// ── Run-log capture ─────────────────────────────────────────────────────
+// All info/warn/error calls go to pino AND an in-memory ring buffer. The
+// runDailySyncTracked wrapper resets the buffer at start, snapshots it onto
+// lastResult.logs at finish, and exposes the live buffer via getCurrentRunLogs()
+// so the admin UI can poll progress during a manual sync.
+const _baseLogger = require('../../utils/logger').child({ service: 'KnowledgeSync' });
+const _runLogs = [];
+const _MAX_LOG_LINES = 1000;
+
+function _captureLogLine(level, args) {
+  const ts = new Date().toISOString();
+  let payload = null;
+  let msg = '';
+  if (args.length === 1) {
+    msg = typeof args[0] === 'string' ? args[0] : JSON.stringify(args[0]).slice(0, 300);
+  } else if (args.length >= 2) {
+    payload = args[0];
+    msg = args[1];
+  }
+  const payloadStr = payload ? ' ' + JSON.stringify(payload).slice(0, 300) : '';
+  _runLogs.push(`[${ts}] ${level.toUpperCase()}: ${msg}${payloadStr}`);
+  if (_runLogs.length > _MAX_LOG_LINES) _runLogs.shift();
+}
+
+const logger = {
+  info: (...args) => { _captureLogLine('info', args); _baseLogger.info(...args); },
+  warn: (...args) => { _captureLogLine('warn', args); _baseLogger.warn(...args); },
+  error: (...args) => { _captureLogLine('error', args); _baseLogger.error(...args); },
+  debug: (...args) => _baseLogger.debug(...args),  // not captured (too noisy)
+};
+
+function _resetRunLogs() { _runLogs.length = 0; }
+function _snapshotRunLogs() { return _runLogs.slice(); }
+function getCurrentRunLogs() { return _runLogs.slice(); }
 
 // Configuration
 const SYNC_CONFIG = {
@@ -419,6 +453,8 @@ async function getSchedulerState() {
     lastResult: state.lastResult,
     nextRunAt: _nextRunAt ? _nextRunAt.toISOString() : null,
     history: state.history || [],
+    // Live run logs while syncing; cleared at next run start.
+    currentRunLogs: _runningFlag ? _snapshotRunLogs() : [],
   };
 }
 
@@ -441,6 +477,7 @@ async function runDailySyncTracked() {
     return { skipped: true, reason: 'Already running' };
   }
   _runningFlag = true;
+  _resetRunLogs();
   const startedAt = new Date();
 
   try {
@@ -453,12 +490,14 @@ async function runDailySyncTracked() {
       publikasi: { indexed: result.publikasi.indexed, errors: result.publikasi.errors },
       durationMs: result.durationMs,
       timestamp: finishedAt.toISOString(),
+      logs: _snapshotRunLogs(),
     };
     const newState = {
       ...state,
       lastRunAt: finishedAt.toISOString(),
       lastResult,
-      history: [lastResult, ...(state.history || [])].slice(0, 5),
+      // History keeps the lighter result shape (no logs) to keep app_settings row small.
+      history: [{ ...lastResult, logs: undefined }, ...(state.history || [])].slice(0, 5),
     };
     await saveState(newState);
     return result;
@@ -470,12 +509,13 @@ async function runDailySyncTracked() {
       error: e?.message || String(e),
       durationMs: finishedAt.getTime() - startedAt.getTime(),
       timestamp: finishedAt.toISOString(),
+      logs: _snapshotRunLogs(),
     };
     const newState = {
       ...state,
       lastRunAt: finishedAt.toISOString(),
       lastResult,
-      history: [lastResult, ...(state.history || [])].slice(0, 5),
+      history: [{ ...lastResult, logs: undefined }, ...(state.history || [])].slice(0, 5),
     };
     await saveState(newState);
     throw e;
@@ -497,5 +537,6 @@ module.exports = {
   isRunning,
   getNextRunAt,
   _setNextRunAt,
+  getCurrentRunLogs,
   SYNC_CONFIG,
 };
