@@ -312,6 +312,67 @@ async function deleteDocument(req, res) {
   }
 }
 
+// =====================
+// Knowledge Sync (BRS + Publikasi auto-embed)
+// =====================
+
+async function getSyncStats(req, res) {
+  try {
+    const knowledgeSyncService = require('../services/rag/knowledgeSync.service');
+    const stats = await knowledgeSyncService.getSyncStats();
+    res.json(stats);
+  } catch (e) {
+    console.error('[Knowledge] getSyncStats error:', e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+async function getSyncConfig(req, res) {
+  try {
+    const knowledgeSyncService = require('../services/rag/knowledgeSync.service');
+    res.json(knowledgeSyncService.SYNC_CONFIG);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+async function runManualSync(req, res) {
+  try {
+    const knowledgeSyncService = require('../services/rag/knowledgeSync.service');
+    if (knowledgeSyncService.isRunning()) {
+      return res.status(409).json({ error: 'Sync already running', running: true });
+    }
+    const result = await knowledgeSyncService.runDailySyncTracked();
+    res.json(result);
+  } catch (e) {
+    console.error('[Knowledge] runManualSync error:', e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
+async function updateSyncSchedule(req, res) {
+  try {
+    const knowledgeSyncService = require('../services/rag/knowledgeSync.service');
+    const { enabled, hour, minute } = req.body || {};
+    const newState = await knowledgeSyncService.updateSchedule({
+      enabled: typeof enabled === 'boolean' ? enabled : undefined,
+      hour: Number.isFinite(Number(hour)) ? Number(hour) : undefined,
+      minute: Number.isFinite(Number(minute)) ? Number(minute) : undefined,
+    });
+    // Restart scheduler so the new hour/minute is armed.
+    try {
+      const { restartKnowledgeSyncScheduler } = require('../services/rag/knowledgeSyncScheduler.service');
+      await restartKnowledgeSyncScheduler();
+    } catch (schedErr) {
+      console.warn('[Knowledge] scheduler restart failed:', schedErr.message);
+    }
+    res.json({ ok: true, schedule: newState });
+  } catch (e) {
+    console.error('[Knowledge] updateSyncSchedule error:', e);
+    res.status(500).json({ error: e.message });
+  }
+}
+
 module.exports = {
   getStats,
   getDatasources,
@@ -327,4 +388,9 @@ module.exports = {
   createFromPdf,
   reEmbedDocument,
   deleteDocument,
+  // Knowledge sync
+  getSyncStats,
+  getSyncConfig,
+  runManualSync,
+  updateSyncSchedule,
 };

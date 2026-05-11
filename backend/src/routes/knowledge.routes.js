@@ -40,6 +40,12 @@ router.post('/search', knowledgeController.search);
 // Cache management
 router.post('/invalidate-cache', knowledgeController.invalidateCache);
 
+// Knowledge Sync (BRS + Publikasi auto-embed)
+router.get('/sync/stats', knowledgeController.getSyncStats);
+router.get('/sync/config', knowledgeController.getSyncConfig);
+router.post('/sync', knowledgeController.runManualSync);
+router.put('/sync/schedule', knowledgeController.updateSyncSchedule);
+
 // Custom knowledge documents
 router.get('/documents/stats', knowledgeController.getDocumentStats);
 router.get('/documents', knowledgeController.getDocuments);
