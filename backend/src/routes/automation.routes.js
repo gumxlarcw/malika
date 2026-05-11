@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const {
-	listAutomationStatus,
 	upsertAutomationConfig,
 	runAutomationNow,
 	runAutomationJobStart,
@@ -17,8 +16,9 @@ const {
 const automationNotificationsRoutes = require('./automation.notifications.routes');
 const schedulerSettingsRoutes = require('./schedulerSettings.routes');
 
-// GET /automation
-router.get('/', listAutomationStatus);
+// GET /automation — removed 2026-05-11; UI uses POST /automation/status-job
+// (async job pattern) which is the only consumer. The sync controller and
+// its 4 duplicate helpers were dead code (audit 2026-05-11).
 
 // Automation Notifications (admin-only)
 // NOTE: keep this BEFORE any /:id routes.
