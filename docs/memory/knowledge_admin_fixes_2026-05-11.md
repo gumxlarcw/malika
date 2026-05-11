@@ -45,3 +45,11 @@ originSessionId: 37e1fd58-1485-413f-bec5-fe58210c8f74
 ## Notes
 - Tests for write paths under xenova use dynamic ESM (`@xenova/transformers`); Jest CJS VM can't load them without `--experimental-vm-modules`. The xenova-dependent tests are `describe.skip`'d with a comment pointing to live smoke. Read-path tests run normally.
 - One thing to watch: PM2 reload during a fire-and-forget `processEmbeddings` (post-create-text/pdf flow) could orphan an in-flight kb row. Out of scope for this pass; pattern is the same as the automation run-job durability fix from earlier today (see automation_flow_fixes_2026-05-11.md if needed).
+
+## Follow-up: datasource auto-embed wired (commit 7b36b04, same day)
+- `POST /datasource`: fire-and-forget `embedDatasource(id)` after create if row.status=true.
+- `PUT /datasource/:id`: re-embed only when `name`/`description`/`aliases`/`category` changed OR status flipped inactive→active; cleanup if active→inactive.
+- `DELETE /datasource/:id` (soft) and `/datasource/:id/hard`: `clearEmbedding(id)` → drops the retrieval_chunks row.
+- Hooks use `setImmediate` so the response never waits on xenova; failures land in pm2 logs as `[datasource auto-embed] <context> id=N FAILED:`.
+- Constant: `EMBED_RELEVANT_FIELDS = ['name', 'description', 'aliases', 'category']` controls which PUT bodies trigger re-embed.
+- Live verified end-to-end: probe id=461 went CREATE→embed (2s)→UPDATE text→re-embed (1s)→UPDATE display_order→skipped→DELETE→cleared (<1s).
