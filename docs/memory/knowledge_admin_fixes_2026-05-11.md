@@ -46,6 +46,24 @@ originSessionId: 37e1fd58-1485-413f-bec5-fe58210c8f74
 - Tests for write paths under xenova use dynamic ESM (`@xenova/transformers`); Jest CJS VM can't load them without `--experimental-vm-modules`. The xenova-dependent tests are `describe.skip`'d with a comment pointing to live smoke. Read-path tests run normally.
 - One thing to watch: PM2 reload during a fire-and-forget `processEmbeddings` (post-create-text/pdf flow) could orphan an in-flight kb row. Out of scope for this pass; pattern is the same as the automation run-job durability fix from earlier today (see automation_flow_fixes_2026-05-11.md if needed).
 
+## Follow-up: pressrelease indexing — NOT NEEDED (verified 2026-05-11)
+The "deferred pressrelease indexing" item was based on incomplete view of the data flow.
+
+**Press releases are already fully searchable today** via the BRS knowledge_doc path:
+- `data_bps.pressrelease_kw_*` (655 rows across 8 keyword tables) is a **separate cache** for per-topic browsing, populated by `services/pressrelease/pull.service.js` with keyword-scoped queries.
+- `knowledge_base WHERE category='BRS'` (761 root + ~27K chunks) holds the **same press release content** reached via the domain-scoped `services/rag/brsFetcher.service.js` (BPS web API `/api/list/model/data?domain=8200`). Indexed in retrieval_chunks as `source_kind='knowledge_doc'`/`'knowledge_chunk'`.
+- Live verified: `/knowledge/search "inflasi maluku utara maret 2026"` returns matching BRS row at similarity 0.860. Same titles overlap between the two tables (e.g., "Inflasi Year on Year Provinsi Maluku Utara April 2026").
+- Daily 06:00 WIT auto-sync (`runDailySyncTracked` → `syncBrs`) keeps fresh press releases flowing into `knowledge_base` and thus into retrieval_chunks.
+
+**Code intent confirmed** by the longstanding comment in `vectorSearch.service.js:158`:
+```
+// Exclude pressrelease - BRS already indexed in knowledge_base
+type: { [Sequelize.Op.ne]: 'pressrelease' },
+```
+That exclusion was correct all along.
+
+Action: **no code change**. Adding a `source_kind='pressrelease'` would create duplicate retrieval entries. Marked closed in the workspace docs.
+
 ## Follow-up: datasource auto-embed wired (commit 7b36b04, same day)
 - `POST /datasource`: fire-and-forget `embedDatasource(id)` after create if row.status=true.
 - `PUT /datasource/:id`: re-embed only when `name`/`description`/`aliases`/`category` changed OR status flipped inactive→active; cleanup if active→inactive.

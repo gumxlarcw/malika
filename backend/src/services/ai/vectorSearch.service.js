@@ -155,7 +155,12 @@ async function loadEmbeddings(force = false) {
     where: {
       status: true,
       embedding: { [Sequelize.Op.ne]: null },
-      // Exclude pressrelease - BRS already indexed in knowledge_base
+      // Exclude pressrelease — same content is already in knowledge_base
+      // (category='BRS') via services/rag/brsFetcher.service.js + knowledgeSync.
+      // data_bps.pressrelease_kw_* tables are a separate per-keyword cache for
+      // topic browsing, not for semantic retrieval. Verified 2026-05-11:
+      // /knowledge/search returns press release titles via knowledge_doc kind
+      // at similarity ~0.86. Adding source_kind='pressrelease' would duplicate.
       type: { [Sequelize.Op.ne]: 'pressrelease' },
     },
     attributes: ['id', 'name', 'type', 'description', 'embedding'],
