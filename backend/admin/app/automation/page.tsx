@@ -40,6 +40,8 @@ type AutomationItem = {
 
 type AutomationStatusResponse = {
   scheduler_enabled: boolean;
+  scheduler_mode?: "daily" | "interval" | null;
+  scheduler_next_run_at?: string | null;
   poll_minutes: number;
   min_interval_hours: number;
   data_bps?: {

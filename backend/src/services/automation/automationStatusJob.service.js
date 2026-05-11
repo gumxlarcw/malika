@@ -4,6 +4,7 @@ const DataSource = require('../../models/DataSource.model');
 const AutomationConfig = require('../../models/AutomationConfig.model');
 const EximPodFilter = require('../../models/EximPodFilter.model');
 const { getPressReleaseKeywordTableName } = require('../replication/pressreleaseTableBps.service');
+const { getAutomationSchedulerState } = require('./scheduler.service');
 
 // In-memory job store for building the automation status list progressively.
 const jobs = new Map();
@@ -187,13 +188,20 @@ async function startAutomationStatusJob({ requestedBy = null } = {}) {
       percent: 0,
       message: 'Starting...',
     },
-    data: {
-      scheduler_enabled: String(process.env.AUTOMATION_ENABLED || '') === 'true',
-      poll_minutes: Number(process.env.AUTOMATION_POLL_MINUTES || 60),
-      min_interval_hours: Number(process.env.AUTOMATION_MIN_INTERVAL_HOURS || 24),
-      data_bps: { available: false, connected: false, dbName: null, error: null },
-      items: [],
-    },
+    data: (() => {
+      const sched = getAutomationSchedulerState();
+      return {
+        scheduler_enabled: Boolean(sched.enabled),
+        scheduler_mode: sched.mode || null,
+        scheduler_next_run_at: sched.nextRunAt
+          ? new Date(sched.nextRunAt).toISOString()
+          : null,
+        poll_minutes: Number(process.env.AUTOMATION_POLL_MINUTES || 60),
+        min_interval_hours: Number(process.env.AUTOMATION_MIN_INTERVAL_HOURS || 24),
+        data_bps: { available: false, connected: false, dbName: null, error: null },
+        items: [],
+      };
+    })(),
     logs: [],
     error: null,
   };
