@@ -147,12 +147,13 @@ const server = app.listen(port, () => {
 
     // Best-effort schedulers — only start after DB is ready
     for (const [label, loader] of [
-        ['automation',     () => require('./src/services/automation/scheduler.service').startAutomationScheduler()],
-        ['publication',    () => require('./src/services/publication/scheduler.service').startPublicationNotificationScheduler()],
-        ['mergedcache',    () => require('./src/services/notification/mergedCacheScheduler.service').startMergedCacheNotificationScheduler()],
-        ['pressrelease',   () => require('./src/services/pressrelease/scheduler.service').startPressReleaseNotificationScheduler()],
-        ['knowledge-sync', () => require('./src/services/rag/knowledgeSyncScheduler.service').startKnowledgeSyncScheduler()],
-        ['petatematik',    () => require('./src/services/petaTematik/petaTematik.service').initIndikatorList()],
+        ['automation',      () => require('./src/services/automation/scheduler.service').startAutomationScheduler()],
+        ['publication',     () => require('./src/services/publication/scheduler.service').startPublicationNotificationScheduler()],
+        ['mergedcache',     () => require('./src/services/notification/mergedCacheScheduler.service').startMergedCacheNotificationScheduler()],
+        ['pressrelease',    () => require('./src/services/pressrelease/scheduler.service').startPressReleaseNotificationScheduler()],
+        ['knowledge-sync',  () => require('./src/services/rag/knowledgeSyncScheduler.service').startKnowledgeSyncScheduler()],
+        ['indicator-meta',  () => require('./src/services/bpsMetadata/indicatorMetaScheduler.service').startIndicatorMetaScheduler()],
+        ['petatematik',     () => require('./src/services/petaTematik/petaTematik.service').initIndikatorList()],
     ]) {
         try {
             await loader();
