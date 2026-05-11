@@ -78,11 +78,13 @@ async function listFlags(req, res) {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
     const status = req.query.status || null;
-    const flagType = req.query.flag_type || null;
+    const flagType = req.query.flag_type || req.query.type || null;
+    const severity = req.query.severity || null;
 
     const where = {};
     if (status) where.resolution_status = status;
     if (flagType) where.flag_type = flagType;
+    if (severity) where.severity = severity;
 
     const { rows, count } = await ChatMessageFlag.findAndCountAll({
       where,
@@ -94,12 +96,7 @@ async function listFlags(req, res) {
     return res.json({
       ok: true,
       flags: rows,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        totalPages: Math.ceil(count / limit),
-      },
+      pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) },
     });
   } catch (error) {
     console.error('[ErrorLearning] listFlags error:', error);

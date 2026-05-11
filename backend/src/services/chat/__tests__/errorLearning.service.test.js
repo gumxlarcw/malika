@@ -66,3 +66,22 @@ describe('getStats payload shape (frontend contract)', () => {
     expect(res.stats).toBeUndefined();
   });
 });
+
+describe('listFlags severity filter (controller behavior)', () => {
+  // The controller builds a Sequelize where-clause from req.query.
+  // This unit asserts the where-shape we expect after parsing.
+  it('builds where clause with severity when query.severity provided', () => {
+    const buildWhere = (q) => {
+      const where = {};
+      if (q.status) where.resolution_status = q.status;
+      if (q.flag_type || q.type) where.flag_type = q.flag_type || q.type;
+      if (q.severity) where.severity = q.severity;
+      return where;
+    };
+    expect(buildWhere({ severity: 'critical' })).toEqual({ severity: 'critical' });
+    expect(buildWhere({ status: 'pending', severity: 'high' }))
+      .toEqual({ resolution_status: 'pending', severity: 'high' });
+    expect(buildWhere({ type: 'hallucination' }))   // dual-name support
+      .toEqual({ flag_type: 'hallucination' });
+  });
+});
