@@ -96,6 +96,7 @@ require("./src/models/ChatFeedback.model");
 require("./src/models/ChatMessageFlag.model"); // Error tracking - flagged messages
 require("./src/models/ChatErrorPattern.model"); // Error learning patterns
 require("./src/models/KnowledgeBase.model"); // RAG knowledge documents
+require("./src/models/AutoTuneLog.model");
 
 // =============================
 // LOAD STATIC ADMIN PANEL (HTML)

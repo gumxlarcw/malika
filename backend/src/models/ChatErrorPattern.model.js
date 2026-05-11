@@ -43,6 +43,11 @@ const ChatErrorPattern = sequelize.define('ChatErrorPattern', {
         Array.isArray(val) ? JSON.stringify(val) : (val || null));
     },
   },
+  canonical_query: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Sample query that triggered this pattern at creation time, used by Auto Tune regression eval to verify the pattern still fires.',
+  },
   trigger_regex: {
     type: DataTypes.TEXT,
     allowNull: true,
