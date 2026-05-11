@@ -75,6 +75,7 @@ Setiap aspek punya file tracking sendiri. **Baca file terkait** saat bekerja di 
 - [DB Audit Fixes (2026-05-08)](db_audit_findings_2026-05-08.md) — plan at `docs/superpowers/plans/2026-05-08-db-audit-fixes.md`. Phases A–F covering 11 audit findings + embedding drift. Phase C unifies retrieval into `retrieval_chunks` (VECTOR(768) cosine HNSW). **DONE 2026-05-09**.
 - [Embedding decision: Gemini only (2026-05-09)](embedding_gemini_decision.md) — superseded by self-hosted e5-base @ 768d via @xenova/transformers (Gemini quotas exhausted, 3 keys suspended). **DONE 2026-05-09**.
 - [BPS data integrity fixes (2026-05-09)](db_audit_findings_2026-05-08.md) — plan at `docs/superpowers/plans/2026-05-09-bps-data-integrity-fixes.md`. Phases 4-6 done 2026-05-10 (year=0 cleanup, CHECK constraints on 310 tables, index backfill on 1..20, `a` value_code, replicator guard, BPS API limitations doc). Phases 1-3 (dynamic→interop migration) deferred — needs manual BPS research per source.
+- [Automation flow fixes (2026-05-11)](automation_flow_fixes_2026-05-11.md) — plan at `docs/superpowers/plans/2026-05-11-automation-flow-fixes.md`. 8 tasks: audit middleware write-only, batched/parallel status loop (560ms→175ms), durable run-log rows, structured progress events, scheduler badge UI, dead route removed. **DONE 2026-05-11**.
 
 ## BPS API limitations (key finding 2026-05-09)
 - **Dynamic API does NOT expose `*`/`**`/`r`/`e`/`p` value_code flags** — BPS strips them before serializing JSON. 157 of 310 indikator sources are dynamic; all lack provisional flags.
