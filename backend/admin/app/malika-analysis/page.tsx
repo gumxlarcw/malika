@@ -126,7 +126,15 @@ export default function MalikaAnalysisPage() {
 
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [promoteDraft, setPromoteDraft] = useState<SuggestedDraft | null>(null);
-  const [autoTuneJob, setAutoTuneJob] = useState<{ jobId: string; flagId: number; status: string; startedAt: number } | null>(null);
+  const [autoTuneJob, setAutoTuneJob] = useState<{
+    jobId: string;
+    flagId: number;
+    status: string;
+    startedAt: number;
+    lastPollAt?: number;
+    pollError?: string | null;
+    pollFatal?: boolean;
+  } | null>(null);
 
   // Fetch flags
   const fetchFlags = useCallback(async () => {
@@ -202,21 +210,58 @@ export default function MalikaAnalysisPage() {
 
   useEffect(() => { setPage(1); }, [flagsFilter.type, flagsFilter.status, flagsFilter.severity]);
 
+  // Heartbeat: trigger re-render every 1s while a non-terminal Auto Tune is in
+  // flight, so the elapsed-time display and "last update Xs ago" stay live even
+  // when polling silently fails.
+  const [autoTuneTick, setAutoTuneTick] = useState(0);
   useEffect(() => {
     if (!autoTuneJob) return;
     if (['committed', 'abandoned', 'failed', 'regression_failed'].includes(autoTuneJob.status)) return;
+    if (autoTuneJob.pollFatal) return;
+    const tick = setInterval(() => setAutoTuneTick((n) => n + 1), 1000);
+    return () => clearInterval(tick);
+  }, [autoTuneJob]);
+
+  const refreshAutoTuneJob = useCallback(async () => {
+    if (!autoTuneJob) return;
+    try {
+      const res = await api.get(`/error-learning/auto-tune/${autoTuneJob.jobId}`);
+      const status = res.data?.job?.status;
+      if (!status) return;
+      setAutoTuneJob((j) => (j ? { ...j, status, lastPollAt: Date.now(), pollError: null, pollFatal: false } : j));
+      if (['committed', 'abandoned', 'failed', 'regression_failed'].includes(status)) {
+        await Promise.all([fetchFlags(), fetchStats(), fetchPatterns(), fetchAnalysis()]);
+      }
+    } catch (e: unknown) {
+      const errAny = e as { response?: { status?: number; data?: { error?: string } }; message?: string };
+      const httpStatus = errAny?.response?.status;
+      const msg = errAny?.response?.data?.error || errAny?.message || String(e);
+      const fatal = httpStatus === 401 || httpStatus === 403;
+      setAutoTuneJob((j) => (j ? { ...j, pollError: `HTTP ${httpStatus ?? '?'}: ${msg}`, pollFatal: fatal } : j));
+    }
+  }, [autoTuneJob, fetchFlags, fetchStats, fetchPatterns, fetchAnalysis]);
+
+  useEffect(() => {
+    if (!autoTuneJob) return;
+    if (['committed', 'abandoned', 'failed', 'regression_failed'].includes(autoTuneJob.status)) return;
+    if (autoTuneJob.pollFatal) return;
     const interval = setInterval(async () => {
       try {
         const res = await api.get(`/error-learning/auto-tune/${autoTuneJob.jobId}`);
         const status = res.data?.job?.status;
         if (!status) return;
-        setAutoTuneJob((j) => (j ? { ...j, status } : j));
+        setAutoTuneJob((j) => (j ? { ...j, status, lastPollAt: Date.now(), pollError: null } : j));
         if (['committed', 'abandoned', 'failed', 'regression_failed'].includes(status)) {
           clearInterval(interval);
           await Promise.all([fetchFlags(), fetchStats(), fetchPatterns(), fetchAnalysis()]);
         }
-      } catch (e) {
-        // keep polling on transient errors
+      } catch (e: unknown) {
+        const errAny = e as { response?: { status?: number; data?: { error?: string } }; message?: string };
+        const httpStatus = errAny?.response?.status;
+        const msg = errAny?.response?.data?.error || errAny?.message || String(e);
+        const fatal = httpStatus === 401 || httpStatus === 403;
+        setAutoTuneJob((j) => (j ? { ...j, pollError: `HTTP ${httpStatus ?? '?'}: ${msg}`, pollFatal: fatal } : j));
+        if (fatal) clearInterval(interval);
       }
     }, 3000);
     return () => clearInterval(interval);
@@ -871,7 +916,33 @@ export default function MalikaAnalysisPage() {
                 {autoTuneJob.status}
               </span>
               <span className="text-gray-500">{Math.floor((Date.now() - autoTuneJob.startedAt) / 1000)}s</span>
+              {autoTuneJob.lastPollAt && !['committed','abandoned','failed','regression_failed'].includes(autoTuneJob.status) && (
+                <span className="text-gray-400">· updated {Math.max(0, Math.floor((Date.now() - autoTuneJob.lastPollAt) / 1000))}s ago</span>
+              )}
             </div>
+            {/* Heartbeat-driven re-render anchor (uses autoTuneTick to force update each second) */}
+            <span className="hidden" data-tick={autoTuneTick} />
+            {autoTuneJob.pollError && !['committed','abandoned','failed','regression_failed'].includes(autoTuneJob.status) && (
+              <div className="mt-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-2">
+                <div className="font-medium mb-0.5">
+                  {autoTuneJob.pollFatal ? 'Polling stopped (auth)' : 'Polling error (retrying)'}
+                </div>
+                <div className="font-mono text-[10px] break-all">{autoTuneJob.pollError}</div>
+                {autoTuneJob.pollFatal && (
+                  <div className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">
+                    Session likely expired — refresh the page to re-authenticate.
+                  </div>
+                )}
+              </div>
+            )}
+            {!['committed','abandoned','failed','regression_failed'].includes(autoTuneJob.status) && (
+              <button
+                onClick={refreshAutoTuneJob}
+                className="mt-2 w-full text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Refresh now
+              </button>
+            )}
           </div>
         )}
       </div>
