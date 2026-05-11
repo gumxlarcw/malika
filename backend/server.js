@@ -153,6 +153,7 @@ const server = app.listen(port, () => {
         ['pressrelease',    () => require('./src/services/pressrelease/scheduler.service').startPressReleaseNotificationScheduler()],
         ['knowledge-sync',  () => require('./src/services/rag/knowledgeSyncScheduler.service').startKnowledgeSyncScheduler()],
         ['indicator-meta',  () => require('./src/services/bpsMetadata/indicatorMetaScheduler.service').startIndicatorMetaScheduler()],
+        ['pattern-retirement', () => require('./src/services/chat/patternRetirement.service').startPatternRetirementScheduler()],
         ['petatematik',     () => require('./src/services/petaTematik/petaTematik.service').initIndikatorList()],
     ]) {
         try {
