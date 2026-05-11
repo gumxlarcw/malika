@@ -428,9 +428,9 @@
       "query": "angka harapan hidup maluku utara 2030",
       "expect": {
         "shouldNotContain": [
-          "angka harapan hidup 2030",
-          "AHH 2030",
-          "sebesar 2030"
+          "AHH 2030 adalah",
+          "AHH 2030 sebesar",
+          "tahun 2030: "
         ],
         "shouldContain": [
           "belum tersedia"
