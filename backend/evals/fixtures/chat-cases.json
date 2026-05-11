@@ -251,8 +251,10 @@
           "BPS"
         ],
         "shouldNotContain": [
-          "tidak tersedia",
-          "maaf"
+          "Drs.",
+          "M.Sc.",
+          "M.Si.",
+          "S.E.,"
         ],
         "minLength": 20,
         "maxLatencyMs": 30000
