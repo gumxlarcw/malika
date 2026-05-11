@@ -373,6 +373,9 @@
       "category": "edge",
       "query": "cara mengakses data BPS",
       "expect": {
+        "shouldContain": [
+          "website|bps.go.id|wa|whatsapp|datang|kantor"
+        ],
         "shouldNotContain": [
           "tidak tersedia"
         ],
