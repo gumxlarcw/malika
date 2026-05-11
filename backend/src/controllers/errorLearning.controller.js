@@ -260,8 +260,9 @@ async function updateFlag(req, res) {
     if (req.body.expected_response !== undefined) updates.expected_response = req.body.expected_response;
     if (req.body.severity) updates.severity = req.body.severity;
     
-    // Set resolved_by and resolved_at if status is changing to resolved state
-    if (updates.resolution_status && updates.resolution_status !== 'pending') {
+    // 'reviewed' = looked at but not closed; only set resolved_* when actually closing
+    const closedStates = ['fixed', 'ignored', 'training_added'];
+    if (updates.resolution_status && closedStates.includes(updates.resolution_status)) {
       updates.resolved_by = req.user?.id || null;
       updates.resolved_at = new Date();
     }
