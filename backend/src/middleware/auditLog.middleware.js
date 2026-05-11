@@ -2,6 +2,7 @@ const AdminAuditLog = require('../models/AdminAuditLog.model');
 const logger = require('../utils/logger').child({ service: 'AuditLog' });
 
 const SENSITIVE_FIELDS = new Set(['password', 'password_hash', 'token', 'refresh_token']);
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 function sanitizePayload(payload) {
   if (!payload || typeof payload !== 'object') return null;
@@ -19,13 +20,14 @@ function sanitizePayload(payload) {
   return clean;
 }
 
-function createAuditLogMiddleware({ resource } = {}) {
+function createAuditLogMiddleware({ resource, logReads = false } = {}) {
   return (req, res, next) => {
     const startedAt = Date.now();
 
     res.on('finish', async () => {
       try {
         if (!req.user) return;
+        if (!logReads && !WRITE_METHODS.has(req.method)) return;
 
         const entry = {
           user_id: req.user.id,
