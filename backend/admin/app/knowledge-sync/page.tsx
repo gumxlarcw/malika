@@ -21,8 +21,10 @@ type SchedulerState = {
     durationMs?: number;
     timestamp?: string;
     error?: string;
+    logs?: string[];
   } | null;
   nextRunAt: string | null;
+  currentRunLogs?: string[];
 };
 
 type KnowledgeBaseStats = {
@@ -393,6 +395,55 @@ export default function KnowledgeSyncPage() {
               <div className="mt-4 text-xs text-muted-foreground">
                 Configuration is set in environment variables or code constants.
               </div>
+            </div>
+
+            {/* Sync Logs — live during run, frozen from last run otherwise */}
+            <div className="bg-card border rounded-lg p-5 lg:col-span-2">
+              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Sync Logs
+                {stats?.scheduler?.running && (
+                  <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 animate-pulse">
+                    LIVE
+                  </span>
+                )}
+              </h2>
+
+              {(() => {
+                const isLive = Boolean(stats?.scheduler?.running);
+                const live = stats?.scheduler?.currentRunLogs || [];
+                const frozen = stats?.scheduler?.lastResult?.logs || [];
+                const lines = isLive ? live : frozen;
+
+                if (lines.length === 0) {
+                  return (
+                    <div className="text-sm text-muted-foreground py-6 text-center">
+                      {isLive
+                        ? "Sync sedang dimulai, log belum tersedia..."
+                        : "Belum ada log dari run terbaru. Jalankan Manual Sync untuk melihat detail di sini."}
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      {isLive
+                        ? `Menampilkan ${lines.length} baris live (refresh tiap 3s)`
+                        : `Run terakhir: ${lines.length} baris (frozen, ${stats?.scheduler?.lastResult?.timestamp ? new Date(stats.scheduler.lastResult.timestamp).toLocaleString("id-ID") : "?"})`}
+                    </div>
+                    <pre className="text-xs font-mono bg-muted/30 rounded p-3 overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+                      {lines.slice(-300).join("\n")}
+                    </pre>
+                    {lines.length > 300 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        (menampilkan 300 baris terakhir dari {lines.length} total)
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
