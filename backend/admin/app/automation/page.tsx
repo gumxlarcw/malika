@@ -333,7 +333,10 @@ export default function AutomationPage() {
       } finally {
         autoConfigInFlightRef.current = false;
         if (anyOk) {
-          setSuccess(`Default otomatis: Smart + ON untuk ${candidates.length} indikator (dynamic/interop) yang baru.`);
+          setSuccess(
+            `Default otomatis: Smart + ON diterapkan untuk ${candidates.length} indikator baru ` +
+            `(dynamic/interop yang belum pernah dijalankan). Ubah manual per-baris jika perlu.`
+          );
           await refresh();
         }
       }
@@ -847,7 +850,33 @@ export default function AutomationPage() {
                       </div>
                     </div>
                   </div>
-        <h1 className="text-2xl font-bold">Automasi Update (Metabase)</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">Automasi Update (Metabase)</h1>
+          {data && (
+            <>
+              <span
+                className={
+                  "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium " +
+                  (data.scheduler_enabled
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                    : "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300")
+                }
+                title="Status scheduler automation (live runtime, bukan env flag)"
+              >
+                Scheduler: {data.scheduler_enabled ? "Aktif" : "Nonaktif"}
+                {data.scheduler_mode ? ` · ${data.scheduler_mode}` : ""}
+              </span>
+              {data.scheduler_enabled && data.scheduler_next_run_at && (
+                <span className="text-xs text-muted-foreground">
+                  Run berikutnya: {new Date(data.scheduler_next_run_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        <div className="text-xs text-muted-foreground -mt-2">
+          Indikator baru otomatis di-set ke <b>Smart mode (ON)</b>. Anda bisa ubah ke Daily atau matikan per baris.
+        </div>
 
         {error && <Alert variant="error">{error}</Alert>}
         {success && <Alert variant="success">{success}</Alert>}
