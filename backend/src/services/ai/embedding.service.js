@@ -166,41 +166,42 @@ async function embedAllDatasources({ force = false, onProgress } = {}) {
 }
 
 /**
- * Get embedding statistics
+ * Get embedding statistics — sourced from retrieval_chunks (Phase C 2026-05-09)
+ * not data_sources.embedding (dropped column).
  * @returns {Promise<object>}
  */
 async function getEmbeddingStats() {
-  const [total, embedded] = await Promise.all([
+  const sequelize = require('../../config/db');
+
+  const [total, embeddedRowsRes, datesRes] = await Promise.all([
     DataSource.count({ where: { status: true } }),
-    DataSource.count({ 
-      where: { 
-        status: true,
-        embedding: { [require('sequelize').Op.ne]: null }
-      }
-    }),
+    sequelize.query(
+      `SELECT COUNT(DISTINCT rc.source_ref_id) AS embedded
+       FROM retrieval_chunks rc
+       INNER JOIN data_sources ds ON ds.id = rc.source_ref_id
+       WHERE rc.source_kind = 'datasource' AND ds.status = 1`,
+      { type: sequelize.QueryTypes.SELECT }
+    ),
+    sequelize.query(
+      `SELECT MIN(embedding_generated_at) AS oldest,
+              MAX(embedding_generated_at) AS newest
+       FROM retrieval_chunks
+       WHERE source_kind = 'datasource'`,
+      { type: sequelize.QueryTypes.SELECT }
+    ),
   ]);
 
-  // Get date range
-  const { Sequelize } = require('sequelize');
-  const oldest = await DataSource.findOne({
-    where: { embedding: { [Sequelize.Op.ne]: null } },
-    order: [['embedding_updated_at', 'ASC']],
-    attributes: ['embedding_updated_at'],
-  });
-  
-  const newest = await DataSource.findOne({
-    where: { embedding: { [Sequelize.Op.ne]: null } },
-    order: [['embedding_updated_at', 'DESC']],
-    attributes: ['embedding_updated_at'],
-  });
+  const embedded = Number(embeddedRowsRes?.[0]?.embedded || 0);
+  const oldest = datesRes?.[0]?.oldest || null;
+  const newest = datesRes?.[0]?.newest || null;
 
   return {
     total,
     embedded,
-    notEmbedded: total - embedded,
-    oldestEmbedding: oldest?.embedding_updated_at || null,
-    newestEmbedding: newest?.embedding_updated_at || null,
-    lastUpdated: newest?.embedding_updated_at || null,
+    notEmbedded: Math.max(0, total - embedded),
+    oldestEmbedding: oldest,
+    newestEmbedding: newest,
+    lastUpdated: newest,
   };
 }
 
