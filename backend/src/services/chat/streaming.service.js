@@ -41,6 +41,14 @@ try {
   console.warn('[StreamChat] Error learning service not available:', e.message);
 }
 
+// AutoFlag: conservative heuristics for system-flagging bad chat responses
+let autoFlagService = null;
+try {
+  autoFlagService = require('./autoFlag.service');
+} catch (e) {
+  console.warn('[StreamChat] autoFlag service not available:', e.message);
+}
+
 // Query Normalizer: abbreviation expansion, typo correction, geo normalization
 let queryNormalizerService = null;
 try {
@@ -4938,13 +4946,50 @@ async function saveAssistantMessage(threadId, text, model, intentResult, candida
   // replay can parse the fenced JSON. DB column is longtext.
   const assistantContent = `${processedText}${uiBlock}`.trim();
 
-  await ChatMessage.create({
+  const savedMessage = await ChatMessage.create({
     thread_id: threadId,
     role: 'assistant',
     content: assistantContent,
     model: model || null,
     created_at: now(),
   });
+
+  // Fire-and-forget auto-flag heuristics — must NOT block the response path
+  if (autoFlagService?.detectAutoFlag) {
+    setImmediate(async () => {
+      try {
+        const ChatMessageFlag = require('../../models/ChatMessageFlag.model');
+        const recent = await ChatMessage.findAll({
+          where: { thread_id: threadId, role: 'assistant', id: { [Op.lt]: savedMessage.id } },
+          order: [['id', 'DESC']],
+          limit: 2,
+          attributes: ['content'],
+        });
+        const recentContents = recent.map((m) => stripMalikaUiBlock(String(m.content || '')).trim());
+
+        const flagPayload = autoFlagService.detectAutoFlag({
+          userQuery: userMessage,
+          assistantResponse: processedText,
+          intent: intentResult?.intent || 'UNKNOWN',
+          candidates: candidates || [],
+          dataPreviewRowCount: dataPreview?.rows?.length || 0,
+          recentAssistantResponses: recentContents,
+        });
+
+        if (flagPayload) {
+          await ChatMessageFlag.create({
+            ...flagPayload,
+            message_id: savedMessage.id,
+            thread_id: threadId,
+            resolution_status: 'pending',
+          });
+          console.log(`[StreamChat] auto-flagged msg=${savedMessage.id} type=${flagPayload.flag_type} severity=${flagPayload.severity}`);
+        }
+      } catch (e) {
+        console.warn('[StreamChat] autoFlag hook failed:', e.message);
+      }
+    });
+  }
 }
 
 /**
