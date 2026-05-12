@@ -3293,8 +3293,16 @@ function isKnowledgeTypeQuery(query, knowledgeSimilarity = 0) {
     /\b(tertinggi|terendah|terbesar|terkecil|naik|turun|pertumbuhan|growth)\b/i,
     /\b(bandingkan|perbandingan|dibanding|versus|vs)\b/i,
     /\b(berapa|how\s+much|how\s+many)\s+(jumlah|angka|nilai|total)/i,
-    // Common statistical indicators
+    // Common statistical indicators followed by geo/year qualifier
     /\b(inflasi|kemiskinan|pengangguran|tpt|ipm|pdrb|ekspor|impor|penduduk)\s+(maluku|2\d{3}|kabupaten|kota)/i,
+    // Bare statistical-indicator mentions (no question word required).
+    // Without this, "IPM provinsi maluku utara" or "kemiskinan kepulauan sula"
+    // didn't match any data signal — knowledgeSimilarity then flipped them
+    // into knowledge mode and wiped the table. Indicators are a strong data
+    // intent by themselves; the explicit knowledge signals (siapa/apa itu/
+    // bagaimana) below still take precedence when present.
+    /\b(ipm|pdrb|tpt|tpak|ihk|ahh|amh|akb|aki|apk|apm|als|rls|hls|gini|ntp|ntup)\b/i,
+    /\b(kemiskinan|miskin|inflasi|pengangguran|kependudukan|migrasi|ketenagakerjaan|ekspor|impor|neraca\s+dagang|upah\s+minimum|umk|umr)\b/i,
   ];
   
   const hasDataSignal = dataSignals.some(p => p.test(q));
