@@ -3381,8 +3381,13 @@ Contoh respons yang BENAR:
     });
   }
 
-  // Add knowledge base context if available (RAG)
-  if (knowledgeContext && knowledgeContext.length > 0) {
+  // Add knowledge base context if available (RAG).
+  // SKIP entirely when dataPreview rows are present — the KB doc is almost
+  // always less relevant than the authoritative table, and including it
+  // (even with "reference only" framing) drowns the table in 8000+ chars of
+  // tangential text. The model then hedges/refuses. (B5c finding 2026-05-12.)
+  const skipKbForDataPath = !!(dataPreview && dataPreview.rows && dataPreview.rows.length > 0);
+  if (!skipKbForDataPath && knowledgeContext && knowledgeContext.length > 0) {
     const topSimilarity = knowledgeContext[0]?.similarity || 0;
     const knowledgeText = knowledgeContext.map((doc, i) => {
       // Strip markdown formatting from knowledge content
