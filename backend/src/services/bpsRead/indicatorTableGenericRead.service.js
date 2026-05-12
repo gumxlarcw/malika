@@ -242,6 +242,14 @@ async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
     }
   }
 
+  // Whether to emit a Tahun column. We do for time-series data but not for
+  // static reference tables (isStatic uses sentinel year=0). Including Tahun
+  // in every row lets the LLM cite numbers with confident year attribution —
+  // without it, single-year queries gave the model rows like {Bulan, Wilayah,
+  // metric} with no period context, triggering "data belum tersedia" refusals
+  // even when 20 rows were sitting in dataPreview. Fix for B5 (2026-05-12).
+  const emitYearColumn = !isStatic && Number.isFinite(finalYear) && finalYear > 0;
+
   const rowsOut = Array.from(grouped.values())
     .sort((a, b) => {
       if (hasMonthly) {
@@ -254,12 +262,13 @@ async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
     })
     .map((r) => {
       const { month_no, ...rest } = r;
-      return rest;
+      return emitYearColumn ? { Tahun: finalYear, ...rest } : rest;
     });
 
-  const columns = hasMonthly
+  const baseColumns = hasMonthly
     ? (hasDim ? ['Bulan', dimKeyLabel, ...metrics] : ['Bulan', ...metrics])
     : [dimKeyLabel, ...metrics];
+  const columns = emitYearColumn ? ['Tahun', ...baseColumns] : baseColumns;
 
   return {
     period: String(isStatic ? 'static' : period),
