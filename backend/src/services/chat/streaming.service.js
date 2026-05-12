@@ -3428,12 +3428,15 @@ Contoh respons yang BENAR:
       return `  ${idx + 1}. ${values.join(', ')}`;
     }).join('\n');
 
-    let contextContent = `DATA STATISTIK DARI DATABASE BPS (sumber: ${dataPreview.from || 'database'}):
+    let contextContent = `★★★ DATA RESMI DARI DATABASE BPS — INI ADALAH JAWABAN UTAMA ★★★
+(sumber: ${dataPreview.from || 'database'})
 
 Judul: ${dataPreview.title}
 Kolom: ${dataPreview.columns.join(' | ')}
 Total baris: ${dataPreview.total_rows}
-${dataPreview.geo ? `Filter wilayah: ${dataPreview.geo}` : ''}`;
+${dataPreview.geo ? `Filter wilayah: ${dataPreview.geo}` : ''}
+
+DATA INI VALID DAN TERMUAT. Jangan katakan "saya tidak memiliki data" atau "data tidak tersedia" — baris-baris di bawah ini ADALAH data yang user minta.`;
 
     // Add period fallback notice — positive frame: lead with data, mention period in passing
     if (periodFallback) {
@@ -3448,14 +3451,15 @@ JANGAN mulai dengan "belum tersedia" atau "tidak tersedia" — rows-nya ADA.`;
 
     contextContent += `
 
-DATA (${Math.min(15, dataPreview.rows.length)} baris):
+DATA (${Math.min(15, dataPreview.rows.length)} baris dari ${dataPreview.total_rows} total — gunakan baris ini untuk menjawab):
 ${rowsFormatted}
 
-INSTRUKSI INTERPRETASI:
-- WAJIB sebutkan ANGKA SPESIFIK dari data di atas
-- Contoh baik: "TPT Kepulauan Sula tahun 2023 adalah 2.67%, lebih rendah dari rata-rata provinsi 4.31%"
-- Contoh buruk: "TPT relatif rendah" (TIDAK BOLEH tanpa angka)
-- Berikan insight singkat (max 3-4 kalimat)`;
+INSTRUKSI INTERPRETASI (WAJIB DIIKUTI):
+- Mulai jawaban dengan ANGKA SPESIFIK dari data di atas — bukan dengan "saat ini saya tidak memiliki..." atau "data belum tersedia"
+- Cite angka utama (misal provinsi Maluku Utara) lebih dulu, lalu boleh tambahkan konteks/perbandingan
+- Contoh BENAR: "PDRB Maluku Utara Triwulan I 2025 atas dasar harga berlaku tercatat sebesar 28.835,5 miliar rupiah (lihat tabel)..."
+- Contoh SALAH: "Saya tidak memiliki data spesifik untuk Triwulan I 2025" (PADAHAL DATA ADA DI ATAS — ini hallucination)
+- Berikan insight singkat (max 3-4 kalimat setelah angka utama)`;
 
     contextMessages.push({
       role: 'system',
@@ -3576,13 +3580,18 @@ async function streamChatResponse({
       sendEvent('thread_updated', { title: thread.title, topics: thread.topics });
     }
 
-    // Get conversation history FIRST (needed for context merging)
+    // Get conversation history FIRST (needed for context merging).
+    // Filter out the just-saved user message — it gets added as the final
+    // {role:'user'} entry below; including it in history caused a duplicate
+    // user-message tail in openAiMessages (B5b finding).
     const historyMessages = await ChatMessage.findAll({
       where: { thread_id: threadId },
       order: [['id', 'ASC']],
       limit: 20,
     });
-    const historyArray = historyMessages.map(m => m.toJSON());
+    const historyArray = historyMessages
+      .map(m => m.toJSON())
+      .filter(m => m.id !== createdUser.id);
 
     // Context-aware query merging:
     // If user says "ya" or "tahun 2025 kabupaten kepsul", merge with previous topic query
@@ -4785,7 +4794,7 @@ async function streamChatResponse({
     }
 
     const openAiMessages = [
-      { role: 'system', content: systemPrompt({ 
+      { role: 'system', content: systemPrompt({
         hasDataPreview: Boolean(dataPreview),
         hasCandidates: candidates.length > 0,
         lowConfidence: isMediumConfidence || isLowConfidence, // Pass confidence level
@@ -4805,6 +4814,14 @@ async function streamChatResponse({
       }),
       { role: 'user', content: effectiveUserQuery },
     ];
+
+    // ── DEBUG (B5 investigation, remove after) ──
+    if (process.env.MALIKA_DEBUG_DUMP === '1' && effectiveUserQuery.includes('pdrb maluku utara triwulan 1 2025')) {
+      try {
+        require('fs').writeFileSync('/tmp/openai-messages-debug.json', JSON.stringify(openAiMessages, null, 2));
+        console.log('[StreamChat] DEBUG dumped openAiMessages to /tmp/openai-messages-debug.json');
+      } catch (e) { console.warn('debug dump fail', e.message); }
+    }
 
     // ── Pipeline progress status: stage 5 of 6 ──
     sendEvent('status', { message: 'Berpikir…', stage: 'thinking' });
