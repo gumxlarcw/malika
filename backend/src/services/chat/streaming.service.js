@@ -3389,22 +3389,34 @@ Contoh respons yang BENAR:
       const cleanContent = stripMarkdownFormatting(doc.content);
       return `[Dokumen ${i + 1}] (relevansi: ${Math.round((doc.similarity || 0) * 100)}%)\n${cleanContent}`;
     }).join('\n\n');
-    
-    // Add stronger instruction based on similarity
-    const confidenceNote = topSimilarity >= 0.55 
+
+    const confidenceNote = topSimilarity >= 0.55
       ? 'Dokumen di atas SANGAT RELEVAN dengan pertanyaan user.'
       : 'Dokumen di atas MUNGKIN terkait, tapi BELUM TENTU menjawab pertanyaan spesifik user.';
-    
-    contextMessages.push({
-      role: 'system',
-      content: `KNOWLEDGE BASE (informasi internal BPS):\n\n${knowledgeText}\n\n${confidenceNote}
 
-INSTRUKSI PENTING:
+    // When dataPreview rows are present, KB documents are reference-only —
+    // they MUST NOT trigger a refusal even if they don't answer the user's
+    // specific question. The data rows are the authoritative source.
+    // Without this gate the "refuse if doc doesn't answer" rule overrode the
+    // data-preview WAJIB-cite-angka rule (B5 root cause, 2026-05-12).
+    const hasPreviewRows = !!(dataPreview && dataPreview.rows && dataPreview.rows.length > 0);
+
+    const instructionBlock = hasPreviewRows
+      ? `INSTRUKSI PENTING:
+1. Dokumen di atas adalah REFERENSI TAMBAHAN untuk konteks. Prioritaskan ANGKA dari dataPreview rows (system message berikutnya).
+2. Jika dokumen menambah nuansa pada angka (misal: methodology, definisi), boleh dipakai. Jika tidak, abaikan dokumen ini.
+3. JANGAN katakan "data tidak tersedia" hanya karena dokumen KB tidak punya angka spesifik — rows ADA di dataPreview.
+4. DILARANG menggunakan markdown formatting (**, *, #, dll) dalam respons`
+      : `INSTRUKSI PENTING:
 1. HANYA gunakan informasi dari dokumen di atas jika BENAR-BENAR menjawab pertanyaan user
 2. Jika user bertanya tentang "layanan X" tapi dokumen berisi "layanan Y", JANGAN jawab dengan informasi layanan Y
 3. Jika dokumen tidak menjawab pertanyaan SPESIFIK user, katakan: "Mohon maaf, informasi tentang [topik spesifik] belum tersedia di sistem saya. Silakan hubungi BPS Maluku Utara via WhatsApp di [+62 851-7676-4422](https://wa.me/6285176764422)."
 4. JANGAN mengarang tahapan/prosedur yang tidak ada di dokumen
-5. DILARANG menggunakan markdown formatting (**, *, #, dll) dalam respons`,
+5. DILARANG menggunakan markdown formatting (**, *, #, dll) dalam respons`;
+
+    contextMessages.push({
+      role: 'system',
+      content: `KNOWLEDGE BASE (informasi internal BPS):\n\n${knowledgeText}\n\n${confidenceNote}\n\n${instructionBlock}`,
     });
   }
 
