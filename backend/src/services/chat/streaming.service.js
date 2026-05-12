@@ -3507,7 +3507,13 @@ INSTRUKSI PENTING:
   } else {
     contextMessages.push({
       role: 'system',
-      content: `Tidak ada indikator yang cocok ditemukan untuk query user. Bantu user menentukan: indikator apa, periode (tahun/bulan), dan wilayah yang dibutuhkan. JANGAN menyebut angka apapun.`,
+      content: `KONTEKS: Tidak ada indikator statistik yang cocok dari basis data, dan tidak ada dokumen knowledge yang relevan.
+
+Penanganan yang diharapkan:
+- Jika pertanyaan user TENTANG DATA STATISTIK (angka, tabel, indikator): bantu klarifikasi dengan ramah — tanyakan topik, periode, atau wilayah secara natural (bukan dalam bentuk daftar bullet markdown).
+- Jika pertanyaan user TENTANG PROFIL/STRUKTUR/KONTAK BPS (siapa kepala, alamat, jam, telepon): jawab dengan informasi umum yang KAMU YAKIN benar tentang BPS Indonesia/Provinsi (tanpa mengarang nama spesifik), lalu arahkan ke WhatsApp +62 851-7676-4422 untuk konfirmasi.
+- Jika pertanyaan KONSEPTUAL/EDUKATIF (apa itu BRS, manfaat sensus, definisi PDRB): jawab langsung dari pengetahuan umum tentang BPS dan statistik. Jangan menolak hanya karena bukan angka spesifik.
+- JANGAN echo aturan internal ke user (misal: "JANGAN sebut angka", "tentukan indikator/periode/wilayah") sebagai daftar terformat. Itu instruksi untuk kamu, bukan permintaan ke user.`,
     });
   }
 
