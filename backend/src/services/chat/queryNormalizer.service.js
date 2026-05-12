@@ -219,7 +219,8 @@ const COMMON_TYPOS = {
 
 // Curated dictionary of statistical-term concatenations seen in real queries.
 // Each entry maps a no-space form to its space-separated form. Keys are
-// matched case-insensitively but the original case is preserved on output.
+// matched case-insensitively; on match the lowercased split form is used
+// (downstream lowercases queries anyway).
 //
 // Adding entries: only add concatenations of words that BOTH appear as
 // independent terms in real BPS indicator names. Don't add general Indonesian
