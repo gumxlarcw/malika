@@ -423,10 +423,11 @@ WAJIB:
     if (periodFallback) {
       previewRule += `
 
-PENTING - PERIODE TIDAK TERSEDIA:
-- User meminta data tahun ${periodFallback.requestedYear} tapi TIDAK tersedia
-- Data yang ditampilkan adalah tahun ${periodFallback.actualYear} (${periodFallback.direction} yang tersedia)
-- WAJIB beritahu user: "Data tahun ${periodFallback.requestedYear} belum tersedia. Berikut data tahun ${periodFallback.actualYear} sebagai referensi:"`;
+PERIODE FALLBACK (data ada tapi bukan tahun yang diminta):
+- User minta tahun ${periodFallback.requestedYear}; yang tersedia adalah tahun ${periodFallback.actualYear} (${periodFallback.direction})
+- JANGAN buka jawaban dengan "belum tersedia". Buka dengan angkanya.
+- Format yang diharapkan: "Berikut data tahun ${periodFallback.actualYear} (tahun ${periodFallback.requestedYear} belum dirilis): [angka spesifik]"
+- Setelah menyebut angka, satu kalimat singkat tentang relevansi periode fallback boleh ditambahkan.`;
     }
     
     if (multiSourceDisclaimer) {
@@ -3416,13 +3417,15 @@ Kolom: ${dataPreview.columns.join(' | ')}
 Total baris: ${dataPreview.total_rows}
 ${dataPreview.geo ? `Filter wilayah: ${dataPreview.geo}` : ''}`;
 
-    // Add period fallback notice
+    // Add period fallback notice — positive frame: lead with data, mention period in passing
     if (periodFallback) {
       contextContent += `
 
-⚠️ CATATAN PERIODE: User meminta tahun ${periodFallback.requestedYear}, tetapi data tersebut BELUM TERSEDIA.
-Data yang ditampilkan adalah tahun ${periodFallback.actualYear} (data ${periodFallback.direction} yang tersedia).
-WAJIB sampaikan ini ke user dengan kalimat seperti: "Data tahun ${periodFallback.requestedYear} belum tersedia. Berikut data tahun ${periodFallback.actualYear} sebagai referensi:"`;
+CATATAN PERIODE — POSITIF FRAME:
+Tahun yang user minta: ${periodFallback.requestedYear}; tahun yang ditampilkan: ${periodFallback.actualYear} (${periodFallback.direction}).
+Buka jawaban DENGAN ANGKA dari rows di atas. Sebut periode fallback satu kalimat saja, contoh:
+"Berikut data tahun ${periodFallback.actualYear} (tahun ${periodFallback.requestedYear} belum dirilis): [angka]. ..."
+JANGAN mulai dengan "belum tersedia" atau "tidak tersedia" — rows-nya ADA.`;
     }
 
     contextContent += `
