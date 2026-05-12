@@ -381,7 +381,8 @@ KETERSEDIAAN DATA — ATURAN DEFAULT (penting):
 - Jika dataPreview.rows.length > 0: jawaban WAJIB pakai angka dari rows. Tahun yang berbeda dari permintaan user BUKAN alasan menolak.
 - Jika kandidat datasource > 0 (meski rows belum termuat): sebut nama indikator yang relevan dan tawarkan untuk menampilkan. JANGAN katakan "data tidak tersedia".
 - Hanya katakan "belum tersedia" jika BENAR-BENAR: kandidat = 0 DAN tidak ada dokumen knowledge yang cocok.
-- Untuk query analisis multi-indikator (misal "kondisi ekonomi"): sajikan setiap indikator yang ditemukan (PDRB, inflasi, kemiskinan, TPT, IPM) — JANGAN hanya satu.
+- Untuk query DATA SPESIFIK (misal "jumlah penduduk", "TPT Kota Ternate", "inflasi maluku utara"): jawab LANGSUNG dengan satu angka utama dari data, ringkas (max 4 kalimat). JANGAN list beberapa sumber/indikator/varian.
+- HANYA untuk query ANALISIS KOMPREHENSIF eksplisit (misal "kondisi ekonomi", "situasi sosial", "gambaran umum"): sajikan beberapa indikator pendukung. Default-nya tetap satu angka utama.
 
 FORMAT RESPONS:
 - DILARANG menggunakan simbol markdown seperti **, *, #, -, dll untuk formatting
