@@ -4820,14 +4820,6 @@ async function streamChatResponse({
       { role: 'user', content: effectiveUserQuery },
     ];
 
-    // ── DEBUG (B5 investigation, remove after) ──
-    if (process.env.MALIKA_DEBUG_DUMP === '1' && effectiveUserQuery.includes('pdrb maluku utara triwulan 1 2025')) {
-      try {
-        require('fs').writeFileSync('/tmp/openai-messages-debug.json', JSON.stringify(openAiMessages, null, 2));
-        console.log('[StreamChat] DEBUG dumped openAiMessages to /tmp/openai-messages-debug.json');
-      } catch (e) { console.warn('debug dump fail', e.message); }
-    }
-
     // ── Pipeline progress status: stage 5 of 6 ──
     sendEvent('status', { message: 'Berpikir…', stage: 'thinking' });
 
