@@ -38,6 +38,13 @@ describe('splitConcatenated', () => {
     expect(splitConcatenated(undefined)).toBe('');
     expect(splitConcatenated('')).toBe('');
   });
+
+  test('does not split when a known concatenation has an Indonesian suffix', () => {
+    // \b regex must protect against future regression where someone "fixes"
+    // the boundary handling. Words like "pertumbuhanekonominya" (-nya suffix)
+    // should NOT be split — the suffix means there's no word boundary.
+    expect(splitConcatenated('pertumbuhanekonominya')).toBe('pertumbuhanekonominya');
+  });
 });
 
 describe('lightNormalize integration', () => {
