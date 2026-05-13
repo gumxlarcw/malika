@@ -793,6 +793,34 @@ async function buildDatasourceCandidates({ q, qb, limit = 20 }) {
     }
   }
 
+  // NEGATION-ALIGNMENT PASS: penalize candidates whose name contains the
+  // negated/opposite form of a token the user actually asked about.
+  // Without this, lex search treats "berbintang" and "nonbintang" as equally
+  // good matches (both contain "bintang"), and the longer Nonbintang name
+  // often wins by token count or display_order. Real example: 2026-05-13
+  // user "hotel berbintang 2024" → id=174 (Nonbintang) ranked above id=175
+  // (Bintang) and model correctly diagnosed mismatch but couldn't answer.
+  const qLower = String(q || '').toLowerCase();
+  const negationPairs = [
+    { positive: /\b(berbintang|bintang)\b/i, negatedInName: /\b(non\s*bintang|nonbintang)\b/i, negatedInQuery: /\b(non\s*bintang|nonbintang)\b/i },
+    { positive: /\bmiskin\b/i, negatedInName: /\b(tidak\s+miskin|nonmiskin)\b/i, negatedInQuery: /\b(tidak\s+miskin|nonmiskin)\b/i },
+    { positive: /\bformal\b/i, negatedInName: /\binformal\b/i, negatedInQuery: /\binformal\b/i },
+    { positive: /\bbekerja\b/i, negatedInName: /\b(pengangguran|tidak\s+bekerja|menganggur)\b/i, negatedInQuery: /\b(pengangguran|tidak\s+bekerja|menganggur)\b/i },
+  ];
+  for (const pair of negationPairs) {
+    const queryHasPositive = pair.positive.test(qLower);
+    const queryHasNegated = pair.negatedInQuery.test(qLower);
+    if (queryHasPositive && !queryHasNegated) {
+      for (const item of merged.values()) {
+        const nameLower = String(item.name || '').toLowerCase();
+        if (pair.negatedInName.test(nameLower)) {
+          item.score = Math.max(0, (item.score || 0) - 30);
+          item.negationPenalty = true;
+        }
+      }
+    }
+  }
+
   return Array.from(merged.values())
     .sort((a, b) => {
       if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
