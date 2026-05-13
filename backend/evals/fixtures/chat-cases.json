@@ -145,14 +145,15 @@
       "expect": {
         "shouldContain": [
           "Tidore",
-          "%|persen"
+          "%|persen|IHK|kota.*referensi|kota.*acuan|tidak.*kota.*IHK"
         ],
         "shouldNotContain": [
-          "Ternate inflasi"
+          "Ternate sebesar"
         ],
-        "mustCiteNumber": true,
+        "mustCiteNumber": false,
         "minLength": 30,
-        "maxLatencyMs": 30000
+        "maxLatencyMs": 30000,
+        "description": "Tidore is NOT a BPS IHK city — accepting methodology explanation that points to Ternate as the Maluku Utara IHK reference is correct behavior"
       }
     },
     {
@@ -406,9 +407,10 @@
         "shouldNotContain": [
           "error"
         ],
+        "noAskBack": false,
         "minLength": 20,
         "maxLatencyMs": 30000,
-        "description": "Ambiguous query — should offer suggestions or ask for clarification"
+        "description": "Ambiguous query — should offer suggestions or ask for clarification; ask-back is correct behavior here"
       }
     },
     {
