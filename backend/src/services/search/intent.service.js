@@ -393,6 +393,20 @@ function inferYearFromText(q) {
 function inferMonthFromText(q) {
   const norm = normalizeText(q);
   if (!norm) return null;
+  // Triwulan/quarter detection first — BPS encodes Triwulan I-IV as month_no
+  // 31..34 (35 = cumulative). Longer/more-specific patterns first so "iv"
+  // matches before bare "i" prefix-shadow risk. Without this, queries like
+  // "PDRB triwulan IV 2024" silently got all-quarters preview (sorted asc
+  // and sliced at 20), so Triwulan III + IV fell off the bottom.
+  const triwulanPatterns = [
+    [/\b(triwulan\s+iv|triwulan\s+4|triwulan\s+empat|kuartal\s+iv|kuartal\s+4|q4)\b/i, 34],
+    [/\b(triwulan\s+iii|triwulan\s+3|triwulan\s+tiga|kuartal\s+iii|kuartal\s+3|q3)\b/i, 33],
+    [/\b(triwulan\s+ii|triwulan\s+2|triwulan\s+dua|kuartal\s+ii|kuartal\s+2|q2)\b/i, 32],
+    [/\b(triwulan\s+i|triwulan\s+1|triwulan\s+satu|kuartal\s+i|kuartal\s+1|q1)\b/i, 31],
+  ];
+  for (const [re, no] of triwulanPatterns) {
+    if (re.test(norm)) return no;
+  }
   const monthMap = {
     januari: 1,
     februari: 2,

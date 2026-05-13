@@ -111,7 +111,7 @@ function normalizeYear(input) {
  * Generic read for non-EXIM indicators replicated into data_bps.indikator_<id>.
  * Produces a table-shaped response: { period, columns, data, source, last_update }.
  */
-async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
+async function readGenericIndicatorFromBps({ sourceId, period, sourceName, month }) {
   const sequelizeBps = getSequelizeBps();
   if (!sequelizeBps) return { __disabled: true };
 
@@ -150,6 +150,20 @@ async function readGenericIndicatorFromBps({ sourceId, period, sourceName }) {
 
   const where = [hasYear ? 'year = ?' : 'th_id = ?'];
   const replacements = [hasYear ? finalYear : (isStatic ? 'static' : String(period))];
+
+  // Optional month filter (handles regular months 1-12 AND BPS triwulan
+  // sentinels 31-34). Only applies when the table actually has a month_no
+  // column AND the caller provided a specific period. Without this filter,
+  // quarterly queries like "PDRB triwulan IV 2024" got sorted-asc preview
+  // that sliced off the requested quarter at the 20-row boundary.
+  const monthFilterValue = Number(month);
+  const useMonthFilter = cols.has('month_no')
+    && Number.isFinite(monthFilterValue)
+    && monthFilterValue > 0;
+  if (useMonthFilter) {
+    where.push('month_no = ?');
+    replacements.push(monthFilterValue);
+  }
 
   const sql = `
     SELECT

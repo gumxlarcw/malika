@@ -2670,7 +2670,7 @@ async function getMergedMultiSourcePreview({ sources, year, geo, topic = null })
  * Get processed data preview for multiple years (range)
  * Returns merged data from all years
  */
-async function getProcessedPreviewForRange({ sourceId, years, geo }) {
+async function getProcessedPreviewForRange({ sourceId, years, geo, month }) {
   if (!Number.isFinite(sourceId) || sourceId <= 0) return null;
   if (!Array.isArray(years) || years.length === 0) return null;
   
@@ -2692,6 +2692,7 @@ async function getProcessedPreviewForRange({ sourceId, years, geo }) {
           sourceId,
           period: year,
           sourceName,
+          month, // quarterly filter
         });
         
         if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && bpsData.data.length > 0) {
@@ -2846,11 +2847,12 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
       sourceId,
       period: year,
       sourceName,
+      month, // pass through so quarterly queries (month_no 31-34) filter correctly
     });
-    
+
     if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && bpsData.data.length > 0) {
       let filteredData = bpsData.data;
-      
+
       // Apply geo filter if provided
       if (geo) {
         const geoNorm = String(geo).toLowerCase().replace(/[^a-z]/g, '');
@@ -4155,6 +4157,7 @@ async function streamChatResponse({
         sourceId: selectedSourceId,
         years: periodRange.years,
         geo: requestedGeo,
+        month: intentResult?.query_builder?.params?.month || null,
       });
 
       if (rangeProcessed && rangeProcessed.data.length > 0) {
