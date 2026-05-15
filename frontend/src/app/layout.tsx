@@ -1,4 +1,4 @@
-import { Outfit } from 'next/font/google';
+import { Outfit, Instrument_Serif, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import type { Metadata, Viewport } from "next";
 import './globals.css';
 import "flatpickr/dist/flatpickr.css";
@@ -14,6 +14,28 @@ import PwaOfflineIndicator from "@/components/PwaOfflineIndicator";
 
 const outfit = Outfit({
   subsets: ["latin"],
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-ibm-plex-sans",
+  display: "swap",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-ibm-plex-mono",
+  display: "swap",
 });
 
 // Viewport configuration for native app-like experience
@@ -61,7 +83,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://metabase.bpsmalut.com" />
         <link rel="preconnect" href="https://metabase.bpsmalut.com" crossOrigin="" />
       </head>
-      <body className={`${outfit.className} dark:bg-gray-900`}>
+      <body className={`${outfit.className} ${instrumentSerif.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} dark:bg-gray-900`}>
         <ThemeProvider>
           <SidebarProvider>
             <PwaServiceWorkerRegister />

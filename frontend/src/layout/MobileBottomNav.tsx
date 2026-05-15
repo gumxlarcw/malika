@@ -79,7 +79,7 @@ function BookIcon({ active }: { active?: boolean }) {
   );
 }
 
-function BrsIcon({ active }: { active?: boolean }) {
+function PetaTematikIcon({ active }: { active?: boolean }) {
   return (
     <svg
       className={`h-6 w-6 ${active ? "text-brand-500" : "text-gray-500 dark:text-gray-400"}`}
@@ -90,11 +90,9 @@ function BrsIcon({ active }: { active?: boolean }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14,2 14,8 20,8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-      <polyline points="10,9 9,9 8,9" />
+      <polygon points="1,6 8,3 16,6 23,3 23,18 16,21 8,18 1,21" />
+      <line x1="8" y1="3" x2="8" y2="18" />
+      <line x1="16" y1="6" x2="16" y2="21" />
     </svg>
   );
 }
@@ -121,8 +119,8 @@ const navItems = [
   { href: "/", label: "Beranda", icon: HomeIcon, tourId: "bottom-nav-home" },
   { href: "/kategori", label: "Data", icon: KategoriIcon, tourId: "bottom-nav-kategori" },
   { href: "/chat", label: "Malika", icon: ChatIcon, tourId: "bottom-nav-chat" },
-  { href: "/publikasi", label: "Publikasi", icon: BookIcon, tourId: "bottom-nav-publikasi" },
-  { href: "/brs", label: "BRS", icon: BrsIcon, tourId: "bottom-nav-brs" },
+  { href: "/brs", label: "BRS & Publikasi", icon: BookIcon, tourId: "bottom-nav-brs-publikasi" },
+  { href: "/peta-tematik", label: "Peta", icon: PetaTematikIcon, tourId: "bottom-nav-peta-tematik" },
 ];
 
 export default function MobileBottomNav() {
@@ -158,8 +156,12 @@ export default function MobileBottomNav() {
     >
       <div className="flex h-16 items-center justify-around" role="menubar">
         {navItems.map((item) => {
-          const isActive = item.href 
-            ? (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)))
+          const isActive = item.href
+            ? (pathname === item.href ||
+               (item.href !== "/" && pathname.startsWith(item.href)) ||
+               // The merged "Arsip" entry links to /brs but should also light up
+               // when the user is on /publikasi (both render ArchiveBrowser).
+               (item.href === "/brs" && pathname.startsWith("/publikasi")))
             : false;
           const Icon = item.icon;
           
@@ -178,7 +180,10 @@ export default function MobileBottomNav() {
               }`}
             >
               <Icon active={isActive} />
-              <span className={`text-xs ${isActive ? "font-medium" : ""}`} aria-hidden="true">
+              <span
+                className={`text-[11px] leading-tight text-center px-0.5 ${isActive ? "font-medium" : ""}`}
+                aria-hidden="true"
+              >
                 {item.label}
               </span>
             </Link>

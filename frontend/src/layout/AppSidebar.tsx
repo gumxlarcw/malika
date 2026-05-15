@@ -9,7 +9,6 @@ import {
   GridIcon,
   HorizontaLDots,
   BellIcon,
-  DocsIcon,
   BookIcon,
   ChatIcon,
   GearIcon,
@@ -58,16 +57,10 @@ const navItems: NavItem[] = [
     tourId: "sidebar-kategori",
   },
   {
-    icon: <DocsIcon />,
-    name: "Berita Resmi Statistik",
-    path: "/brs",
-    tourId: "sidebar-brs",
-  },
-  {
     icon: <BookIcon />,
-    name: "Publikasi",
-    path: "/publikasi",
-    tourId: "sidebar-publikasi",
+    name: "BRS & Publikasi",
+    path: "/brs",
+    tourId: "sidebar-brs-publikasi",
   },
   {
     icon: <BellIcon />,
@@ -241,8 +234,17 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  // Active when path matches, OR when both /brs and /publikasi resolve to the
+  // merged "Berita & Publikasi" entry (which links to /brs but should also
+  // highlight when the user is on /publikasi).
+  const isActive = useCallback(
+    (path: string) => {
+      if (path === pathname) return true;
+      if (path === "/brs" && pathname === "/publikasi") return true;
+      return false;
+    },
+    [pathname],
+  );
 
   useEffect(() => {
     // Check if the current path matches any submenu item
