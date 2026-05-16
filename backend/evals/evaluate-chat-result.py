@@ -32,6 +32,20 @@ def main():
     tokens = meta.get("tokens", {})
 
     ft = d.get("full_text", "")
+
+    # Fallback: when the `done` event packs an empty full_text (observed on
+    # greeting/chitchat replies), reconstruct from `chunk` events. Each chunk
+    # event looks like:  event: chunk\ndata: {"text": "..."}
+    if not ft:
+        chunks = re.findall(r'event:\s*chunk\ndata:\s*(\{[^\n]*\})', data)
+        pieces = []
+        for c in chunks:
+            try:
+                pieces.append(json.loads(c).get('text', ''))
+            except json.JSONDecodeError:
+                pass
+        ft = ''.join(pieces)
+
     model = meta.get("model", "?")
     text_len = len(ft)
     total_ms = pm.get("total", 0)
