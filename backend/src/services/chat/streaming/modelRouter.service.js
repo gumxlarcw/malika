@@ -1,54 +1,26 @@
 /**
  * Model Router Service
  *
- * Dynamically selects the appropriate model and parameters
- * based on query complexity, type, and context signals.
+ * Picks `max_tokens`, `temperature`, and `thinking_budget` based on query
+ * complexity. All tiers use the same model (`claude-sonnet-4-6`) served
+ * via the malika-llm-proxy — there is no per-tier model selection.
  *
- * Routing tiers (updated 2026-03-18 — Claude Extended Thinking):
- *   GREETING  → claude-sonnet-4-6  (fast, low tokens — or template)
- *   SIMPLE    → claude-sonnet-4-6  (strong reasoning with good prompts)
- *   COMPLEX   → claude-sonnet-4-6  (Extended Thinking enabled, 8K budget)
- *   DEEP      → claude-sonnet-4-6  (Extended Thinking enabled, 16K budget)
+ * Single-lane decision recorded 2026-05-16 in
+ * docs/superpowers/specs/2026-05-16-malika-sonnet-only-single-lane-design.md
  */
 
 'use strict';
 
 const logger = require('../../../utils/logger').child({ service: 'ModelRouter' });
-const { OPENAI, FEATURES, CLAUDE_THINKING = {} } = require('./config');
+const { FEATURES, CLAUDE_THINKING = {} } = require('./config');
 
-/**
- * Canonical tier names for `modelForTier`. Call sites should import this
- * constant instead of repeating string literals so a typo like `'COMLEX'`
- * is caught by autocomplete rather than falling through to the default.
- */
-const MODEL_TIERS = Object.freeze({
-  GREETING: 'GREETING',
-  SIMPLE:   'SIMPLE',
-  COMPLEX:  'COMPLEX',
-  DEEP:     'DEEP',
-});
-
-/**
- * Map a pipeline tier to the proxy-understood model string.
- *
- * Defaults favor cheap Gemini for low-complexity stages and Claude Sonnet
- * for reasoning-heavy ones. The proxy owns provider-level fallback (e.g.
- * Gemini-keys-exhausted → Claude) — this function only picks an initial
- * model.
- *
- * Per-tier override: set env var MODEL_GREETING / MODEL_SIMPLE / MODEL_COMPLEX / MODEL_DEEP.
- */
-function modelForTier(tier) {
-  // tier arrives uppercase by pipeline convention (GREETING/SIMPLE/COMPLEX/DEEP);
-  // anything else falls through to the final claude-sonnet-4-6 fallback.
-  const defaults = {
-    GREETING: 'gemini-3-flash-preview',
-    SIMPLE:   'gemini-3-flash-preview',
-    COMPLEX:  'claude-sonnet-4-6',
-    DEEP:     'claude-sonnet-4-6',
-  };
-  const envKey = `MODEL_${tier}`;
-  return process.env[envKey] || defaults[tier] || 'claude-sonnet-4-6';
+// Deprecated env vars (warn once at module load so misconfig is caught at boot).
+{
+  const deprecated = ['MODEL_GREETING', 'MODEL_SIMPLE', 'MODEL_COMPLEX', 'MODEL_DEEP', 'CHAT_FORCE_MODEL']
+    .filter((k) => process.env[k]);
+  if (deprecated.length > 0) {
+    logger.warn({ deprecated }, 'Deprecated MODEL_* env var(s) detected — no longer honored. Remove from .env.');
+  }
 }
 
 // ── Tier definitions ────────────────────────────────────────────────────────
@@ -71,7 +43,7 @@ const TIERS = {
  */
 const TIER_CONFIG = {
   [TIERS.GREETING]: {
-    model: process.env.OPENAI_MODEL_CHAT || 'claude-sonnet-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 300,
     temperature: 0.7,
     reasoning: false,
@@ -80,7 +52,7 @@ const TIER_CONFIG = {
     description: 'Sapaan singkat',
   },
   [TIERS.SIMPLE]: {
-    model: process.env.OPENAI_MODEL_CHAT || 'claude-sonnet-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 8000,
     temperature: 0.3,
     reasoning: false,
@@ -89,7 +61,7 @@ const TIER_CONFIG = {
     description: 'Pencarian data sederhana',
   },
   [TIERS.COMPLEX]: {
-    model: process.env.OPENAI_MODEL_CHAT || 'claude-sonnet-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 8000,
     temperature: 0.2,
     reasoning: false,
@@ -98,7 +70,7 @@ const TIER_CONFIG = {
     description: 'Analisis mendalam',
   },
   [TIERS.DEEP]: {
-    model: process.env.OPENAI_MODEL_REASONING || 'claude-sonnet-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 16000,
     temperature: 0.2,
     reasoning: false,
@@ -168,16 +140,6 @@ function routeModel({
   isKnowledgeMode = false,
   hasIndicatorInjectedDocs = false,
 } = {}) {
-  // ── Force override via env ──
-  if (process.env.CHAT_FORCE_MODEL) {
-    logger.debug({ forced: process.env.CHAT_FORCE_MODEL }, 'Model forced via env');
-    const base = TIER_CONFIG[TIERS.SIMPLE];
-    return {
-      tier: TIERS.SIMPLE,
-      config: { ...base, model: process.env.CHAT_FORCE_MODEL },
-    };
-  }
-
   // ── Reasoning disabled globally? ──
   const reasoningEnabled = process.env.CHAT_REASONING_ENABLED !== 'false';
 
@@ -303,6 +265,4 @@ module.exports = {
   buildModelParams,
   isReasoningModel,
   isClaudeModel,
-  modelForTier,
-  MODEL_TIERS,
 };
