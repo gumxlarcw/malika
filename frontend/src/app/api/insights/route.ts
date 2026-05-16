@@ -2297,7 +2297,8 @@ PAYLOAD: ${JSON.stringify(safePayload)}`;
       const timeoutMs = Number(process.env.OPENAI_INTERPRETATION_TIMEOUT_MS || "12000");
       const timeout = setTimeout(() => controller.abort(), Math.max(1000, timeoutMs));
 
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      const PROXY_URL = process.env.OPENAI_API_URL || "http://127.0.0.1:3031/v1/chat/completions";
+      const res = await fetch(PROXY_URL, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${key}`,
