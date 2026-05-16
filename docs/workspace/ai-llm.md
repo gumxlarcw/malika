@@ -15,6 +15,15 @@ pds-backend → http://127.0.0.1:3031/v1/chat/completions → malika-llm-proxy
   → fallback: Google Gemini (10 keys, rotation)
 ```
 
+## Why frontend keeps a hardcoded proxy URL fallback
+
+Backend services (`backend/src/utils/requireProxyUrl.js`) throw at module
+load if `OPENAI_API_URL` is missing. The Next.js `/api/insights` route
+silently falls back to `http://127.0.0.1:3031/v1/chat/completions`
+because Next server routes don't auto-load `backend/.env`. The fallback
+is safe because the proxy is always co-located on this host. Both
+codepaths target the same URL in practice.
+
 ## Google API Keys (10 working)
 wisnucandragumelar, ipdsmalut, gumelarwork, perpustakaankaryapertiwi, saparysimon161, igbpssula, hasmanumakaapa40, irwandi.sula, taibannaji, bista.malut
 **SUSPENDED**: socmedbpssula
@@ -47,6 +56,7 @@ wisnucandragumelar, ipdsmalut, gumelarwork, perpustakaankaryapertiwi, saparysimo
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
+| 2026-05-16 | Add OPENAI_API_URL to frontend env; document fallback asymmetry vs backend requireProxyUrl | frontend/.env.production.local, frontend/src/app/api/insights/route.ts |
 | 2026-03-02 | DocumentJudge optimization (candidates 50→20, high-confidence bypass) | documentJudge.service.js |
 | 2026-03-02 | Fix skipRerank passthrough chain | knowledgeSearch.service.js, multiStrategySearch.service.js |
 | 2026-03-02 | Supervisor JSON parse fix (Gemini markdown fences) | supervisor.service.js |

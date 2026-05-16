@@ -2297,6 +2297,9 @@ PAYLOAD: ${JSON.stringify(safePayload)}`;
       const timeoutMs = Number(process.env.OPENAI_INTERPRETATION_TIMEOUT_MS || "12000");
       const timeout = setTimeout(() => controller.abort(), Math.max(1000, timeoutMs));
 
+      // Proxy-only rule: prefer env (set in frontend/.env.production.local).
+      // Hardcoded fallback retained as defense-in-depth — the malika-llm-proxy
+      // is always co-located on 127.0.0.1:3031 on this host. See followup #7.
       const PROXY_URL = process.env.OPENAI_API_URL || "http://127.0.0.1:3031/v1/chat/completions";
       const res = await fetch(PROXY_URL, {
         method: "POST",
