@@ -161,12 +161,6 @@ try {
 
 console.log(`[config.js] OPENAI.API_URL=${OPENAI.API_URL} key=${OPENAI.API_KEY ? '(configured)' : '(missing)'}`);
 
-// Model display names — SINGLE SOURCE OF TRUTH for backend
-const MODEL_ALIASES = {
-  'gpt-5-mini': 'MALIKA Deep',
-  'gpt-4.1': 'MALIKA Flash',
-};
-
 module.exports = {
   OPENAI,
   DATA,
@@ -178,7 +172,6 @@ module.exports = {
   EXIM,
   INTERNAL_API_BASE,
   SSE,
-  MODEL_ALIASES,
   SMART_CONTEXT,
   INDICATOR_INJECTION,
 };
