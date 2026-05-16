@@ -1,5 +1,12 @@
 # MALIKA Sonnet-only cleanup — follow-ups (2026-05-16)
 
+> **Status (2026-05-16):** All 7 follow-ups closed. See plan
+> `docs/superpowers/plans/2026-05-16-sonnet-only-followups-cleanup.md` and
+> commits `3f97634..efd3547` on `main`. PR #5 closed (retrospective audit only).
+> Two unsurfaced cleanups also done: rename misleading `OPENAI_API_URL` const in
+> `openaiClient.js` (commit `a7bf7d8`), refresh stale cross-ref comment in
+> `frontend/src/lib/chatConstants.ts` (commit `f605506`).
+
 Surfaced by the per-task and final code reviews during execution of `docs/superpowers/plans/2026-05-16-malika-sonnet-only-single-lane.md`. None of these blocked shipping; all are quality-of-life. Tackle as separate small PRs when convenient.
 
 ## Priority guide
