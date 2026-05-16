@@ -10,7 +10,7 @@ const { countTokens, countTextTokens } = require('../../../utils/tokenizer');
 const { getNextKey, markRateLimited } = require('./geminiKeyRotation');
 
 // Proxy-only rule (2026-05-16): see backend/src/utils/requireProxyUrl.js
-const OPENAI_API_URL = require('../../../utils/requireProxyUrl')(
+const OPENAI_API_BASE_URL = require('../../../utils/requireProxyUrl')(
   'ai/client/openaiClient', 'OPENAI_API_BASE_URL'
 );
 // Embeddings still need real OpenAI API (Copilot proxy doesn't support embeddings)
@@ -69,7 +69,7 @@ async function requestOpenAI({ apiKeyEnv, endpoint, payload, timeoutMs = DEFAULT
   }
 
   const tokensUsed = estimateTokensFromPayload(payload);
-  const url = `${baseUrl || OPENAI_API_URL}${endpoint}`;
+  const url = `${baseUrl || OPENAI_API_BASE_URL}${endpoint}`;
 
   let lastError;
   const startTime = Date.now();
