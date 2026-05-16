@@ -234,18 +234,10 @@ export const MalikaAssistantMessage = forwardRef<
           )}
           {modelLabel && (
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
-                modelLabel === 'MALIKA Deep'
-                  ? 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300'
-                  : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300'
-              }`}
+              className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-1.5 py-0.5 text-[9px] font-medium text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
               title={tokenInfo ? `Input: ${tokenInfo.input} · Output: ${tokenInfo.output}${tokenInfo.reasoning > 0 ? ` · Reasoning: ${tokenInfo.reasoning}` : ''} · Total: ${tokenInfo.total} token` : undefined}
             >
-              {modelLabel === 'MALIKA Deep' ? (
-                <LightbulbIcon className="h-2.5 w-2.5" fill="currentColor" />
-              ) : (
-                <LightningIcon className="h-2.5 w-2.5" fill="currentColor" />
-              )}
+              <LightbulbIcon className="h-2.5 w-2.5" fill="currentColor" />
               {modelLabel}
             </span>
           )}

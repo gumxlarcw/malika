@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { applyTableRowOrdering } from "@/lib/tableRowOrdering";
-import { CloseIcon, LightbulbIcon, LightningIcon, ChevronDownIcon } from "@/components/chat/icons";
+import { CloseIcon } from "@/components/chat/icons";
 
 // Types and utilities extracted for reusability
 import type { Thread, BackendMessage, ChatUiMessage, MalikaUiMetaV1, ThinkingItem } from "@/types/chat";
@@ -140,19 +140,13 @@ export default function ChatPageClient() {
   const reasoningBufferRef = useRef("");
   const reasoningRafRef = useRef<number | null>(null);
 
-  const [selectedModel, setSelectedModel] = useState<"claude-sonnet-4-6" | "claude-haiku-4-5">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("malika_selected_model");
-      if (saved === "claude-haiku-4-5" || saved === "claude-sonnet-4-6") return saved;
-    }
-    return "claude-haiku-4-5";
-  });
-  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-
-  // Persist model selection across page loads
+  // Single-lane (2026-05-16): only Sonnet. Clean stale dropdown selection from
+  // pre-2026-05-16 visits — idempotent, safe to ship and re-ship.
   useEffect(() => {
-    localStorage.setItem("malika_selected_model", selectedModel);
-  }, [selectedModel]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("malika_selected_model");
+    }
+  }, []);
 
   // Inline edit state — when user clicks pencil on their own message
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -1025,12 +1019,13 @@ export default function ChatPageClient() {
         onIntent: () => { /* debug info */ },
       };
 
-      // Start streaming via chatTransport — replaces manual fetch + ReadableStream + SSE parsing
-      const controller = streamMessage(threadId, trimmed, malikaUid, callbacks, undefined, { model: selectedModel });
+      // Start streaming via chatTransport — replaces manual fetch + ReadableStream + SSE parsing.
+      // Single-lane (2026-05-16): omit `model` so chatTransport applies its Sonnet default.
+      const controller = streamMessage(threadId, trimmed, malikaUid, callbacks, undefined);
       pendingSendRef.current = controller;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startProcessing, finishProcessing, clearSteps, clearToolCalls, markAllStepsDone, pushStep, pushStepDetail, pushToolCall, pushToolResult, setProcessSteps, getModelLabel are stable (useCallback with [] deps). openRating and hasExistingFeedback are used only in rare thank-you path and captured via ref.
-    [appendMsg, isThankYouMessage, loadThreads, malikaUid, refreshMessagesSilently, removeMsg, selectedModel, updateMsg]
+    [appendMsg, isThankYouMessage, loadThreads, malikaUid, refreshMessagesSilently, removeMsg, updateMsg]
   );
 
   // Retry failed message
@@ -1984,71 +1979,6 @@ export default function ChatPageClient() {
                           }
                         }}
                       >
-                        {/* Model Selector — left of textarea */}
-                        <div className="relative flex shrink-0 items-end">
-                          <button
-                            type="button"
-                            onClick={() => setModelDropdownOpen((v) => !v)}
-                            className={`flex h-10 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all duration-200 hover:shadow-md active:scale-95 ${
-                              selectedModel === "claude-sonnet-4-6"
-                                ? "bg-purple-50 text-purple-700 ring-1 ring-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:ring-purple-700"
-                                : "bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-700"
-                            }`}
-                            aria-label="Pilih model AI"
-                            title={selectedModel === "claude-sonnet-4-6" ? "MALIKA Deep — Reasoning" : "MALIKA Flash — Cepat"}
-                          >
-                            {selectedModel === "claude-sonnet-4-6" ? (
-                              <>
-                                <LightbulbIcon className="h-3.5 w-3.5" fill="currentColor" />
-                                <span className="hidden sm:inline">Deep</span>
-                              </>
-                            ) : (
-                              <>
-                                <LightningIcon className="h-3.5 w-3.5" fill="currentColor" />
-                                <span className="hidden sm:inline">Flash</span>
-                              </>
-                            )}
-                            <ChevronDownIcon className={`h-3 w-3 opacity-50 transition-transform duration-200 ${modelDropdownOpen ? "rotate-180" : ""}`} />
-                          </button>
-
-                          {modelDropdownOpen && (
-                            <>
-                              <div className="fixed inset-0 z-30" onClick={() => setModelDropdownOpen(false)} />
-                              <div className="absolute bottom-full left-0 z-40 mb-1 w-64 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-600 dark:bg-gray-800">
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedModel("claude-sonnet-4-6"); setModelDropdownOpen(false); }}
-                                  className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${selectedModel === "claude-sonnet-4-6" ? "bg-purple-50 dark:bg-purple-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                                >
-                                  <LightbulbIcon className="mt-0.5 h-4 w-4 shrink-0 text-purple-500" fill="currentColor" />
-                                  <div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">MALIKA Deep</span>
-                                      <span className="rounded bg-purple-100 px-1 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">Reasoning</span>
-                                      {selectedModel === "claude-sonnet-4-6" && <svg className="h-4 w-4 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
-                                    </div>
-                                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Lebih akurat · Lebih lambat · Analisis mendalam</p>
-                                  </div>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedModel("claude-haiku-4-5"); setModelDropdownOpen(false); }}
-                                  className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${selectedModel === "claude-haiku-4-5" ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                                >
-                                  <LightningIcon className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" fill="currentColor" />
-                                  <div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">MALIKA Flash</span>
-                                      <span className="rounded bg-blue-100 px-1 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Cepat</span>
-                                      {selectedModel === "claude-haiku-4-5" && <svg className="h-4 w-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
-                                    </div>
-                                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Lebih cepat · Kurang akurat · Respons ringkas</p>
-                                  </div>
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
                         <textarea
                           rows={1}
                           maxLength={4000}
