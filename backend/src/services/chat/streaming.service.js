@@ -92,7 +92,7 @@ try {
 // ============================================================================
 // PROXY-ROUTED LLM CLIENT
 // All chat LLM calls go through the local malika-llm-proxy (:3031) via the
-// shared openaiClient.chat() helper. Tier-based model selection via modelForTier.
+// shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
 // (modelForTier/MODEL_TIERS removed 2026-05-16 — single Sonnet lane, no tier-based model selection)
