@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Tests for evaluate-chat-result.py — focus on greeting false-fail fix."""
-import subprocess, tempfile, os, sys
+import subprocess, tempfile, os
 
 SCRIPT = os.path.join(os.path.dirname(__file__), '..', 'evaluate-chat-result.py')
 
