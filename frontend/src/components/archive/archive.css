@@ -3,13 +3,18 @@
    handoff (claude.ai/design — Archive.html). */
 
 .archive-root {
-  --paper:        #f5f1ea;
-  --paper-2:      #ebe5da;
+  /* Matches body's bg-gray-50 (#f9fafb) from globals.css line 514, so the
+     archive surface blends seamlessly with the rest of MALIKA's admin
+     chrome — identical to how Peta Tematik's --pt-canvas-deep matches the
+     body bg. The modal (.ar-pv-panel) keeps its own pure-white --paper
+     to stay visually elevated above the page. */
+  --paper:        #f9fafb;
+  --paper-2:      #f2f4f7;
   --ink:          #1d1916;
   --ink-2:        #4a4239;
   --ink-3:        #8a7f70;
-  --rule:         #d6cebf;
-  --rule-2:       #c4b9a4;
+  --rule:         #e7e2d6;
+  --rule-2:       #d4cdbb;
   --accent:       #7a2630;
   --accent-soft:  color-mix(in oklab, var(--accent) 12%, var(--paper));
   --ar-r:         14px;
@@ -29,8 +34,14 @@
   text-rendering: optimizeLegibility;
   position: relative;
   isolation: isolate;
-  margin-inline: calc(-1 * var(--ar-shell-pad, 0px));
-  padding-inline: var(--ar-shell-pad, 0px);
+  /* Match Peta Tematik exactly: sit inside the admin layout's px-4 / md:px-6
+     padding, no negative-margin bleed. The body bg (white in light mode,
+     gray-900 in dark mode) shows through the gutter; with archive-root's
+     bg also being white, the boundary is invisible. min-height ensures the
+     surface extends to the bottom of the scrollable main even when content
+     is short. */
+  width: 100%;
+  min-height: 100%;
 }
 
 .archive-root[data-density="compact"] { --ar-pad: 18px; --ar-pad-card: 16px; --ar-gap-grid: 18px; }
@@ -39,23 +50,23 @@
 .archive-root * { box-sizing: border-box; }
 .archive-root button { font: inherit; color: inherit; }
 
-/* Subtle paper-noise overlay scoped to the archive view */
+/* Paper-noise overlay disabled on white background — it would just gray
+   the page out. Keep the ::before declared so the rule cascade is unchanged. */
 .archive-root::before {
   content: "";
   position: absolute; inset: 0;
   pointer-events: none;
-  opacity: .35;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  mix-blend-mode: multiply;
+  opacity: 0;
   z-index: 0;
 }
 
 .archive-root > .ar-shell {
   position: relative;
   z-index: 1;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 28px var(--ar-pad) 96px;
+  /* Zero top padding so the toolbar sits flush against the admin layout's
+     pt-[76px] (mobile) / md:pt-[89px] (desktop) header-clearance, identical
+     to Peta Tematik. Admin <main> already handles horizontal edge padding. */
+  padding: 0 0 64px;
 }
 
 /* ── Top bar ───────────────────────────────────────────────────────── */
@@ -489,13 +500,13 @@
 @keyframes ar-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 
 .ar-pv-panel {
-  --paper:        #f5f1ea;
-  --paper-2:      #ebe5da;
+  --paper:        #ffffff;
+  --paper-2:      #f3f0ea;
   --ink:          #1d1916;
   --ink-2:        #4a4239;
   --ink-3:        #8a7f70;
-  --rule:         #d6cebf;
-  --rule-2:       #c4b9a4;
+  --rule:         #e7e2d6;
+  --rule-2:       #d4cdbb;
   --accent:       #7a2630;
   --ar-r:         14px;
   --ar-serif: var(--font-instrument-serif), Georgia, serif;
@@ -706,7 +717,7 @@
   .archive-root .ar-section-h { font-size: 30px; }
 }
 @media (max-width: 720px) {
-  .archive-root > .ar-shell { padding: 22px 18px 80px; }
+  .archive-root > .ar-shell { padding: 0 0 56px; }
   .archive-root .ar-grid { grid-template-columns: 1fr; gap: 28px; }
   .archive-root .ar-feat { grid-template-columns: 1fr; gap: 22px; padding: 22px 0 28px; }
   .archive-root .ar-feat-cover { max-width: 200px; }
