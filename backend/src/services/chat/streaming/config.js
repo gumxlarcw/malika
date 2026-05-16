@@ -143,6 +143,22 @@ const INDICATOR_INJECTION = {
 // L9: Validate URL configs at startup
 try { new URL(OPENAI.API_URL); } catch { console.error(`[config.js] Invalid OPENAI_API_URL: ${OPENAI.API_URL}`); }
 try { new URL(INTERNAL_API_BASE); } catch { console.error(`[config.js] Invalid INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE}`); }
+
+// Proxy-only rule (2026-05-16): chat traffic must terminate at the local malika-llm-proxy.
+// If OPENAI_API_URL ever points off-host, refuse to start — silent provider bypass is worse than a crash.
+try {
+  const u = new URL(OPENAI.API_URL);
+  const okHost = u.hostname === '127.0.0.1' || u.hostname === 'localhost';
+  const okPort = u.port === '3031';
+  if (!okHost || !okPort) {
+    console.error(`[config.js] FATAL: OPENAI_API_URL must be 127.0.0.1:3031 (the malika-llm-proxy). Got: ${OPENAI.API_URL}`);
+    process.exit(1);
+  }
+} catch (e) {
+  console.error(`[config.js] FATAL: OPENAI_API_URL unparseable: ${e.message}`);
+  process.exit(1);
+}
+
 console.log(`[config.js] OPENAI.API_URL=${OPENAI.API_URL} key=${OPENAI.API_KEY ? '(configured)' : '(missing)'}`);
 
 // Model display names — SINGLE SOURCE OF TRUTH for backend
