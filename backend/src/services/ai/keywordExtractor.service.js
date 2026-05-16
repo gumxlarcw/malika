@@ -432,11 +432,7 @@ async function extractDeepKeywords(title, content) {
   const sectionHeaders = extractSectionHeaders(content);
   if (!sectionHeaders || sectionHeaders.length < 50) return '';
 
-  const apiKey = process.env.OPENAI_API_KEY_CHAT
-    || process.env.OPENAI_API_KEY_INTERPRETATION
-    || process.env.OPENAI_API_KEY_QUERY_BUILDER
-    || '';
-
+  const apiKey = getNextKey();
   if (!apiKey) return '';
 
   const inputText = `Judul: ${title}\n\nDaftar Bab/Tabel:\n${sectionHeaders}`;
