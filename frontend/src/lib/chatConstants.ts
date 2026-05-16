@@ -7,8 +7,8 @@
 export const CHAT_API_BASE = "/api/chat";
 export const BPS_API_BASE = "https://webapi.bps.go.id/v1/api";
 
-// Model display names — SINGLE SOURCE OF TRUTH for frontend
-// Backend equivalent is in config.js MODEL_ALIASES
+// Model display names — single source of truth (frontend-only;
+// backend MODEL_ALIASES was dropped 2026-05-16, single Sonnet lane).
 export const MODEL_ALIASES: Record<string, string> = {
   'claude-sonnet-4-6': 'MALIKA',
 } as const;
