@@ -30,12 +30,8 @@ const { getNextKey } = require('./client/geminiKeyRotation');
 const LLM_TIMEOUT_MS = 20000; // Increased for gpt-5-mini
 const BATCH_DELAY_MS = 300; // Delay between LLM calls in batch mode
 
-// Proxy-only rule (2026-05-16): all chat calls must terminate at the local
-// malika-llm-proxy. Crash loud at module load if OPENAI_API_URL is missing.
-const CHAT_URL = process.env.OPENAI_API_URL;
-if (!CHAT_URL) {
-  throw new Error('[keywordExtractor.service] OPENAI_API_URL env var must be set (must point at malika-llm-proxy)');
-}
+// Proxy-only rule (2026-05-16): see backend/src/utils/requireProxyUrl.js
+const CHAT_URL = require('../../utils/requireProxyUrl')('keywordExtractor.service');
 
 // ── Statistical stopwords to exclude ───────────────────────────────────────
 const STOPWORDS = new Set([

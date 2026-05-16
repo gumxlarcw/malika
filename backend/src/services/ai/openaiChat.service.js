@@ -1,12 +1,7 @@
 const axios = require('axios');
 
-// Proxy-only rule (2026-05-16): all chat calls must terminate at the local
-// malika-llm-proxy. Refuse to load if OPENAI_API_URL is not set so misconfig
-// fails loud at boot instead of silently bypassing the proxy.
-const CHAT_URL = process.env.OPENAI_API_URL;
-if (!CHAT_URL) {
-  throw new Error('[openaiChat.service] OPENAI_API_URL env var must be set (must point at malika-llm-proxy)');
-}
+// Proxy-only rule (2026-05-16): see backend/src/utils/requireProxyUrl.js
+const CHAT_URL = require('../../utils/requireProxyUrl')('openaiChat.service');
 
 function getOpenAiApiKey(envKeyName) {
   const v = process.env[envKeyName];
