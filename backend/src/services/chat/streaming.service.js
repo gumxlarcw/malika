@@ -95,7 +95,7 @@ try {
 // shared openaiClient.chat() helper. Tier-based model selection via modelForTier.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
-const { modelForTier, MODEL_TIERS } = require('./streaming/modelRouter.service');
+// (modelForTier/MODEL_TIERS removed 2026-05-16 — single Sonnet lane, no tier-based model selection)
 
 /**
  * Read a chat-completions response from the proxy, tolerant of both SSE
@@ -694,8 +694,7 @@ async function streamGreetingResponse({
   // Stream response from proxy (tier: GREETING) with retry
   let fullText = '';
   try {
-    const tier = MODEL_TIERS.GREETING;
-    const effectiveModel = modelOverride || modelForTier(tier);
+    const effectiveModel = modelOverride || 'claude-sonnet-4-6';
     const response = await llmChat({
       model: effectiveModel,
       messages,
@@ -4842,8 +4841,7 @@ async function streamChatResponse({
 
     // Stream from proxy (tier: COMPLEX — main reasoning path). Routing via
     // llmChat: handles retry, circuit breaker, abort signal propagation.
-    const tier = MODEL_TIERS.COMPLEX;
-    const effectiveModel = modelOverride || modelForTier(tier);
+    const effectiveModel = modelOverride || 'claude-sonnet-4-6';
     const response = await llmChat({
       model: effectiveModel,
       messages: openAiMessages,
@@ -5233,8 +5231,7 @@ async function sendMessageNonStreaming({ threadId, userMessage, ownerId }) {
     try {
       // Non-streaming follow-up (tier: SIMPLE — cheap model is fine).
       // No response stream here, so no abort signal is plumbed in.
-      const tier = MODEL_TIERS.SIMPLE;
-      const effectiveModel = modelForTier(tier);
+      const effectiveModel = 'claude-sonnet-4-6';
       const response = await llmChat({
         model: effectiveModel,
         messages: openAiMessages,
