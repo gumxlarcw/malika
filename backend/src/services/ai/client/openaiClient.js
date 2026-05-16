@@ -9,7 +9,12 @@ const { metrics } = require('../../../utils/metrics');
 const { countTokens, countTextTokens } = require('../../../utils/tokenizer');
 const { getNextKey, markRateLimited } = require('./geminiKeyRotation');
 
-const OPENAI_API_URL = process.env.OPENAI_API_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
+// Proxy-only rule (2026-05-16): chat calls must terminate at malika-llm-proxy.
+// Throw at module load if OPENAI_API_BASE_URL is missing — never silently bypass.
+const OPENAI_API_URL = process.env.OPENAI_API_BASE_URL;
+if (!OPENAI_API_URL) {
+  throw new Error('[ai/client/openaiClient] OPENAI_API_BASE_URL env var must be set (must point at malika-llm-proxy)');
+}
 // Embeddings still need real OpenAI API (Copilot proxy doesn't support embeddings)
 const OPENAI_EMBEDDINGS_URL = process.env.OPENAI_EMBEDDINGS_BASE_URL || 'https://api.openai.com/v1';
 const DEFAULT_TIMEOUT_MS = 60_000; // Increased for gpt-5-mini
