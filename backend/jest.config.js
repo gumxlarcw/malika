@@ -3,4 +3,5 @@ module.exports = {
   roots: ["<rootDir>/src", "<rootDir>/evals"],
   testMatch: ["**/__tests__/**/*.test.js"],
   collectCoverageFrom: ["src/**/*.js", "!src/**/index.js"],
+  setupFiles: ["<rootDir>/jest.setup.env.js"],
 };
