@@ -30,6 +30,13 @@ const { getNextKey } = require('./client/geminiKeyRotation');
 const LLM_TIMEOUT_MS = 20000; // Increased for gpt-5-mini
 const BATCH_DELAY_MS = 300; // Delay between LLM calls in batch mode
 
+// Proxy-only rule (2026-05-16): all chat calls must terminate at the local
+// malika-llm-proxy. Crash loud at module load if OPENAI_API_URL is missing.
+const CHAT_URL = process.env.OPENAI_API_URL;
+if (!CHAT_URL) {
+  throw new Error('[keywordExtractor.service] OPENAI_API_URL env var must be set (must point at malika-llm-proxy)');
+}
+
 // ── Statistical stopwords to exclude ───────────────────────────────────────
 const STOPWORDS = new Set([
   'data', 'dan', 'di', 'ke', 'dari', 'yang', 'untuk', 'dengan', 'pada',
@@ -174,7 +181,7 @@ async function extractKeywords(title, abstract) {
   const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
 
   try {
-    const response = await fetch(process.env.OPENAI_API_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+    const response = await fetch(CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -442,7 +449,7 @@ async function extractDeepKeywords(title, content) {
   const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
 
   try {
-    const response = await fetch(process.env.OPENAI_API_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+    const response = await fetch(CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
