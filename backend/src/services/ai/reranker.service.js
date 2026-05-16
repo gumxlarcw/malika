@@ -14,7 +14,7 @@ const requestContext = require('../chat/streaming/requestContext');
 
 // Configuration
 const RERANK_SCORE_GAP_THRESHOLD = 20; // Wider window — more queries get AI reranking (was 15)
-const RERANK_MODEL = process.env.OPENAI_MODEL_RERANKER || 'gemini-3-flash-preview';
+const RERANK_MODEL = process.env.OPENAI_MODEL_RERANKER || 'claude-sonnet-4-6';
 const RERANK_API_KEY_ENV = 'OPENAI_API_KEY_QUERY_BUILDER'; // Share with query builder (same cost bucket)
 
 /**

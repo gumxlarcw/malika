@@ -99,7 +99,7 @@ const SYNONYM_CONFIG = {
   MIN_MATCHES_THRESHOLD: 3,    // Expand if fewer than this many matches
   
   // LLM settings
-  MODEL: process.env.OPENAI_MODEL_SYNONYM || 'gemini-3-flash-preview',
+  MODEL: process.env.OPENAI_MODEL_SYNONYM || 'claude-sonnet-4-6',
   TEMPERATURE: 0.3,
   MAX_TOKENS: 500,
   

@@ -25,7 +25,7 @@ const { chatCompletion } = require('../ai/client/openaiClient');
 // ── Configuration ──────────────────────────────────────────────────────────
 
 const CONFIG = {
-  EXTRACTION_MODEL: process.env.OPENAI_MODEL_MEMORY || 'gemini-3-flash-preview',
+  EXTRACTION_MODEL: process.env.OPENAI_MODEL_MEMORY || 'claude-sonnet-4-6',
   EXTRACTION_TEMPERATURE: 0.1,
   EXTRACTION_MAX_TOKENS: 500,
   MAX_MEMORIES_PER_USER: 100,

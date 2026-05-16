@@ -57,13 +57,13 @@ afterEach(() => { jest.clearAllMocks(); });
 describe('chat()', () => {
   test('POSTs to OPENAI.API_URL with model + messages in body', async () => {
     mockFetchOnce(buildResponse({ status: 200, body: '{"ok":true}' }));
-    await chat({ model: 'gemini-3-flash-preview', messages: [{ role: 'user', content: 'hi' }] });
+    await chat({ model: 'claude-sonnet-4-6', messages: [{ role: 'user', content: 'hi' }] });
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe('http://127.0.0.1:3031/v1/chat/completions');
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body);
-    expect(body.model).toBe('gemini-3-flash-preview');
+    expect(body.model).toBe('claude-sonnet-4-6');
     expect(body.messages).toEqual([{ role: 'user', content: 'hi' }]);
     expect(body.stream).toBe(false);
   });

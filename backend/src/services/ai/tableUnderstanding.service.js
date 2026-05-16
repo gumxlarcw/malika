@@ -78,7 +78,7 @@ Berikan respons dalam format JSON:
   try {
     const startTime = Date.now();
     
-    const tableModel = requestContext.getModelOverride() || process.env.OPENAI_MODEL_TABLE_UNDERSTANDING || 'gemini-3-flash-preview';
+    const tableModel = requestContext.getModelOverride() || process.env.OPENAI_MODEL_TABLE_UNDERSTANDING || 'claude-sonnet-4-6';
     const _startMs = Date.now();
     const response = await chatCompletion({
       apiKeyEnv: 'OPENAI_API_KEY_CHAT',

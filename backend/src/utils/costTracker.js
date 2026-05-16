@@ -16,11 +16,6 @@
 // ── Pricing table (USD per 1M tokens, as of 2026-02) ────────────────────
 
 const MODEL_PRICING = {
-  // Gemini models (free tier — $0 cost)
-  'gemini-3-flash-preview': { input: 0, output: 0, cachedInput: 0 },
-  'gemini-3-pro-preview':   { input: 0, output: 0, cachedInput: 0 },
-  'gemini-2.5-flash':       { input: 0, output: 0, cachedInput: 0 },
-  'gemini-2.0-flash':       { input: 0, output: 0, cachedInput: 0 },
   // Legacy OpenAI (kept for reference)
   'gpt-4.1-mini': { input: 0.40, output: 1.60, cachedInput: 0.10 },
   'gpt-4.1-nano': { input: 0.10, output: 0.40, cachedInput: 0.025 },

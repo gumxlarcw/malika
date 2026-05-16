@@ -24,7 +24,7 @@
 
 'use strict';
 
-const LLM_MODEL = process.env.OPENAI_MODEL_KEYWORD_EXTRACTOR || 'gemini-3-flash-preview';
+const LLM_MODEL = process.env.OPENAI_MODEL_KEYWORD_EXTRACTOR || 'claude-sonnet-4-6';
 const requestContext = require('../chat/streaming/requestContext');
 const { getNextKey } = require('./client/geminiKeyRotation');
 const LLM_TIMEOUT_MS = 20000; // Increased for gpt-5-mini

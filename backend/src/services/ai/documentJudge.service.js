@@ -27,7 +27,7 @@ const logger = require('../../utils/logger').child({ service: 'DocumentJudge' })
 const crypto = require('crypto');
 
 // ── Configuration ──
-const JUDGE_MODEL = process.env.OPENAI_MODEL_DOCUMENT_JUDGE || 'gemini-3-flash-preview';
+const JUDGE_MODEL = process.env.OPENAI_MODEL_DOCUMENT_JUDGE || 'claude-sonnet-4-6';
 const JUDGE_API_KEY_ENV = 'OPENAI_API_KEY_QUERY_BUILDER';
 const MAX_CANDIDATES_INPUT = 20;   // Max docs sent to judge (reduced from 50 — top-20 cosine captures relevant docs, cuts prompt ~60%)
 const MAX_SELECTED_OUTPUT = 10;    // Max docs returned (was Judge→20→Reranker→8; now single pass → 10)

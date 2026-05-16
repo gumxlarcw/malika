@@ -134,7 +134,7 @@ async function expandWithSynonyms(terms, context = 'statistik BPS Indonesia') {
   try {
     logger.info({ terms: normalizedTerms }, 'Expanding terms with LLM synonyms');
 
-    const synonymModel = requestContext.getModelOverride() || process.env.OPENAI_MODEL_SYNONYM || 'gemini-3-flash-preview';
+    const synonymModel = requestContext.getModelOverride() || process.env.OPENAI_MODEL_SYNONYM || 'claude-sonnet-4-6';
     const startMs = Date.now();
     const response = await chatCompletion({
       apiKeyEnv: 'OPENAI_API_KEY_QUERY_BUILDER',
