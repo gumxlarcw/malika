@@ -15,6 +15,12 @@ const logger = require('../../../utils/logger').child({ service: 'ModelRouter' }
 const { FEATURES, CLAUDE_THINKING = {} } = require('./config');
 
 // Deprecated env vars (warn once at module load so misconfig is caught at boot).
+// Tier-level overrides MODEL_GREETING/SIMPLE/COMPLEX/DEEP and CHAT_FORCE_MODEL are
+// gone with the single Sonnet lane.
+// NOTE: OPENAI_MODEL_CHAT and OPENAI_MODEL_REASONING are still read by other
+// modules (config.js, chat.service.js, streaming.service.js, multiStrategySearch.service.js),
+// so they are NOT warned about here even though they no longer affect tier
+// selection inside modelRouter.service.js.
 {
   const deprecated = ['MODEL_GREETING', 'MODEL_SIMPLE', 'MODEL_COMPLEX', 'MODEL_DEEP', 'CHAT_FORCE_MODEL']
     .filter((k) => process.env[k]);
@@ -186,15 +192,12 @@ function routeModel({
  * Build model parameters from a tier config.
  * Returns fields applicable to the selected model family.
  *
- * For OpenAI reasoning models (o-series, gpt-5 family):
- * - Uses maxCompletionTokens instead of maxTokens
- * - Enables reasoning with configurable effort
- * - Skips temperature
- *
- * For Claude models with Extended Thinking:
- * - Adds thinking config (type + budgetTokens)
+ * All tiers now use Claude Sonnet 4.6 (single-lane refactor), so this only
+ * handles the Claude path:
+ * - Adds Extended Thinking config (type + budgetTokens) when thinking_budget is set
  * - Keeps maxTokens as-is (thinking budget is separate in Claude API)
- * - Temperature is set but SDK may ignore it when thinking is enabled
+ * - Temperature is set on non-thinking tiers; omitted on thinking tiers because
+ *   Claude ignores temperature when Extended Thinking is enabled
  */
 function buildModelParams(tierConfig) {
   const params = {
@@ -203,7 +206,6 @@ function buildModelParams(tierConfig) {
   };
 
   const isClaude = isClaudeModel(tierConfig.model);
-  const isOSeries = isReasoningModel(tierConfig.model);
 
   // ── Claude Extended Thinking ──
   if (isClaude && tierConfig.thinking_budget && FEATURES.CLAUDE_THINKING_ENABLED) {
@@ -225,30 +227,7 @@ function buildModelParams(tierConfig) {
     }
   }
 
-  // ── OpenAI o-series / gpt-5 reasoning ──
-  if (isOSeries) {
-    // Skip temperature for reasoning models
-    params.reasoning = {
-      effort: tierConfig.reasoning_effort || 'medium',
-      summary: 'auto',
-    };
-    // Reasoning models use maxCompletionTokens (includes reasoning + output)
-    params.maxTokens = undefined;
-    params.maxCompletionTokens = Math.max(tierConfig.max_tokens * 4, 4000);
-  } else if (!isClaude && tierConfig.temperature !== undefined) {
-    // Non-Claude, non-reasoning models (Gemini etc): apply temperature
-    params.temperature = tierConfig.temperature;
-  }
-
   return params;
-}
-
-/**
- * Check if a model is an OpenAI reasoning model (o-series / gpt-5).
- * Gemini and Claude are NOT OpenAI reasoning models.
- */
-function isReasoningModel(model) {
-  return /^o[1-9]\b|^gpt-5\b/.test(model || '');
 }
 
 /**
@@ -263,6 +242,5 @@ module.exports = {
   TIER_CONFIG,
   routeModel,
   buildModelParams,
-  isReasoningModel,
   isClaudeModel,
 };
