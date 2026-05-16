@@ -47,7 +47,7 @@ function httpPost(url, body, headers = {}) {
 function sseChat(threadId, message, uid, model) {
   return new Promise((resolve, reject) => {
     // Only include model if it's in the allowed list; otherwise omit to use default
-    const allowed = ['gemini-3-flash-preview', 'gemini-3-pro-preview', 'claude-sonnet-4-6', 'claude-haiku-4-5'];
+    const allowed = ['claude-sonnet-4-6'];
     const payload = { text: message };
     if (model && allowed.includes(model)) payload.model = model;
     const body = JSON.stringify(payload);

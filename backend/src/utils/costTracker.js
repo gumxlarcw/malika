@@ -16,6 +16,8 @@
 // ── Pricing table (USD per 1M tokens, as of 2026-02) ────────────────────
 
 const MODEL_PRICING = {
+  // Anthropic Claude (via malika-llm-proxy OAuth — notional pricing for telemetry)
+  'claude-sonnet-4-6': { input: 3.00, output: 15.00, cachedInput: 0.30 },
   // Legacy OpenAI (kept for reference)
   'gpt-4.1-mini': { input: 0.40, output: 1.60, cachedInput: 0.10 },
   'gpt-4.1-nano': { input: 0.10, output: 0.40, cachedInput: 0.025 },
