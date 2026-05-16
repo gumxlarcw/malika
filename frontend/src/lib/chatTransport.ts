@@ -157,7 +157,7 @@ export function streamMessage(
           "Content-Type": "application/json",
           "x-malika-uid": malikaUid,
         },
-        body: JSON.stringify({ text, model: options?.model || "claude-haiku-4-5" }),
+        body: JSON.stringify({ text, model: options?.model || "claude-sonnet-4-6" }),
         signal: controller.signal,
       });
 

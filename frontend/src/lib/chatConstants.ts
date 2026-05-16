@@ -10,8 +10,7 @@ export const BPS_API_BASE = "https://webapi.bps.go.id/v1/api";
 // Model display names — SINGLE SOURCE OF TRUTH for frontend
 // Backend equivalent is in config.js MODEL_ALIASES
 export const MODEL_ALIASES: Record<string, string> = {
-  'claude-sonnet-4-6': 'MALIKA Deep',
-  'claude-haiku-4-5': 'MALIKA Flash',
+  'claude-sonnet-4-6': 'MALIKA',
 } as const;
 
 // Get BPS API key from environment (single source of truth)
