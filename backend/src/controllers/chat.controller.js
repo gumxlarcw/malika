@@ -73,12 +73,10 @@ async function streamMessage(req, res, next) {
     // advertises; anything else is dropped so the downstream tier policy picks.
     // (The running proxy ignores body.model today — this is still wired in so
     // callers with their own policy can override per request.)
-    const ALLOWED_OVERRIDES = new Set([
-      'claude-sonnet-4-6',
-      'claude-haiku-4-5-20251001',
-      'gemini-3-flash-preview',
-      'gemini-3-pro-preview',
-    ]);
+    // Single-lane (2026-05-16): only Sonnet via the proxy. Out-of-set strings
+    // (e.g., stale PWA tabs sending 'claude-haiku-4-5') silently fall through
+    // to the tier-router default — no 4xx, no surprise.
+    const ALLOWED_OVERRIDES = new Set(['claude-sonnet-4-6']);
     const rawModel = req.body?.model;
     const modelOverride = (typeof rawModel === 'string' && ALLOWED_OVERRIDES.has(rawModel))
       ? rawModel
