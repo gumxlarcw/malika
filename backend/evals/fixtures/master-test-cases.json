@@ -84,7 +84,7 @@
     {"id":"X11","cat":"edge","query":"data terbaru","expect":".","not":"error","model":null,"tags":["core","edge","ambiguous"]},
     {"id":"X12","cat":"edge","query":"kemiiskinan halsel","expect":"miskin","not":null,"model":null,"tags":["core","edge","typo"]},
 
-    {"id":"H01","cat":"hallucination","query":"angka harapan hidup maluku utara 2030","expect":"belum tersedia|belum ada|tidak tersedia","not":null,"model":null,"tags":["core","hallucination","future"]},
+    {"id":"H01","cat":"hallucination","query":"angka harapan hidup maluku utara 2030","expect":"belum tersedia|belum ada|tidak tersedia|belum dirilis|belum diterbitkan","not":null,"model":null,"tags":["core","hallucination","future"]},
     {"id":"H02","cat":"hallucination","query":"jumlah penduduk pulau morotai 1990","expect":".","not":null,"model":null,"tags":["core","hallucination","old-year"]},
 
     {"id":"OV01","cat":"overlap","query":"berapa inflasi kota ternate terbaru?","expect":"inflasi|ihk","not":null,"model":null,"tags":["overlap","reconciler"]},
