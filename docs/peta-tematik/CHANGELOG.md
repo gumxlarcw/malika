@@ -21,6 +21,17 @@ dengan versioning berbasis tanggal (`YYYY.MM.DD`) karena MALIKA tidak rilis publ
 
 ---
 
+## [2026.05.18] — Flow Diagram Document
+
+### Added
+- 📚 [`FLOW_PETA_TEMATIK.md`](./FLOW_PETA_TEMATIK.md) — dokumen flow 4-swimlane (ISO 5807) berisi 5 diagram Mermaid: Master, ETL (BPS API→DB), Discovery (boot scan + indikator-list), Render (choropleth Leaflet), Interaksi (hover linked + drawer + share). Dilengkapi tabel transisi status, tabel auth/rate-limit, tabel endpoint × tabel × diagram, dan 7 catatan inkonsistensi vs `ARSITEKTUR_LENGKAP.md` (~595 baris).
+
+### Identified (follow-up)
+- ⚠ Cache key prefix `pt:` di `ARSITEKTUR_LENGKAP.md §3.1` tidak match kode aktual (sebenarnya `ind:`, `data:`, `summary:`, `meta:ind:`). Perlu PR koreksi.
+- ⚠ Frontend route handler PWA pakai query name `ind=` sementara backend menerima `indikator=` — rename terjadi di Next.js API proxy.
+
+---
+
 ## [2026.05.17] — Documentation Sprint
 
 ### Added
