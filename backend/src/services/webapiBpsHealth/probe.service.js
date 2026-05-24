@@ -129,9 +129,11 @@ async function runProbe({ trigger = 'scheduled' } = {}) {
                   : 'DEGRADED';
 
     if (overall === 'DOWN') {
-      try { bpsAPICircuit.onFailure(); } catch { /* ignore */ }
+      try { bpsAPICircuit.onFailure(); }
+      catch (cbErr) { logger.warn({ err: cbErr.message }, 'bpsAPICircuit.onFailure threw'); }
     } else if (overall === 'UP') {
-      try { bpsAPICircuit.onSuccess(); } catch { /* ignore */ }
+      try { bpsAPICircuit.onSuccess(); }
+      catch (cbErr) { logger.warn({ err: cbErr.message }, 'bpsAPICircuit.onSuccess threw'); }
     }
 
     return {

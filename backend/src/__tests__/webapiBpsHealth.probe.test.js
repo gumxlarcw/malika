@@ -51,6 +51,15 @@ describe('webapiBpsHealth probe — classification', () => {
     expect(result.overall).toBe('UP');
     expect(result.perFamily).toHaveLength(4);
     expect(WebapiHealthLog.create).toHaveBeenCalledTimes(4);
+    // Validate DB payload shape (guards against typos in column names)
+    expect(WebapiHealthLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      run_id: expect.any(String),
+      probe_kind: 'manual',
+      endpoint_family: expect.any(String),
+      url_template: expect.any(String),
+      ok: 1,
+      error_code: null,
+    }));
   });
 
   test('runProbe with mixed results → DEGRADED', async () => {
