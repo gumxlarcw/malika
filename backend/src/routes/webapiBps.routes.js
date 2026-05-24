@@ -180,4 +180,58 @@ router.get('/logs', async (req, res) => {
   }
 });
 
+// In-memory rate-limit: max 6 manual probes per minute per key (ip|user)
+const probeRateMap = new Map(); // key → [timestamp, ...]
+const PROBE_RATE_MAX = 6;
+const PROBE_RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(key) {
+  const now = Date.now();
+  const arr = (probeRateMap.get(key) || []).filter(t => now - t < PROBE_RATE_WINDOW_MS);
+  arr.push(now);
+  probeRateMap.set(key, arr);
+  return arr.length <= PROBE_RATE_MAX;
+}
+
+// POST /webapi-bps/probe — manual trigger
+router.post('/probe', async (req, res) => {
+  try {
+    const rateKey = (req.user && req.user.id) || req.ip || 'anonymous';
+    if (!checkRateLimit(String(rateKey))) {
+      res.set('Retry-After', '60');
+      return res.status(429).json({ error: 'rate_limited', message: 'Too many manual probes; wait 1 minute' });
+    }
+
+    const result = await runProbe({ trigger: 'manual' });
+
+    if (result.skipped) {
+      return res.status(409).json(result);
+    }
+
+    // Invalidate status cache so next GET /status sees fresh data
+    statusCache = { ts: 0, data: null };
+
+    // Audit log (best-effort)
+    try {
+      const AdminAuditLog = require('../models/AdminAuditLog.model');
+      await AdminAuditLog.create({
+        user_id: req.user && req.user.id,
+        user_email: req.user && req.user.email,
+        action: 'webapi_bps_probe_manual',
+        resource: 'webapi-bps',
+        resource_id: result.runId,
+        ip: req.ip,
+        status_code: 200,
+      });
+    } catch (auditErr) {
+      logger.warn({ err: auditErr.message }, 'Audit log write failed (non-fatal)');
+    }
+
+    return res.json(result);
+  } catch (err) {
+    logger.error({ err: err.message }, 'POST /webapi-bps/probe failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

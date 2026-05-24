@@ -23,6 +23,9 @@ jest.mock('../services/webapiBpsHealth/probe.service', () => ({
 jest.mock('../config/db', () => ({
   query: jest.fn().mockResolvedValue([[{ uptime: 1, total: 4, failed: 0, p50: 100, p95: 200 }]]),
 }));
+jest.mock('../models/AdminAuditLog.model', () => ({
+  create: jest.fn().mockResolvedValue({}),
+}));
 
 const express = require('express');
 const request = require('supertest');
@@ -93,5 +96,29 @@ describe('webapiBps routes', () => {
     expect(WebapiHealthLog.findAndCountAll).toHaveBeenCalled();
     const args = WebapiHealthLog.findAndCountAll.mock.calls.at(-1)[0];
     expect(args.where.ok).toBe(0);
+  });
+
+  test('POST /webapi-bps/probe triggers probe and returns result', async () => {
+    const r = await request(app()).post('/webapi-bps/probe');
+    expect(r.status).toBe(200);
+    expect(r.body.runId).toBe('abc');
+    expect(r.body.overall).toBe('UP');
+  });
+
+  test('POST /webapi-bps/probe returns 409 when probe already running', async () => {
+    const { runProbe } = require('../services/webapiBpsHealth/probe.service');
+    runProbe.mockResolvedValueOnce({ skipped: true, reason: 'probe_already_running' });
+    const r = await request(app()).post('/webapi-bps/probe');
+    expect(r.status).toBe(409);
+    expect(r.body.reason).toBe('probe_already_running');
+  });
+
+  test('POST /webapi-bps/probe rate-limits after 6 requests/min per ip', async () => {
+    // Hit 7 times rapidly
+    let last;
+    for (let i = 0; i < 7; i++) {
+      last = await request(app()).post('/webapi-bps/probe');
+    }
+    expect(last.status).toBe(429);
   });
 });
