@@ -1,7 +1,7 @@
 // src/routes/auth.routes.js
 const express = require("express");
 const router = express.Router();
-const { login, register, me, logout, listUsers, deleteUser } = require("../controllers/auth.controller");
+const { login, register, me, logout, listUsers, deleteUser, changePassword } = require("../controllers/auth.controller");
 const { authMiddleware, requireAdmin } = require("../middleware/auth.middleware");
 const { createAuditLogMiddleware } = require("../middleware/auditLog.middleware");
 
@@ -21,6 +21,9 @@ router.get("/users", authMiddleware, requireAdmin, listUsers);
 
 // delete user (admin only)
 router.delete("/users/:id", authMiddleware, requireAdmin, auditAuth, deleteUser);
+
+// change own password (any logged-in user)
+router.post("/change-password", authMiddleware, auditAuth, changePassword);
 
 // logout
 router.post("/logout", authMiddleware, auditAuth, logout);

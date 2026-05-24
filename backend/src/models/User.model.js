@@ -52,6 +52,13 @@ const User = {
       replacements: [id],
     });
   },
+
+  async updatePasswordHash(id, password_hash) {
+    await sequelize.query(
+      "UPDATE users SET password_hash = ? WHERE id = ?",
+      { replacements: [password_hash, id] }
+    );
+  },
 };
 
 module.exports = User;

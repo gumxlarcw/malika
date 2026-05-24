@@ -103,6 +103,44 @@ async function listUsers(req, res) {
   }
 }
 
+// POST /auth/change-password (any authenticated user — changes own password)
+async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+
+    if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+      return res.status(400).json({ error: "currentPassword dan newPassword wajib diisi" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password baru minimal 8 karakter" });
+    }
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ error: "Password baru harus berbeda dari yang lama" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User tidak ditemukan" });
+    }
+
+    const match = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: "Password saat ini salah" });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await User.updatePasswordHash(user.id, newHash);
+
+    // Invalidate current session — force re-login with new password
+    res.clearCookie("token", { path: "/" });
+
+    return res.json({ message: "Password berhasil diganti" });
+  } catch (err) {
+    console.error("Change password error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // DELETE /auth/users/:id (admin only)
 async function deleteUser(req, res) {
   try {
@@ -121,4 +159,4 @@ async function deleteUser(req, res) {
   }
 }
 
-module.exports = { login, register, me, logout, listUsers, deleteUser };
+module.exports = { login, register, me, logout, listUsers, deleteUser, changePassword };

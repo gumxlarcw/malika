@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
 import { getErrorMessage } from "@/lib/errors";
 import { fmt } from "@/lib/formatters";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Alert from "@/components/Alert";
 import RequireAuth from "@/components/RequireAuth";
-import { UserPlus, Trash2, Users } from "lucide-react";
+import { Modal } from "@/components/ui";
+import { UserPlus, Trash2, Users, KeyRound } from "lucide-react";
 
 interface User {
   id: number;
@@ -17,6 +19,7 @@ interface User {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,6 +33,14 @@ export default function UsersPage() {
   const [addPassword, setAddPassword] = useState("");
   const [addRole, setAddRole] = useState("admin");
   const [adding, setAdding] = useState(false);
+
+  // Change-password modal
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [cpCurrent, setCpCurrent] = useState("");
+  const [cpNew, setCpNew] = useState("");
+  const [cpConfirm, setCpConfirm] = useState("");
+  const [cpSubmitting, setCpSubmitting] = useState(false);
+  const [cpError, setCpError] = useState("");
 
   async function loadUsers() {
     setLoading(true);
@@ -82,6 +93,48 @@ export default function UsersPage() {
     }
   }
 
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setCpError("");
+    if (cpNew.length < 8) {
+      setCpError("Password baru minimal 8 karakter");
+      return;
+    }
+    if (cpNew !== cpConfirm) {
+      setCpError("Konfirmasi password baru tidak cocok");
+      return;
+    }
+    if (cpNew === cpCurrent) {
+      setCpError("Password baru harus berbeda dari yang lama");
+      return;
+    }
+    setCpSubmitting(true);
+    try {
+      await api.post("/auth/change-password", {
+        currentPassword: cpCurrent,
+        newPassword: cpNew,
+      });
+      // Backend invalidates session — force re-login
+      setShowChangePwd(false);
+      setCpCurrent("");
+      setCpNew("");
+      setCpConfirm("");
+      router.replace("/login");
+    } catch (e: unknown) {
+      setCpError(getErrorMessage(e, "Gagal mengganti password"));
+    } finally {
+      setCpSubmitting(false);
+    }
+  }
+
+  function resetChangePwdForm() {
+    setShowChangePwd(false);
+    setCpCurrent("");
+    setCpNew("");
+    setCpConfirm("");
+    setCpError("");
+  }
+
   async function handleDelete(user: User) {
     if (user.id === currentUserId) {
       setError("Tidak bisa menghapus diri sendiri");
@@ -108,13 +161,22 @@ export default function UsersPage() {
             <Users className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">User Management</h1>
           </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Tambah User</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowChangePwd(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-muted transition-colors"
+            >
+              <KeyRound className="h-4 w-4" />
+              <span>Ganti Password</span>
+            </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Tambah User</span>
+            </button>
+          </div>
         </div>
 
         {error && <Alert variant="error">{error}</Alert>}
@@ -239,6 +301,74 @@ export default function UsersPage() {
         <p className="text-xs text-muted-foreground">
           Total: {users.length} pengguna
         </p>
+
+        <Modal
+          isOpen={showChangePwd}
+          onClose={resetChangePwdForm}
+          title="Ganti Password Saya"
+          size="sm"
+        >
+          <form onSubmit={handleChangePassword} className="space-y-3">
+            {cpError && <Alert variant="error">{cpError}</Alert>}
+            <div>
+              <label className="block text-sm font-medium mb-1">Password Saat Ini</label>
+              <input
+                type="password"
+                value={cpCurrent}
+                onChange={(e) => setCpCurrent(e.target.value)}
+                autoComplete="current-password"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Password Baru <span className="text-muted-foreground text-xs">(minimal 8 karakter)</span>
+              </label>
+              <input
+                type="password"
+                value={cpNew}
+                onChange={(e) => setCpNew(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Konfirmasi Password Baru</label>
+              <input
+                type="password"
+                value={cpConfirm}
+                onChange={(e) => setCpConfirm(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background"
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Setelah password diganti, Anda akan otomatis logout dan harus login ulang.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={resetChangePwdForm}
+                disabled={cpSubmitting}
+                className="px-4 py-2 rounded-lg border border-border hover:bg-muted disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={cpSubmitting}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {cpSubmitting ? "Mengganti…" : "Ganti Password"}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </RequireAuth>
   );
