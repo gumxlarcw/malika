@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import AppShell from "@/components/AppShell";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import ReactQueryProvider from "@/components/ReactQueryProvider";
 
 export const metadata: Metadata = {
   title: "Admin Panel | MALIKA",
@@ -37,11 +38,13 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="antialiased bg-background text-foreground">
-        <ThemeProvider>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-          </AuthProvider>
-        </ThemeProvider>
+        <ReactQueryProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppShell>{children}</AppShell>
+            </AuthProvider>
+          </ThemeProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );
