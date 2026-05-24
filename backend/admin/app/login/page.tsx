@@ -166,6 +166,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <form
         className="p-6 w-full max-w-sm bg-card text-card-foreground rounded-xl border border-border shadow"
+        method="post"
+        action="#"
         onSubmit={handleLogin}
       >
         <h1 className="text-xl font-bold mb-4">Login Admin</h1>
