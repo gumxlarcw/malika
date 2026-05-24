@@ -23,7 +23,7 @@ Tools: `/webapi-bps-status`, `/search-test`, `/intent-stats`, `/fetch-logs`, `/a
 - `AppShell.tsx` — Cmd+K, G-chord, wraps content in `ErrorBoundary`
 - `Sidebar.tsx` — 6 groups
 - `AuthProvider.tsx`, `ThemeProvider.tsx`
-- `RequireAuth.tsx` — gates 25/27 pages
+- `RequireAuth.tsx` — gates 26/28 pages
 - `ErrorBoundary.tsx` — fallback UI when a page render throws
 - `ui/Modal.tsx` — has focus trap (`useFocusTrap`) and `role="dialog"`
 - `DataTable.tsx`, `Alert.tsx`, `Skeleton.tsx`, `LoadingSpinner.tsx`, `StatCard.tsx`
