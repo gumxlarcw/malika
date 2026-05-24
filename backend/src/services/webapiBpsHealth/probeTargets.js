@@ -2,15 +2,10 @@
 
 // 4 endpoint sentinel WebAPI BPS yang di-probe tiap 15 menit.
 // Spec: docs/superpowers/specs/2026-05-24-webapi-bps-status-design.md §5.1
-//
-// WISNU: STABLE_VAR_ID di bawah perlu diisi nilai nyata sebelum smoke test.
-// Pilih variabel di domain 8200 (BPS Malut) yang Anda yakin sudah ada sejak
-// tahun lama dan tidak akan dihapus. Contoh kandidat: '13' (Penduduk).
-// Salah pilih = probe 'th' false-positive setiap 15 menit.
+// Smoke test 2026-05-24: VAR_ID=13 (Penduduk) valid di domain 8200 (BPS Malut).
 
 const DEFAULT_DOMAIN_ID = '8200';   // BPS Maluku Utara
-const STABLE_VAR_ID     = '13';     // TODO(Wisnu): konfirmasi nilai stabil
-                                     // Default '13' (Penduduk) — common, tapi validasi dulu
+const STABLE_VAR_ID     = '13';     // Penduduk — verified stable
 
 function buildTargets(apiKey) {
   return [
