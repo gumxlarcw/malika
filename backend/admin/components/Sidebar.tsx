@@ -24,6 +24,7 @@ import {
   CalendarClock,
   BarChart3,
   Target,
+  Activity,
 } from "lucide-react";
 
 type Props = {
@@ -74,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/geojson", label: "GeoJSON Editor", icon: <Map className="h-4 w-4" /> },
       { href: "/search-test", label: "Search Test", icon: <FlaskConical className="h-4 w-4" /> },
       { href: "/intent-stats", label: "Intent Stats", icon: <Search className="h-4 w-4" /> },
+      { href: "/webapi-bps-status", label: "Status WebAPI BPS", icon: <Activity className="h-4 w-4" /> },
       { href: "/fetch-logs", label: "Fetch Logs", icon: <FileText className="h-4 w-4" /> },
       { href: "/exim-hs", label: "EXIM HS Lookup", icon: <ShipWheel className="h-4 w-4" /> },
       { href: "/period-availability", label: "Period Check", icon: <CalendarClock className="h-4 w-4" /> },
