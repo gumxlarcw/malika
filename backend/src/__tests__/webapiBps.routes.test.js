@@ -45,4 +45,22 @@ describe('webapiBps routes', () => {
     expect(r.body.circuit).toBeDefined();
     expect(r.body.apiKeyPresent).toBe(true);
   });
+
+  test('GET /webapi-bps/history returns bucketed data', async () => {
+    const sequelize = require('../config/db');
+    sequelize.query.mockResolvedValueOnce([[
+      { bucket_start: '2026-05-23 04:00:00', probes: 4, failed: 0, p95: 290 },
+      { bucket_start: '2026-05-23 05:00:00', probes: 4, failed: 1, p95: 1820 },
+    ]]);
+    const r = await request(app()).get('/webapi-bps/history?hours=24&bucket=1h');
+    expect(r.status).toBe(200);
+    expect(r.body.bucket).toBe('1h');
+    expect(r.body.buckets).toHaveLength(2);
+    expect(r.body.buckets[0]).toMatchObject({ probes: 4, failed: 0 });
+  });
+
+  test('GET /webapi-bps/history rejects bucket=5m hours>24', async () => {
+    const r = await request(app()).get('/webapi-bps/history?hours=168&bucket=5m');
+    expect(r.status).toBe(400);
+  });
 });

@@ -104,4 +104,54 @@ router.get('/status', async (req, res) => {
   }
 });
 
+// GET /webapi-bps/history?hours=24&bucket=1h
+router.get('/history', async (req, res) => {
+  try {
+    const hours = Math.min(Math.max(parseInt(req.query.hours) || 24, 1), 168);
+    const bucket = String(req.query.bucket || '1h');
+
+    // Validate bucket combinations (cap total points at ~300)
+    const bucketSec = bucket === '5m' ? 300 : bucket === '15m' ? 900 : bucket === '1h' ? 3600 : null;
+    if (!bucketSec) {
+      return res.status(400).json({ error: 'bucket must be one of: 5m, 15m, 1h' });
+    }
+    const totalPoints = (hours * 3600) / bucketSec;
+    if (totalPoints > 300) {
+      return res.status(400).json({ error: `Too many buckets (${totalPoints}); reduce hours or use larger bucket` });
+    }
+
+    // Group-by SQL — server-side bucketing
+    const format = bucket === '1h' ? '%Y-%m-%d %H:00:00'
+                 : bucket === '15m' ? '%Y-%m-%d %H:%i:00'
+                 : '%Y-%m-%d %H:%i:00';
+
+    const [rows] = await sequelize.query(`
+      SELECT
+        DATE_FORMAT(created_at, ?) AS bucket_start,
+        COUNT(*)                    AS probes,
+        SUM(1 - ok)                 AS failed,
+        AVG(latency_ms)             AS avg_latency
+      FROM webapi_health_logs
+      WHERE probe_kind = 'scheduled'
+        AND created_at >= NOW() - INTERVAL ? HOUR
+      GROUP BY bucket_start
+      ORDER BY bucket_start ASC
+    `, { replacements: [format, hours] });
+
+    return res.json({
+      bucket,
+      hours,
+      buckets: rows.map(r => ({
+        t: new Date(r.bucket_start + 'Z').toISOString(),
+        probes: Number(r.probes),
+        failed: Number(r.failed),
+        p95LatencyMs: r.p95 != null ? Number(r.p95) : (r.avg_latency != null ? Number(r.avg_latency) : null),
+      })),
+    });
+  } catch (err) {
+    logger.error({ err: err.message }, 'GET /webapi-bps/history failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
