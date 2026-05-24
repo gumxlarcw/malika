@@ -8,11 +8,11 @@
 - **basePath**: `/backend` → semua route di `api-malika.bpsmalut.com/backend/*`
 - **Output**: standalone
 
-## Pages (27 total)
+## Pages (28 total)
 Core: `/dashboard`, `/datasources`, `/datasources/[id]`, `/cache`, `/chats`, `/knowledge`, `/users`
 Automation: `/automation`, `/knowledge-sync`, `/automation-notifications`, `/notifications-control`, `/push-subscribers`
 AI: `/feedback`, `/rag-trial`, `/malika-analysis`
-Tools: `/search-test`, `/intent-stats`, `/fetch-logs`, `/audit-logs`, `/geojson`, `/exim-hs`, `/metabase`, `/period`, `/period-availability`, `/merge`
+Tools: `/webapi-bps-status`, `/search-test`, `/intent-stats`, `/fetch-logs`, `/audit-logs`, `/geojson`, `/exim-hs`, `/metabase`, `/period`, `/period-availability`, `/merge`
 
 ## State Management
 - Zustand (`lib/store/useUiStore`): sidebar, table density, filters
@@ -46,3 +46,4 @@ Vitest + React Testing Library + jsdom. Run with `npm test`. Coverage focused on
 |---|---|---|
 | 2026-03-02 | Initial audit & documentation | - |
 | 2026-05-09 | Post-audit refresh: page count corrected (27, not 35+); ErrorBoundary added; Modal focus trap; html2canvas → html2canvas-pro; lib/axios migrated to TS; Vitest + RTL test infrastructure added | per `2026-05-09-admin-panel-audit-fixes` plan |
+| 2026-05-24 | New page /webapi-bps-status: WebAPI BPS health probe + dashboard | spec 2026-05-24 |

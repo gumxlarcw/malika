@@ -7,16 +7,22 @@
 - **Port**: 5000 (PM2: pds-backend)
 - **Entry**: `backend/server.js` → `backend/app.js`
 
-## Routes (34 files)
-Public: `/dynamic`, `/pressrelease`, `/interop`, `/static`, `/exim`, `/metabase`, `/notifications`, `/push`, `/search`, `/categories`, `/analytics`, `/period/public`, `/ai`, `/chat`, `/chat-feedback`, `/geojson`, `/error-learning`
+## Routes (35 files)
+Public: `/dynamic`, `/pressrelease`, `/interop`, `/static`, `/exim`, `/metabase`, `/notifications`, `/push`, `/search`, `/categories`, `/analytics`, `/period/public`, `/ai`, `/chat`, `/chat-feedback`, `/geojson`, `/error-learning`, `/webapi-bps`
 Auth: `/auth`, `/csrf-token`
 Admin: `/datasource`, `/period`, `/summary`, `/cache`, `/automation`, `/search/admin`, `/chat/admin`, `/knowledge`, `/rag-trial`, `/logs`, `/notifications/admin`
 
 ## Controllers: 33 files
-## Models: 26 Sequelize models
+## Models: 27 Sequelize models (added: webapi_health_logs)
 ## Middleware: auth, csrf, rateLimit, auditLog, observability, validate
-## Services: 122+ files across 26 subdirectories
+## Services: 123+ files across 27 subdirectories (added: webapiBpsHealth/)
 ## Utils: 18 files | Shared: 3 files
+
+## New WebAPI BPS Health Service
+- **Route file**: `routes/webapiBps.routes.js` — mounts `GET /webapi-bps/{status,history,logs}` + `POST /webapi-bps/probe`
+- **Service dir**: `services/webapiBpsHealth/` — probeTargets.js, probe.service.js, scheduler.service.js
+- **Model**: `webapi_health_logs` table with 90-day retention policy
+- **Purpose**: Health probes against external WebAPI BPS endpoints, retention of probe history for diagnostics
 
 ## Change Log
 | Date | Change | Files Affected |
@@ -30,4 +36,5 @@ Admin: `/datasource`, `/period`, `/summary`, `/cache`, `/automation`, `/search/a
 | 2026-05-11 | Pressrelease indexing deferred item **closed without code change** — verified that `data_bps.pressrelease_kw_*` is a separate per-topic browsing cache; the same press release content is already indexed via `services/rag/brsFetcher.service.js` → `knowledge_base.category='BRS'` → retrieval_chunks `source_kind='knowledge_doc'`. `/knowledge/search` returns press releases at similarity 0.86. Added clarifying comment on the `vectorSearch.service.js:158` exclusion site so future audits don't re-investigate. | `backend/src/services/ai/vectorSearch.service.js` (comment only) |
 | 2026-05-11 | Indicator-meta auto re-index cron — `indicator_meta` rows refreshed by `persistMetadata` weren't propagating to retrieval_chunks (`rc.embedding_generated_at < im.fetched_at` for 149/302 rows). New `indicatorMetaSync.service.js` finds stale rows and DELETE+INSERTs via xenova; new WIT-aware daily scheduler `indicatorMetaScheduler.service.js` fires at 06:30 WIT (30 min after knowledge-sync). Wired in server.js bootstrap. First manual run cleaned all 149 stale rows in 62s, 0 errors. | `backend/src/services/bpsMetadata/indicatorMetaSync.service.js`, `backend/src/services/bpsMetadata/indicatorMetaScheduler.service.js`, `backend/server.js` |
 | 2026-05-08 | Production chat persistence path is `streaming.service.js`, **not** `chat.service.js:sendMessage`. The latter handles the dormant non-streaming `POST /chat/threads/:id/messages` route (controller line 47); the frontend always uses streaming. Same truncation-cap bug pattern existed in both files but only the streaming sites were live and were fixed. | (note only; see chat-pipeline.md for the fix entry) |
+| 2026-05-24 | New WebAPI BPS health service: route `/webapi-bps` with status/history/logs endpoints + probe scheduler; table `webapi_health_logs` (90-day retention); 27 Sequelize models, 27 service subdirectories | spec 2026-05-24 |
 | 2026-03-02 | Initial audit & documentation | - |
