@@ -38,6 +38,7 @@ const chatAdminRoutes = require("./src/routes/chat.admin.routes");
 const knowledgeRoutes = require("./src/routes/knowledge.routes");
 const errorLearningRoutes = require("./src/routes/errorLearning.routes");
 const logsRoutes = require("./src/routes/logs.routes");
+const webapiBpsRoutes = require("./src/routes/webapiBps.routes");
 const analyticsRoutes = require("./src/routes/analytics.routes");
 
 const app = express();
@@ -193,6 +194,9 @@ app.use("/error-learning", require("./src/routes/autoTune.routes"));
 
 // Admin-only: Fetch logs viewer
 app.use("/logs", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'logs' }), logsRoutes);
+
+// Admin-only: WebAPI BPS health probe + dashboard
+app.use("/webapi-bps", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'webapi-bps' }), webapiBpsRoutes);
 
 // Admin-only: Peta Tematik (choropleth map data)
 app.use("/peta-tematik", authMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'peta-tematik' }), require("./src/routes/peta-tematik.routes"));
