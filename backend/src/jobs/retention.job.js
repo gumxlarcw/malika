@@ -6,6 +6,7 @@ const POLICIES = [
   { table: 'fetch_logs',          days: 90,  column: 'created_at' },
   { table: 'automation_run_logs', days: 30,  column: 'created_at' },
   { table: 'admin_audit_logs',    days: 365, column: 'created_at' },
+  { table: 'webapi_health_logs',  days: 90,  column: 'created_at' },
 ];
 
 async function runRetention() {
