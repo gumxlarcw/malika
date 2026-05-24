@@ -26,6 +26,7 @@ jest.mock('../config/db', () => ({
 
 const express = require('express');
 const request = require('supertest');
+const WebapiHealthLog = require('../models/WebapiHealthLog.model');
 const webapiBpsRouter = require('../routes/webapiBps.routes');
 
 function app() {
@@ -62,5 +63,35 @@ describe('webapiBps routes', () => {
   test('GET /webapi-bps/history rejects bucket=5m hours>24', async () => {
     const r = await request(app()).get('/webapi-bps/history?hours=168&bucket=5m');
     expect(r.status).toBe(400);
+  });
+
+  test('GET /webapi-bps/logs returns paginated logs', async () => {
+    WebapiHealthLog.findAndCountAll.mockResolvedValueOnce({
+      count: 2,
+      rows: [
+        { id: 2, run_id: 'r2', probe_kind: 'scheduled', endpoint_family: 'th',
+          url_template: 'list/model/th/.../key/<REDACTED>/', http_status: null,
+          latency_ms: null, ok: 0, error_code: 'TIMEOUT', error_message: 'timeout',
+          bytes_received: null, created_at: '2026-05-24T03:45:18Z' },
+        { id: 1, run_id: 'r1', probe_kind: 'scheduled', endpoint_family: 'domain',
+          url_template: 'list/model/domain/.../key/<REDACTED>/', http_status: 200,
+          latency_ms: 312, ok: 1, error_code: null, error_message: null,
+          bytes_received: 1024, created_at: '2026-05-24T03:45:17Z' },
+      ],
+    });
+    const r = await request(app()).get('/webapi-bps/logs?limit=50&offset=0');
+    expect(r.status).toBe(200);
+    expect(r.body.total).toBe(2);
+    expect(r.body.logs).toHaveLength(2);
+    expect(r.body.logs[0].endpoint_family).toBe('th');
+  });
+
+  test('GET /webapi-bps/logs respects status=error filter', async () => {
+    WebapiHealthLog.findAndCountAll.mockResolvedValueOnce({ count: 0, rows: [] });
+    const r = await request(app()).get('/webapi-bps/logs?status=error');
+    expect(r.status).toBe(200);
+    expect(WebapiHealthLog.findAndCountAll).toHaveBeenCalled();
+    const args = WebapiHealthLog.findAndCountAll.mock.calls.at(-1)[0];
+    expect(args.where.ok).toBe(0);
   });
 });

@@ -154,4 +154,30 @@ router.get('/history', async (req, res) => {
   }
 });
 
+// GET /webapi-bps/logs?limit&offset&family&status&kind&runId
+router.get('/logs', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+    const where = {};
+    if (req.query.family) where.endpoint_family = String(req.query.family);
+    if (req.query.kind) where.probe_kind = String(req.query.kind);
+    if (req.query.runId) where.run_id = String(req.query.runId);
+    if (req.query.status === 'ok') where.ok = 1;
+    else if (req.query.status === 'error') where.ok = 0;
+
+    const { count, rows } = await WebapiHealthLog.findAndCountAll({
+      where,
+      order: [['id', 'DESC']],
+      limit,
+      offset,
+    });
+
+    return res.json({ total: count, limit, offset, logs: rows });
+  } catch (err) {
+    logger.error({ err: err.message }, 'GET /webapi-bps/logs failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
