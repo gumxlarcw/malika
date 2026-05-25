@@ -1,56 +1,116 @@
-const axios = require("axios");
-const FetchLog = require("../../models/FetchLog.model");
-const logger = require("../../utils/logger");
+'use strict';
 
-async function fetchAPI(url, source_id = null, retries = 3) {
-    try {
-        const response = await axios.get(url, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
-                "Accept": "application/json,text/html,*/*",
-                "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Referer": "https://www.bps.go.id/",
-                "Origin": "https://www.bps.go.id",
-                "Cache-Control": "no-cache",
-                "Pragma": "no-cache",
-                "DNT": "1",
-                "Connection": "keep-alive"
-            },
-            timeout: 20000
-        });
+const axios = require('axios');
+const FetchLog = require('../../models/FetchLog.model');
+const logger = require('../../utils/logger');
+const { BPS_HEADERS, BPS_TIMEOUT_MS } = require('./bpsHeaders');
 
-        // Deteksi jika API mengembalikan HTML (Cloudflare / WAF)
-        if (typeof response.data === "string" && response.data.startsWith("<")) {
-            throw new Error("Invalid response: HTML received instead of JSON");
-        }
+const DEFAULT_MAX_ATTEMPTS = 4;        // initial + 3 retries (preserves prior contract)
+const BACKOFF_BASE_MS      = 1000;     // 1s → 2s → 4s
+const BACKOFF_JITTER_RATIO = 0.2;      // ±20% — avoid thundering herd on shared WAF
 
-        await FetchLog.create({
-            source_id,
-            status_code: response.status,
-            message: "OK"
-        });
+const RETRYABLE_NETWORK_CODES = new Set([
+  'ECONNRESET', 'ECONNABORTED', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH', 'ENOTFOUND',
+]);
 
-        return response.data;
+// Skip real waits during jest runs — keeps retry tests sub-second.
+const IS_TEST = process.env.NODE_ENV === 'test';
 
-    } catch (err) {
+function isRetryable(err) {
+  // WAF challenge HTML: hammering escalates the block. Fail fast.
+  if (err && err.code === 'WAF_HTML_RESPONSE') return false;
 
-        // Auto retry
-        if (retries > 0) {
-            logger.warn({ url, attempt: 3 - retries + 1 }, "Retrying fetch");
-            return fetchAPI(url, source_id, retries - 1);
-        }
+  const status = err && err.response && err.response.status;
+  if (status) {
+    // Transient: server-side errors, request timeout, rate limit.
+    // Permanent: 4xx (auth/not-found/validation) — retrying won't fix the request.
+    return status >= 500 || status === 408 || status === 429;
+  }
 
-        await FetchLog.create({
-            source_id,
-            status_code: err.response?.status || 500,
-            message: err.message
-        });
+  // No HTTP response → network-layer error.
+  if (err && err.code && RETRYABLE_NETWORK_CODES.has(err.code)) return true;
 
-        logger.error({ url, error: err.message }, "Fetch failed");
-
-        throw err;
-    }
+  // Unknown shape with no status: assume retryable (e.g. plain Error from axios).
+  return !status;
 }
 
-module.exports = { fetchAPI };
+function computeBackoffMs(attempt) {
+  const base = BACKOFF_BASE_MS * Math.pow(2, attempt - 1);
+  const jitter = base * BACKOFF_JITTER_RATIO * (Math.random() * 2 - 1);
+  return Math.max(0, Math.round(base + jitter));
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function looksLikeHtmlResponse(response) {
+  const ct = response && response.headers && response.headers['content-type'];
+  if (ct && /text\/html/i.test(ct)) return true;
+  const body = response && response.data;
+  return typeof body === 'string' && body.trim().startsWith('<');
+}
+
+async function fetchAPI(url, source_id = null, maxAttempts = DEFAULT_MAX_ATTEMPTS) {
+  const errors = [];
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await axios.get(url, {
+        headers: BPS_HEADERS,
+        timeout: BPS_TIMEOUT_MS,
+      });
+
+      if (looksLikeHtmlResponse(response)) {
+        const wafErr = new Error('Invalid response: HTML received instead of JSON');
+        wafErr.code = 'WAF_HTML_RESPONSE';
+        throw wafErr;
+      }
+
+      await FetchLog.create({
+        source_id,
+        status_code: response.status,
+        message: 'OK',
+      });
+      return response.data;
+
+    } catch (err) {
+      errors.push({
+        attempt,
+        status: err.response?.status,
+        code: err.code,
+        message: err.message,
+      });
+
+      const canRetry = attempt < maxAttempts && isRetryable(err);
+      if (!canRetry) {
+        const summary = errors
+          .map(e => `[${e.attempt}] ${e.status || e.code || 'ERR'}: ${e.message}`)
+          .join(' | ');
+        await FetchLog.create({
+          source_id,
+          status_code: err.response?.status || 500,
+          message: summary,
+        });
+        logger.error({ url, errors }, 'Fetch failed (final)');
+        throw err;
+      }
+
+      const delayMs = IS_TEST ? 0 : computeBackoffMs(attempt);
+      logger.warn(
+        {
+          url,
+          attempt,
+          nextAttempt: attempt + 1,
+          delayMs,
+          errorCode: err.code,
+          status: err.response?.status,
+        },
+        'Retrying fetch'
+      );
+      if (delayMs > 0) await sleep(delayMs);
+    }
+  }
+}
+
+module.exports = { fetchAPI, isRetryable, computeBackoffMs };

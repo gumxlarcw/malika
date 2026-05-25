@@ -4,6 +4,8 @@
 // Spec: docs/superpowers/specs/2026-05-24-webapi-bps-status-design.md §5.1
 // Smoke test 2026-05-24: VAR_ID=13 (Penduduk) valid di domain 8200 (BPS Malut).
 
+const { BPS_HEADERS } = require('../datasource/bpsHeaders');
+
 const DEFAULT_DOMAIN_ID = '8200';   // BPS Maluku Utara
 const STABLE_VAR_ID     = '13';     // Penduduk — verified stable
 
@@ -32,19 +34,8 @@ function buildTargets(apiKey) {
   ];
 }
 
-// Headers identik dengan datasource/fetch.service.js — penting untuk WAF
-const PROBE_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0',
-  'Accept': 'application/json,text/html,*/*',
-  'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Referer': 'https://www.bps.go.id/',
-  'Origin': 'https://www.bps.go.id',
-  'Cache-Control': 'no-cache',
-  'Pragma': 'no-cache',
-  'DNT': '1',
-  'Connection': 'keep-alive',
-};
+// Shared with datasource/fetch.service.js via bpsHeaders.js — single source of truth.
+const PROBE_HEADERS = BPS_HEADERS;
 
 const PROBE_TIMEOUT_MS = 8000;
 
