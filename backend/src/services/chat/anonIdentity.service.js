@@ -19,13 +19,13 @@ const RENEW_SECONDS = 30 * 24 * 60 * 60; // renew when < 30 days remain
 function issueToken(uid) {
   const sub = String(uid || '').trim();
   if (!sub) throw new Error('issueToken: uid required');
-  return jwt.sign({ sub, typ: 'anon' }, SECRET, { expiresIn: TTL_SECONDS });
+  return jwt.sign({ sub, typ: 'anon' }, SECRET, { expiresIn: TTL_SECONDS, algorithm: 'HS256' });
 }
 
 function verifyToken(token) {
   if (!token || typeof token !== 'string') return null;
   try {
-    const payload = jwt.verify(token, SECRET);
+    const payload = jwt.verify(token, SECRET, { algorithms: ['HS256'] });
     if (!payload || payload.typ !== 'anon' || !payload.sub) return null;
     return payload; // { sub, typ, iat, exp }
   } catch {

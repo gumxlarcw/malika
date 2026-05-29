@@ -40,6 +40,11 @@ describe('anonIdentity.service', () => {
     expect(svc.verifyToken(123)).toBeNull();
   });
 
+  it('rejects a token signed with a different HMAC variant (algorithm pinned to HS256)', () => {
+    const hs512 = jwt.sign({ sub: 'user-A', typ: 'anon' }, SECRET, { expiresIn: 3600, algorithm: 'HS512' });
+    expect(svc.verifyToken(hs512)).toBeNull();
+  });
+
   it('shouldRenew is true inside the 30-day window and false outside it', () => {
     const nowSec = Math.floor(Date.now() / 1000);
     expect(svc.shouldRenew({ exp: nowSec + 29 * 24 * 3600 })).toBe(true);
