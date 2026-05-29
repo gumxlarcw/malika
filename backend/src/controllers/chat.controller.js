@@ -1,6 +1,15 @@
 const chatService = require('../services/chat/chat.service');
 const streamingService = require('../services/chat/streaming.service');
 const threadSuggestionsService = require('../services/chat/threadSuggestions.service');
+const anonIdentity = require('../services/chat/anonIdentity.service');
+const { randomUUID } = require('crypto');
+
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isWellFormedUid(uid) {
+  const s = String(uid || '').trim();
+  if (!s || s.length > 100) return false;
+  return UUID_V4.test(s) || /^uid_/.test(s);
+}
 
 async function listThreads(req, res, next) {
   try {
@@ -127,6 +136,32 @@ async function getThreadSuggestions(req, res, next) {
   }
 }
 
+/**
+ * Mint / renew a signed anonymous identity token.
+ * POST /chat/identity  (public; MUST stay outside the identity guard).
+ */
+async function createIdentity(req, res, next) {
+  try {
+    const presented = req.get('x-malika-token') || '';
+    const payload = presented ? anonIdentity.verifyToken(presented) : null;
+
+    let uid;
+    if (payload && payload.sub) {
+      uid = payload.sub;                       // 1) sliding renewal
+    } else if (isWellFormedUid(req.body?.uid)) {
+      uid = String(req.body.uid).trim();        // 2) legacy adoption
+    } else {
+      uid = randomUUID();                        // 3) fresh identity
+    }
+
+    const token = anonIdentity.issueToken(uid);
+    const verified = anonIdentity.verifyToken(token);
+    return res.json({ ok: true, uid, token, exp: verified?.exp });
+  } catch (e) {
+    next(e);
+  }
+}
+
 module.exports = {
   listThreads,
   createThread,
@@ -134,4 +169,5 @@ module.exports = {
   sendMessage,
   streamMessage,
   getThreadSuggestions,
+  createIdentity,
 };
