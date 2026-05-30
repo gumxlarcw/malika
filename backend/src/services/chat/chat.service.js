@@ -91,16 +91,17 @@ function now() {
 }
 
 function getOwnerIdFromReq(req) {
-  const raw = req.get('x-malika-uid') || req.get('x-malika-user') || '';
-  const ownerId = String(raw || '').trim();
+  // Identity is set by malikaIdentityMiddleware: the verified token's sub, or
+  // (dual-mode only) the legacy bare uid. Never read the raw header here.
+  const ownerId = String(req.malikaUid || '').trim();
   if (!ownerId) {
-    const err = new Error('Missing x-malika-uid header');
+    const err = new Error('Missing identity');
     err.status = 400;
     err.code = 'missing_owner';
     throw err;
   }
   if (ownerId.length > 100) {
-    const err = new Error('Invalid x-malika-uid header');
+    const err = new Error('Invalid identity');
     err.status = 400;
     err.code = 'invalid_owner';
     throw err;
@@ -3180,6 +3181,7 @@ ${periodAvailabilityNotice}`.trim();
 
 module.exports = {
   getOwnerIdFromReq,
+  getThreadOwned,
   listThreads,
   createThread,
   listMessages,

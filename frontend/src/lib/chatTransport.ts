@@ -14,6 +14,7 @@
 
 import { CHAT_API_BASE } from "@/lib/chatConstants";
 import type { ThinkingItem } from "@/types/chat";
+import { getMalikaTokenSync } from "@/app/(admin)/chat/chatHelpers";
 
 /** Re-export retained for backward compatibility — context state types still reference it. */
 export type ThinkingEvent = ThinkingItem;
@@ -151,12 +152,15 @@ export function streamMessage(
 
   const attemptStream = async (attempt: number) => {
     try {
+      const reqHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        "x-malika-uid": malikaUid,
+      };
+      const malikaToken = getMalikaTokenSync();
+      if (malikaToken) reqHeaders["x-malika-token"] = malikaToken;
       const res = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-malika-uid": malikaUid,
-        },
+        headers: reqHeaders,
         body: JSON.stringify({ text, model: options?.model || "claude-sonnet-4-6" }),
         signal: controller.signal,
       });

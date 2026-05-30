@@ -50,6 +50,81 @@ export function getOrCreateMalikaUid() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Signed anonymous identity token (IDOR fix)
+// Spec: docs/superpowers/specs/2026-05-29-chat-idor-auth-design.md
+// ---------------------------------------------------------------------------
+
+const MALIKA_TOKEN_KEY = "malika_token";
+// Renew when fewer than 30 days remain — mirrors the backend RENEW_SECONDS window.
+const TOKEN_RENEW_SECONDS = 30 * 24 * 60 * 60;
+
+type StoredToken = { uid: string; token: string; exp: number };
+
+function readStoredToken(): StoredToken | null {
+  try {
+    const raw = localStorage.getItem(MALIKA_TOKEN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.uid === "string" &&
+      typeof parsed.token === "string" &&
+      typeof parsed.exp === "number"
+    ) {
+      return parsed as StoredToken;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Synchronous read of a still-valid signed token, or "" if absent/expired. */
+export function getMalikaTokenSync(): string {
+  const stored = readStoredToken();
+  if (!stored) return "";
+  const now = Math.floor(Date.now() / 1000);
+  return stored.exp > now ? stored.token : "";
+}
+
+/**
+ * Ensure a signed identity token exists and is not near expiry.
+ * Mints/renews via POST /api/chat/identity, adopting the existing bare uid.
+ * Fail-soft: on any network/parse error returns the current stored token (or "").
+ */
+export async function ensureMalikaToken(uid: string): Promise<string> {
+  const stored = readStoredToken();
+  const now = Math.floor(Date.now() / 1000);
+  if (stored && stored.exp - now > TOKEN_RENEW_SECONDS) {
+    return stored.token;
+  }
+  try {
+    const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (uid) reqHeaders["x-malika-uid"] = uid;
+    if (stored?.token) reqHeaders["x-malika-token"] = stored.token;
+    const res = await fetch(`${backendBaseUrl()}/identity`, {
+      method: "POST",
+      headers: reqHeaders,
+      body: JSON.stringify({ uid }),
+    });
+    if (!res.ok) return stored?.token || "";
+    const data = await res.json();
+    if (data && typeof data.token === "string" && typeof data.exp === "number") {
+      const next: StoredToken = { uid: data.uid || uid, token: data.token, exp: data.exp };
+      try {
+        localStorage.setItem(MALIKA_TOKEN_KEY, JSON.stringify(next));
+      } catch {
+        // localStorage quota / disabled — token still usable in-memory this session
+      }
+      return next.token;
+    }
+    return stored?.token || "";
+  } catch {
+    return stored?.token || "";
+  }
+}
+
 // Search history helpers
 const SEARCH_HISTORY_KEY = "malika_search_history";
 const MAX_SEARCH_HISTORY = 10;
