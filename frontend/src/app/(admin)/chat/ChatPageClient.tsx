@@ -68,6 +68,8 @@ import {
   backendBaseUrl,
   safeRandomId,
   getOrCreateMalikaUid,
+  getMalikaTokenSync,
+  ensureMalikaToken,
   getSearchHistory,
   addToSearchHistory,
 } from "./chatHelpers";
@@ -108,6 +110,7 @@ export default function ChatPageClient() {
     toolCalls, pushToolCall, pushToolResult, clearToolCalls,
   } = useChatProcess();
   const [malikaUid, setMalikaUid] = useState<string>("");
+  const [malikaToken, setMalikaToken] = useState<string>("");
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
   const [loadingThreads, setLoadingThreads] = useState(false);
@@ -287,8 +290,9 @@ export default function ChatPageClient() {
       "Content-Type": "application/json",
     };
     if (malikaUid) h["x-malika-uid"] = malikaUid;
+    if (malikaToken) h["x-malika-token"] = malikaToken;
     return h;
-  }, [malikaUid]);
+  }, [malikaUid, malikaToken]);
 
   // Quick replies — fully LLM-driven, no hardcoded suggestions
   const quickReplies = useMemo(() => {
@@ -1075,6 +1079,10 @@ export default function ChatPageClient() {
   useEffect(() => {
     const uid = getOrCreateMalikaUid();
     setMalikaUid(uid);
+    setMalikaToken(getMalikaTokenSync());
+    ensureMalikaToken(uid)
+      .then((t) => { if (t) setMalikaToken(t); })
+      .catch(() => { /* fail-soft: legacy uid still works while STRICT=off */ });
   }, []);
 
   // Initial mount: load threads AND first thread's messages together for faster perceived load
