@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { backendBaseUrl, getMalikaUid, getMalikaToken } from "@/lib/apiHelpers";
+import { backendBaseUrl, getMalikaUid, getMalikaToken, proxyBackendError } from "@/lib/apiHelpers";
 
 export async function GET(req: NextRequest) {
   const uid = getMalikaUid(req);
@@ -23,10 +23,7 @@ export async function GET(req: NextRequest) {
 
   const text = await res.text();
   if (!res.ok) {
-    return Response.json(
-      { ok: false, error: `backend_http_${res.status}`, detail: text.slice(0, 500) },
-      { status: 502 }
-    );
+    return proxyBackendError(res.status, text);
   }
 
   try {
@@ -66,10 +63,7 @@ export async function POST(req: NextRequest) {
 
   const text = await res.text();
   if (!res.ok) {
-    return Response.json(
-      { ok: false, error: `backend_http_${res.status}`, detail: text.slice(0, 500) },
-      { status: 502 }
-    );
+    return proxyBackendError(res.status, text);
   }
 
   try {

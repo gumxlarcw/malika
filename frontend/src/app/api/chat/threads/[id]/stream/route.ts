@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { backendBaseUrl, getMalikaUid, getMalikaToken } from "@/lib/apiHelpers";
+import { backendBaseUrl, getMalikaUid, getMalikaToken, proxyBackendError } from "@/lib/apiHelpers";
 
 /**
  * Proxy SSE stream from backend to client.
@@ -54,10 +54,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   if (!backendRes.ok) {
     const errorText = await backendRes.text().catch(() => "");
-    return Response.json(
-      { ok: false, error: `backend_http_${backendRes.status}`, detail: errorText.slice(0, 500) },
-      { status: 502 }
-    );
+    return proxyBackendError(backendRes.status, errorText);
   }
 
   const contentType = backendRes.headers.get("content-type") || "";
