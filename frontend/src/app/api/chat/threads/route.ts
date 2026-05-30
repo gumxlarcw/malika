@@ -1,37 +1,22 @@
 import { NextRequest } from "next/server";
-
-function backendBaseUrl() {
-  return (
-    process.env.BACKEND_BASE_URL ||
-    process.env.BACKEND_INTERNAL_API_URL ||
-    process.env.INTERNAL_BACKEND_API_URL ||
-    process.env.BACKEND_API_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
-    "http://127.0.0.1:5000"
-  ).replace(/\/$/, "");
-}
-
-function getMalikaUid(req: NextRequest) {
-  const uid = req.headers.get("x-malika-uid") || "";
-  return String(uid).trim();
-}
+import { backendBaseUrl, getMalikaUid, getMalikaToken } from "@/lib/apiHelpers";
 
 export async function GET(req: NextRequest) {
   const uid = getMalikaUid(req);
-  if (!uid) {
+  const token = getMalikaToken(req);
+  if (!uid && !token) {
     return Response.json({ ok: false, error: "missing_uid" }, { status: 400 });
   }
 
   const url = `${backendBaseUrl()}/chat/threads`;
 
+  const fwd: Record<string, string> = {};
+  if (uid) fwd["x-malika-uid"] = uid;
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
-    res = await fetch(url, {
-      headers: {
-        "x-malika-uid": uid,
-      },
-      cache: "no-store",
-    });
+    res = await fetch(url, { headers: fwd, cache: "no-store" });
   } catch {
     return Response.json({ ok: false, error: "backend_unreachable" }, { status: 502 });
   }
@@ -54,7 +39,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const uid = getMalikaUid(req);
-  if (!uid) {
+  const token = getMalikaToken(req);
+  if (!uid && !token) {
     return Response.json({ ok: false, error: "missing_uid" }, { status: 400 });
   }
 
@@ -62,14 +48,15 @@ export async function POST(req: NextRequest) {
 
   const url = `${backendBaseUrl()}/chat/threads`;
 
+  const fwd: Record<string, string> = { "Content-Type": "application/json" };
+  if (uid) fwd["x-malika-uid"] = uid;
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-malika-uid": uid,
-      },
+      headers: fwd,
       body: JSON.stringify({ title: body?.title }),
       cache: "no-store",
     });

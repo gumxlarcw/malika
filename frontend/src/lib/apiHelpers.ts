@@ -26,3 +26,11 @@ export function getMalikaUid(req: NextRequest): string {
   const uid = req.headers.get("x-malika-uid") || "";
   return String(uid).trim();
 }
+
+/**
+ * Extract and sanitise the x-malika-token header from a request.
+ */
+export function getMalikaToken(req: NextRequest): string {
+  const token = req.headers.get("x-malika-token") || "";
+  return String(token).trim();
+}

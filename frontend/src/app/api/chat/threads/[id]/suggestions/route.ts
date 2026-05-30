@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
-import { backendBaseUrl, getMalikaUid } from "@/lib/apiHelpers";
+import { backendBaseUrl, getMalikaUid, getMalikaToken } from "@/lib/apiHelpers";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const uid = getMalikaUid(req);
-  if (!uid) {
+  const token = getMalikaToken(req);
+  if (!uid && !token) {
     return Response.json({ ok: false, error: "missing_uid" }, { status: 400 });
   }
 
@@ -15,14 +16,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const url = `${backendBaseUrl()}/chat/threads/${encodeURIComponent(String(threadId))}/suggestions`;
 
+  const fwd: Record<string, string> = {};
+  if (uid) fwd["x-malika-uid"] = uid;
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
-    res = await fetch(url, {
-      headers: {
-        "x-malika-uid": uid,
-      },
-      cache: "no-store",
-    });
+    res = await fetch(url, { headers: fwd, cache: "no-store" });
   } catch {
     return Response.json({ ok: false, error: "backend_unreachable" }, { status: 502 });
   }
