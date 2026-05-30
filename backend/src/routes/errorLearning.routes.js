@@ -8,11 +8,12 @@ const router = express.Router();
 const { authMiddleware, requireAdmin } = require('../middleware/auth.middleware');
 const { createAuditLogMiddleware } = require('../middleware/auditLog.middleware');
 const errorLearningController = require('../controllers/errorLearning.controller');
+const { malikaIdentityMiddleware } = require('../middleware/malikaIdentity.middleware');
 
 const auditEL = createAuditLogMiddleware({ resource: 'error-learning' });
 
 // Public endpoint - users can flag messages
-router.post('/flag', auditEL, errorLearningController.flagMessage);
+router.post('/flag', malikaIdentityMiddleware, auditEL, errorLearningController.flagMessage);
 
 // Admin-only endpoints (require auth + admin role)
 router.get('/stats', authMiddleware, requireAdmin, errorLearningController.getStats);

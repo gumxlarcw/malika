@@ -18,6 +18,7 @@ jest.mock('../../controllers/chat.controller', () => ({
   getQualityStats: (req, res) => res.json({ stats: {} }),
   getThreadQuality: (req, res) => res.json({ quality: {} }),
   getQueueStatus: (req, res) => res.json({ ok: true, active: 0, waiting: 0, maxConcurrent: 2, maxQueue: 8 }),
+  createIdentity: (req, res) => res.json({ ok: true, uid: 'minted', token: 'tok', exp: 1 }),
 }));
 
 jest.mock('../../middleware/validate.middleware', () => ({

@@ -13,7 +13,7 @@ const ChatErrorPattern = require('../models/ChatErrorPattern.model');
 async function flagMessage(req, res) {
   try {
     const { message_id, thread_id, flag_type, expected_response } = req.body;
-    const ownerId = req.headers['x-malika-uid'] || null;
+    const ownerId = req.malikaUid || null;
 
     if (!message_id || !flag_type) {
       return res.status(400).json({ ok: false, error: 'message_id and flag_type required' });

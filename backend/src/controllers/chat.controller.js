@@ -63,7 +63,7 @@ async function sendMessage(req, res, next) {
 
 /**
  * Stream chat response using Server-Sent Events (SSE)
- * GET /threads/:id/stream?text=...
+ * POST /threads/:id/stream
  */
 async function streamMessage(req, res, next) {
   try {
@@ -73,7 +73,7 @@ async function streamMessage(req, res, next) {
       return res.status(400).json({ ok: false, error: 'invalid_thread_id' });
     }
 
-    const userMessage = String(req.query.text || req.body?.text || '').trim();
+    const userMessage = String(req.body?.text || '').trim();
     if (!userMessage) {
       return res.status(400).json({ ok: false, error: 'missing_text' });
     }
