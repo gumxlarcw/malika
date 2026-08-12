@@ -24,92 +24,71 @@ Kamu juga tidak bisa membaca file `.env` project lain, dan port-forwarding
 SSH ditutup. Semua itu batas yang sengaja dipasang; jangan mencari jalan
 memutarnya — kalau ada yang kamu butuhkan tapi terhalang, bilang ke pembimbing.
 
-## Setup pertama kali
+## Mulai bekerja — workspace-mu sudah siap
 
-### 1. Ambil kode
-
-Untuk sekarang kode diambil langsung dari repo di server ini — belum perlu
-akun GitHub.
-
-```bash
-cd ~
-git clone /var/www/html/project-data-strategis malika
-cd malika
-```
-
-Kalau muncul `fatal: detected dubious ownership`, jalankan sekali ini lalu
-ulangi clone (repo produksi dimiliki user lain, jadi git minta konfirmasi):
+Kamu **tidak perlu clone, install, atau build apa pun**. Semuanya sudah
+disiapkan di `~/malika`: kode, dependency (2,3 GB), hasil build, dan `.env`
+yang sudah menunjuk ke database milikmu.
 
 ```bash
-git config --global --add safe.directory /var/www/html/project-data-strategis
-git config --global --add safe.directory /var/www/html/project-data-strategis/.git
+ssh magang1@<alamat-server>      # atau magang2
+cd ~/malika
+ss -ltn | grep -E ':(5200|5250|6200)\b'    # kosong = giliranmu
+pm2 start ecosystem.dev.config.js
 ```
 
-Identitas commit-mu:
+Buka `http://localhost:6200`. Selesai — itu saja untuk mulai.
+
+Satu-satunya yang mungkin perlu kamu isi sendiri di `backend/.env` adalah
+`OPENAI_API_KEY` (key proxy LLM, minta ke pembimbing) kalau kamu mengerjakan
+fitur chat. Sisanya — `DB_*`, `MALIKA_ANON_SECRET`, `JWT_SECRET` — sudah terisi.
+
+Kalau ingin bereksperimen dengan model atau NLP lain, ganti saja
+`OPENAI_API_BASE_URL` di `backend/.env` ke milikmu. Itu diperbolehkan.
+
+### Identitas commit
+
+Sekali saja, supaya commit-mu bernama:
 
 ```bash
 git config --global user.name  "Nama Kamu"
 git config --global user.email "email-kamu@contoh.com"
 ```
 
-`origin` menunjuk ke repo produksi dan bersifat **baca saja** — `git push`
-ke sana akan ditolak, dan itu memang disengaja. Ambil perubahan terbaru
-dengan `git pull origin main`.
+### Kalau perlu memasang ulang dependency
 
-File `.env` tidak ikut ter-clone (memang di-gitignore); kamu membuatnya
-sendiri di langkah 3.
-
-### 2. Environment
+Jarang dibutuhkan, tapi kalau `node_modules` rusak:
 
 ```bash
-cp backend/.env.example backend/.env
+cd ~/malika/frontend && npm ci --legacy-peer-deps
 ```
 
-Isi minimal berikut (ganti `N` dengan nomor akunmu — `magang1` → `pds_dev1`):
+⚠️ **Wajib pakai `npm ci --legacy-peer-deps`, bukan `npm install`.**
+`react-leaflet@4.2.1` menuntut React 18 sementara project ini memakai React 19,
+jadi `npm install` biasa gagal dengan `ERESOLVE`. Flag itu memakai pohon
+dependency terkunci di `package-lock.json` yang memang sudah terbukti jalan.
+`./scripts/build-all.sh` memakai `npm install` biasa, jadi **jangan dipakai
+dari nol** — skrip itu untuk deploy produksi, bukan untuk menyiapkan workspace.
 
-```
-DB_HOST=localhost
-DB_USER=pds_devN
-DB_NAME=pds_devN
-DB_PASS=<minta ke pembimbing>
-
-MALIKA_ANON_SECRET=<hasil: openssl rand -hex 32>
-JWT_SECRET=<hasil: openssl rand -hex 32>
-
-OPENAI_API_BASE_URL=https://bps8200.tail8e7302.ts.net/v1
-OPENAI_API_KEY=<key proxy milikmu, minta ke pembimbing>
-```
-
-`MALIKA_ANON_SECRET` wajib diisi. Kalau kosong, backend gagal start dengan
-error saat import chat controller — bukan bug, memang dirancang fail-closed.
-
-Kalau kamu ingin bereksperimen dengan model atau NLP lain, ganti saja
-`OPENAI_API_BASE_URL` ke milikmu. Itu diperbolehkan.
-
-### 3. Dependency dan build
+Setelah install ulang, build lagi:
 
 ```bash
-cd ~/malika
-./scripts/build-all.sh
+cd ~/malika/backend/admin && npm run build
+cd ~/malika/frontend      && npm run build
 ```
-
-Skrip ini sudah ada di repo dan mengurus install + build backend, admin, dan
-frontend sekaligus.
-
-### 4. Jalankan
-
-```bash
-cd ~/malika
-pm2 start ecosystem.dev.config.js
-pm2 logs dev-backend
-```
-
-Buka `http://localhost:6200` (atau lewat SSH tunnel dari laptopmu bila
-pembimbing sudah menyiapkan aksesnya).
 
 Admin di-build dengan mode `standalone`, jadi yang dijalankan adalah
-`.next/standalone/server.js`, bukan `next start`. `ecosystem.dev.config.js` sudah
-mengaturnya; kamu tidak perlu menghafalnya.
+`.next/standalone/server.js`, bukan `next start`. `ecosystem.dev.config.js`
+sudah mengaturnya; kamu tidak perlu menghafalnya.
+
+### Mengambil perubahan terbaru
+
+`origin` menunjuk ke repo produksi dan bersifat **baca saja** — `git push`
+ke sana akan ditolak, dan itu memang disengaja.
+
+```bash
+git pull origin main
+```
 
 ## Sandbox bergiliran
 
@@ -147,7 +126,7 @@ bergiliran.
 
 ## Aturan memori
 
-- Pakai `./scripts/build-all.sh` lalu `pm2 start`, **jangan** `npm run dev`.
+- Pakai hasil build yang sudah ada lalu `pm2 start`, **jangan** `npm run dev`.
   Mode dev jauh lebih boros dan bisa menjatuhkan layanan orang lain.
 - **Jangan menaikkan `max_memory_restart`** di `ecosystem.dev.config.js`. Angka itu
   satu-satunya pengaman yang mencegah proses kalian menjatuhkan produksi.
