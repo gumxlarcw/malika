@@ -51,7 +51,20 @@ module.exports = {
       exec_mode: "fork",
       instances: 1,
       max_memory_restart: "400M",
-      env: { NODE_ENV: "production", PORT: 6200 }
+      env: {
+        NODE_ENV: "production",
+        PORT: 6200,
+        // WAJIB. src/lib/backendBaseUrl.ts jatuh ke default
+        // "http://127.0.0.1:5000" bila semua env kosong — dan itu backend
+        // PRODUKSI. Workspace magang tidak punya frontend/.env.production.local
+        // (gitignored, tidak ikut ter-clone), jadi tanpa baris ini frontend
+        // sandbox menulis chat ke chat_messages produksi tanpa gejala apa pun.
+        // Ditemukan 2026-08-12.
+        BACKEND_BASE_URL: "http://127.0.0.1:5200",
+        // Hanya dipakai useAnalytics.ts (fallback ''), dan ter-bake saat build,
+        // jadi baru berlaku setelah `npm run build` berikutnya.
+        NEXT_PUBLIC_BACKEND_URL: "https://api-malika-dev.bpsmalut.com"
+      }
     }
   ]
 };
