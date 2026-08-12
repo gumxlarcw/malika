@@ -120,11 +120,20 @@ sedang menjalankan sandbox, `pm2 start` milikmu gagal dengan `EADDRINUSE`.
 memorinya sudah sesak; hanya muat satu stack sandbox pada satu waktu. Port
 yang sama membuat batas itu ditegakkan sistem, bukan bergantung siapa yang ingat.
 
-Cek siapa yang sedang memakai:
+**SELALU cek dulu sebelum `pm2 start`:**
 
 ```bash
-ss -ltn | grep -E ':(5200|5250|6200)\b'
+ss -ltn | grep -E ':(5200|5250|6200)\b'      # ada isinya = giliran orang lain
 ```
+
+⚠️ **Jangan percaya `pm2 list` untuk hal ini.** `dev-admin` dan `dev-frontend`
+memang akan berstatus `errored` kalau port terpakai — itu sinyal yang benar.
+Tapi **`dev-backend` tetap tampil hijau `online` walau gagal mengikat port**;
+prosesnya hidup tanpa melayani apa pun. Kalau kamu memaksa lanjut, request ke
+`localhost:5200` sebenarnya masuk ke backend **milik temanmu**, bukan milikmu.
+
+Aturan praktisnya: kalau `dev-admin` atau `dev-frontend` `errored`, hentikan
+semuanya (`pm2 delete all`) dan tunggu giliran.
 
 Selesai bekerja, **selalu** lepaskan giliran:
 
@@ -199,6 +208,7 @@ manual setelah review.
 |---|---|
 | Backend gagal start, error soal `MALIKA_ANON_SECRET` | Key itu wajib; isi `openssl rand -hex 32` |
 | `pm2 start` gagal `EADDRINUSE` | Temanmu sedang memakai sandbox; tunggu giliran |
+| `dev-backend` hijau tapi API tak merespons | Port 5200 dipegang sandbox temanmu; `dev-backend` gagal bind tanpa error. Cek `ss -ltn` |
 | `pm2` error `spawn ... EACCES` | Jalankan dari direktori yang bisa kamu akses (`cd ~/malika` dulu) |
 | Chat menjawab error / 503 | Cek `OPENAI_API_BASE_URL` dan key proxy-mu |
 | `pm2 list` kosong | Normal — itu daemon milikmu sendiri |
