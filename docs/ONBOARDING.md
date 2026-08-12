@@ -6,6 +6,7 @@ Dokumen ini untuk kamu yang baru bergabung mengerjakan MALIKA. Ikuti dari atas.
 
 - **User Linux di server**: `magang1` atau `magang2` (tanya pembimbing yang mana)
 - **Sandbox sendiri**: backend `:5200`, admin `:5250`, frontend `:6200` — dipakai bergiliran, lihat bagian "Sandbox bergiliran"
+- **URL publik sandbox**: `https://malika-dev.bpsmalut.com` (PWA) dan `https://api-malika-dev.bpsmalut.com` (API) — menunjuk ke sandbox yang sedang jalan, siapa pun yang memakainya
 - **Database sendiri**: `pds_dev1` atau `pds_dev2` — sudah terisi data, siap pakai
 - **Metabase**: akun grup Magang, akses data source `DATA BPS`
 - **Workspace siap pakai** di `~/malika`: kode, dependency, hasil build, dan `.env` sudah disiapkan (belum perlu akun GitHub)
@@ -37,14 +38,20 @@ ss -ltn | grep -E ':(5200|5250|6200)\b'    # kosong = giliranmu
 pm2 start ecosystem.dev.config.js
 ```
 
-Buka `http://localhost:6200`. Selesai — itu saja untuk mulai.
+Buka **https://malika-dev.bpsmalut.com** (atau `http://localhost:6200` dari
+dalam server). Selesai — itu saja untuk mulai.
 
-Satu-satunya yang mungkin perlu kamu isi sendiri di `backend/.env` adalah
-`OPENAI_API_KEY` (key proxy LLM, minta ke pembimbing) kalau kamu mengerjakan
-fitur chat. Sisanya — `DB_*`, `MALIKA_ANON_SECRET`, `JWT_SECRET` — sudah terisi.
+`backend/.env` sudah lengkap: database, secret, dan LLM. **Kamu tidak perlu
+API key apa pun** — sandbox memanggil proxy LLM lokal di
+`http://127.0.0.1:3031/v1`, sama seperti backend produksi, dan proxy itu
+membebaskan pemanggil dari dalam server.
 
 Kalau ingin bereksperimen dengan model atau NLP lain, ganti saja
 `OPENAI_API_BASE_URL` di `backend/.env` ke milikmu. Itu diperbolehkan.
+
+⚠️ **URL dev itu publik.** Apa pun yang kamu jalankan di sandbox bisa dilihat
+siapa saja yang tahu alamatnya. Jangan taruh data sungguhan atau kredensial
+di sana.
 
 ### Identitas commit
 
@@ -189,7 +196,8 @@ manual setelah review.
 | `pm2 start` gagal `EADDRINUSE` | Temanmu sedang memakai sandbox; tunggu giliran |
 | `dev-backend` hijau tapi API tak merespons | Port 5200 dipegang sandbox temanmu; `dev-backend` gagal bind tanpa error. Cek `ss -ltn` |
 | `pm2` error `spawn ... EACCES` | Jalankan dari direktori yang bisa kamu akses (`cd ~/malika` dulu) |
-| Chat menjawab error / 503 | Cek `OPENAI_API_BASE_URL` dan key proxy-mu |
+| Chat/pencarian error atau lambat sekali | Pencarian pertama memang lambat (~20 detik, cache dingin). Kalau tetap gagal, cek `OPENAI_API_BASE_URL` = `http://127.0.0.1:3031/v1` |
+| Halaman menampilkan data yang bukan dari sandbox | `BACKEND_BASE_URL` tidak terbaca. Pastikan dijalankan lewat `pm2 start ecosystem.dev.config.js`, bukan `npm start` langsung |
 | `pm2 list` kosong | Normal — itu daemon milikmu sendiri |
 
 Dokumentasi per area ada di `docs/workspace/<area>.md`: `backend.md`,
