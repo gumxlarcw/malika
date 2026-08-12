@@ -8,7 +8,7 @@ Dokumen ini untuk kamu yang baru bergabung mengerjakan MALIKA. Ikuti dari atas.
 - **Sandbox sendiri**: backend `:5200`, admin `:5250`, frontend `:6200` — dipakai bergiliran, lihat bagian "Sandbox bergiliran"
 - **Database sendiri**: `pds_dev1` atau `pds_dev2` — sudah terisi data, siap pakai
 - **Metabase**: akun grup Magang, akses data source `DATA BPS`
-- **GitHub**: akses baca `gumxlarcw/malika`; kontribusi lewat fork + Pull Request
+- **Kode**: clone dari repo di server ini (belum perlu akun GitHub)
 
 ## Yang tidak bisa kamu lakukan — dan itu memang disengaja
 
@@ -26,32 +26,38 @@ memutarnya — kalau ada yang kamu butuhkan tapi terhalang, bilang ke pembimbing
 
 ## Setup pertama kali
 
-### 1. Kunci SSH untuk GitHub
+### 1. Ambil kode
 
-Login ke server sebagai user-mu, lalu:
-
-```bash
-ssh-keygen -t ed25519 -C "magang-malika"     # Enter saja untuk semua pertanyaan
-cat ~/.ssh/id_ed25519.pub
-```
-
-Salin isinya ke GitHub: **Settings → SSH and GPG keys → New SSH key**.
-Uji:
-
-```bash
-ssh -T git@github.com     # sukses bila muncul "Hi <username>!"
-```
-
-### 2. Fork dan clone
-
-Fork `gumxlarcw/malika` lewat GitHub UI (tombol Fork), lalu:
+Untuk sekarang kode diambil langsung dari repo di server ini — belum perlu
+akun GitHub.
 
 ```bash
 cd ~
-git clone git@github.com:<username-kamu>/malika.git
+git clone /var/www/html/project-data-strategis malika
 cd malika
-git remote add upstream git@github.com:gumxlarcw/malika.git
 ```
+
+Kalau muncul `fatal: detected dubious ownership`, jalankan sekali ini lalu
+ulangi clone (repo produksi dimiliki user lain, jadi git minta konfirmasi):
+
+```bash
+git config --global --add safe.directory /var/www/html/project-data-strategis
+git config --global --add safe.directory /var/www/html/project-data-strategis/.git
+```
+
+Identitas commit-mu:
+
+```bash
+git config --global user.name  "Nama Kamu"
+git config --global user.email "email-kamu@contoh.com"
+```
+
+`origin` menunjuk ke repo produksi dan bersifat **baca saja** — `git push`
+ke sana akan ditolak, dan itu memang disengaja. Ambil perubahan terbaru
+dengan `git pull origin main`.
+
+File `.env` tidak ikut ter-clone (memang di-gitignore); kamu membuatnya
+sendiri di langkah 3.
 
 ### 3. Environment
 
@@ -162,19 +168,30 @@ git checkout -b fitur/nama-singkat
 npm --prefix backend test
 git add <file-spesifik>          # jangan `git add -A`
 git commit -m "feat: deskripsi singkat"
-git push origin fitur/nama-singkat
 ```
 
-Lalu buka Pull Request ke `gumxlarcw/malika` lewat GitHub.
+Kerjaanmu tetap di clone milikmu. Kalau sudah siap ditinjau, **beri tahu
+pembimbing nama branch-mu** — pembimbing menariknya langsung dari clone-mu:
+
+```bash
+# dijalankan pembimbing, bukan kamu
+git fetch /home/magang1/malika fitur/nama-singkat
+```
+
+Jadi kamu tidak perlu push ke mana pun. Jangan menyalin kode ke luar server
+(email, Drive pribadi, flashdisk) — kirim lewat branch saja.
+
+Ambil perubahan terbaru secara berkala supaya tidak jauh tertinggal:
+
+```bash
+git pull origin main
+```
 
 Merge tidak berarti tayang. Deploy ke produksi dilakukan pembimbing secara
 manual setelah review.
 
-Ambil perubahan terbaru dari upstream secara berkala:
-
-```bash
-git fetch upstream && git rebase upstream/main
-```
+> Nanti kalau akses GitHub dibuka, alurnya berubah jadi fork + Pull Request.
+> Pembimbing akan memberi tahu saat itu tiba.
 
 ## Kalau tersangkut
 
