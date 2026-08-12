@@ -8,7 +8,7 @@ Dokumen ini untuk kamu yang baru bergabung mengerjakan MALIKA. Ikuti dari atas.
 - **Sandbox sendiri**: backend `:5200`, admin `:5250`, frontend `:6200` — dipakai bergiliran, lihat bagian "Sandbox bergiliran"
 - **Database sendiri**: `pds_dev1` atau `pds_dev2` — sudah terisi data, siap pakai
 - **Metabase**: akun grup Magang, akses data source `DATA BPS`
-- **Kode**: clone dari repo di server ini (belum perlu akun GitHub)
+- **Workspace siap pakai** di `~/malika`: kode, dependency, hasil build, dan `.env` sudah disiapkan (belum perlu akun GitHub)
 
 ## Yang tidak bisa kamu lakukan — dan itu memang disengaja
 
