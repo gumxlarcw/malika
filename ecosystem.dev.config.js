@@ -22,8 +22,13 @@ module.exports = {
       script: "server.js",
       exec_mode: "fork",
       instances: 1,
+      // Heap V8 dibatasi 640 MB; RSS diberi 1100 MB karena runtime ONNX milik
+      // Xenova memakai memori native di luar heap. Diukur 2026-08-12: puncak
+      // 762 MB saat memuat model, lalu turun stabil 450-680 MB. Batas 700 MB
+      // sebelumnya memicu restart di tengah kerja (2x saat pengujian).
+      // Produksi memakai 2300 MB — ini tetap jauh di bawahnya.
       node_args: "--max-old-space-size=640",
-      max_memory_restart: "700M",
+      max_memory_restart: "1100M",
       env: { NODE_ENV: "development", PORT: 5200 }
     },
     {
