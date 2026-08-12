@@ -59,7 +59,7 @@ dengan `git pull origin main`.
 File `.env` tidak ikut ter-clone (memang di-gitignore); kamu membuatnya
 sendiri di langkah 3.
 
-### 3. Environment
+### 2. Environment
 
 ```bash
 cp backend/.env.example backend/.env
@@ -86,7 +86,7 @@ error saat import chat controller — bukan bug, memang dirancang fail-closed.
 Kalau kamu ingin bereksperimen dengan model atau NLP lain, ganti saja
 `OPENAI_API_BASE_URL` ke milikmu. Itu diperbolehkan.
 
-### 4. Dependency dan build
+### 3. Dependency dan build
 
 ```bash
 cd ~/malika
@@ -96,7 +96,7 @@ cd ~/malika
 Skrip ini sudah ada di repo dan mengurus install + build backend, admin, dan
 frontend sekaligus.
 
-### 5. Jalankan
+### 4. Jalankan
 
 ```bash
 cd ~/malika
