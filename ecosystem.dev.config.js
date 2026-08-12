@@ -1,3 +1,7 @@
+// CATATAN: nama file WAJIB berakhiran `.config.js`. PM2 mengenali file
+// konfigurasi dari pola namanya; `ecosystem.dev.js` diperlakukan sebagai skrip
+// Node biasa dan "berhasil" start sebagai satu proses kosong tanpa satu pun
+// aplikasi — gagal secara diam-diam dengan status hijau. Diverifikasi 2026-08-12.
 // Instance sandbox anak magang. Port dan batas memori sengaja berbeda
 // dari ecosystem.config.js (produksi) supaya keduanya bisa hidup bersama.
 // Dijalankan dengan PM2 milik user magang sendiri, bukan PM2 root.

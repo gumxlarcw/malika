@@ -100,7 +100,7 @@ frontend sekaligus.
 
 ```bash
 cd ~/malika
-pm2 start ecosystem.dev.js
+pm2 start ecosystem.dev.config.js
 pm2 logs dev-backend
 ```
 
@@ -108,7 +108,7 @@ Buka `http://localhost:6200` (atau lewat SSH tunnel dari laptopmu bila
 pembimbing sudah menyiapkan aksesnya).
 
 Admin di-build dengan mode `standalone`, jadi yang dijalankan adalah
-`.next/standalone/server.js`, bukan `next start`. `ecosystem.dev.js` sudah
+`.next/standalone/server.js`, bukan `next start`. `ecosystem.dev.config.js` sudah
 mengaturnya; kamu tidak perlu menghafalnya.
 
 ## Sandbox bergiliran
@@ -140,7 +140,7 @@ bergiliran.
 
 - Pakai `./scripts/build-all.sh` lalu `pm2 start`, **jangan** `npm run dev`.
   Mode dev jauh lebih boros dan bisa menjatuhkan layanan orang lain.
-- **Jangan menaikkan `max_memory_restart`** di `ecosystem.dev.js`. Angka itu
+- **Jangan menaikkan `max_memory_restart`** di `ecosystem.dev.config.js`. Angka itu
   satu-satunya pengaman yang mencegah proses kalian menjatuhkan produksi.
 
 ## Reset database kalau rusak
