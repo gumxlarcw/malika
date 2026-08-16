@@ -16,6 +16,10 @@ test.describe("Landing page (/)", () => {
       test.skip(true, `Landing page not reachable at ${URL}`);
     }
     await page.goto(URL, { waitUntil: "domcontentloaded" });
+    // A first visit shortly after a deploy navigates twice while the service
+    // worker takes control. Anything located before that settles gets detached
+    // mid-action, so wait for the load event rather than just DOM content.
+    await page.waitForLoadState("load");
   });
 
   test("renders the hero and every section the nav jumps to", async ({ page }) => {
@@ -77,11 +81,12 @@ test.describe("Landing page (/)", () => {
 
   test("map draws all ten kabupaten/kota with a value tooltip", async ({ page }) => {
     const mapSvg = page.locator("#peta svg").first();
-    await mapSvg.scrollIntoViewIfNeeded();
-    await expect(mapSvg).toBeVisible();
 
+    // Assertions only, no imperative scroll: `expect` re-resolves the locator on
+    // every retry, so a service-worker re-navigation can't detach it mid-action.
     // Geometry is pre-projected into the bundle, so it is present on first paint —
     // no fetch, and no dependency on the backend being up.
+    await expect(mapSvg).toBeVisible();
     await expect(mapSvg.locator("path")).toHaveCount(10);
     await expect(page.locator("#peta").getByText(/Peringkat \d+ dari 10/)).toBeVisible();
 
@@ -97,7 +102,7 @@ test.describe("Landing page (/)", () => {
     });
 
     await page.reload({ waitUntil: "networkidle" });
-    await page.locator("#peta").scrollIntoViewIfNeeded();
+    await expect(page.locator("#peta")).toBeVisible();
     await page.waitForTimeout(1500);
 
     expect(geojsonRequests).toEqual([]);
