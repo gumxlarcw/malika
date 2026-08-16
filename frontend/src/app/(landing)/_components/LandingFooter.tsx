@@ -12,7 +12,7 @@ export default function LandingFooter({ t }: Props) {
     {
       heading: t.tFootExplore,
       links: [
-        { label: "Dashboard", href: "/" },
+        { label: "Dashboard", href: "/dashboard" },
         { label: "Peta Tematik", href: "/peta-tematik" },
         { label: "Chat MALIKA", href: "/chat" },
         { label: "Data Statistik", href: "/kategori" },

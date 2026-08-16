@@ -116,7 +116,9 @@ function KategoriIcon({ active }: { active?: boolean }) {
 }
 
 const navItems = [
-  { href: "/", label: "Beranda", icon: HomeIcon, tourId: "bottom-nav-home" },
+  // Points at /dashboard, not "/": "/" is the public landing page, which has no
+  // sidebar or bottom nav, so sending the Home tab there would drop the app chrome.
+  { href: "/dashboard", label: "Beranda", icon: HomeIcon, tourId: "bottom-nav-home" },
   { href: "/kategori", label: "Data", icon: KategoriIcon, tourId: "bottom-nav-kategori" },
   { href: "/chat", label: "Malika", icon: ChatIcon, tourId: "bottom-nav-chat" },
   { href: "/brs", label: "BRS & Publikasi", icon: BookIcon, tourId: "bottom-nav-brs-publikasi" },

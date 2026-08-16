@@ -2,15 +2,15 @@ import { test, expect } from "@playwright/test";
 import { isReachable } from "./utils";
 
 /**
- * Smoke coverage for the landing page at /beranda.
+ * Smoke coverage for the public landing page at "/".
  *
  * Point PWA_BASE_URL at whichever server is serving the current build, e.g.
- *   PWA_BASE_URL=http://127.0.0.1:6199 npx playwright test landing-beranda
+ *   PWA_BASE_URL=http://127.0.0.1:6199 npx playwright test landing
  */
 const BASE = process.env.PWA_BASE_URL || "http://127.0.0.1:3000";
-const URL = `${BASE}/beranda`;
+const URL = `${BASE}/`;
 
-test.describe("Landing page (/beranda)", () => {
+test.describe("Landing page (/)", () => {
   test.beforeEach(async ({ page }) => {
     if (!(await isReachable(URL))) {
       test.skip(true, `Landing page not reachable at ${URL}`);

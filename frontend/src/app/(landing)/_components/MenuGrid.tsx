@@ -46,7 +46,7 @@ export default function MenuGrid({ t, onOpenReservasi }: Props) {
     {
       title: "Dashboard",
       subtitle: t.tTile1s,
-      href: "/",
+      href: "/dashboard",
       Icon: GridIcon,
       chip: cn(SURFACE_BRAND_2, BRAND_TEXT),
     },

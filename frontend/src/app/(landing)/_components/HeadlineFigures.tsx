@@ -35,7 +35,7 @@ export default function HeadlineFigures({ t }: Props) {
           <p className={cn("mt-1.5 text-sm leading-5", TEXT_4)}>{t.tIndSub}</p>
         </div>
         <Link
-          href="/"
+          href="/dashboard"
           className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-brand-600 dark:text-brand-300"
         >
           {t.tIndLink}

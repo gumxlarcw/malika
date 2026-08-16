@@ -21,7 +21,9 @@ export default function AdminLayout({
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const pathname = usePathname();
   const router = useRouter();
-  const isDashboard = pathname === "/";
+  // The Metabase embed needs the full-bleed, non-scrolling main area. It moved to
+  // /dashboard when the public landing page took over "/".
+  const isDashboard = pathname === "/dashboard";
   const isChat = pathname === "/chat";
 
   // Handle pull-to-refresh
