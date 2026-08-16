@@ -90,12 +90,13 @@ function ModalShell({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 md:items-center md:p-6">
-      <button
-        type="button"
-        aria-label={closeLabel}
-        tabIndex={-1}
+      {/* Backdrop is decorative: making it a labelled <button> would announce a
+          second "close" control to screen readers alongside the real one below.
+          Keyboard users close with Escape or that button. */}
+      <div
+        aria-hidden="true"
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-gray-900/55 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-gray-900/55 backdrop-blur-[2px]"
       />
       <div
         ref={sheetRef}

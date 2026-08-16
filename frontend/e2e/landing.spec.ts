@@ -108,3 +108,155 @@ test.describe("Landing page (/)", () => {
     expect(geojsonRequests).toEqual([]);
   });
 });
+
+/**
+ * Dialog behaviour and responsiveness.
+ *
+ * Openers are declared once and exercised at several viewports. Each opener
+ * scrolls its section into view first — the consultation controls sit far down a
+ * ~4900px page, and the splash screen covers the viewport for ~3s after load, so
+ * clicking blind is unreliable.
+ */
+const DIALOGS: Array<{ name: string; open: (page: import("@playwright/test").Page) => Promise<void>; expect: RegExp }> = [
+  {
+    name: "reservasi",
+    expect: /Ajukan reservasi konsultasi/,
+    open: async (page) => {
+      await page.locator("#menu").scrollIntoViewIfNeeded();
+      await page.getByRole("button", { name: /Konsultasi Langsung/ }).click();
+    },
+  },
+  {
+    name: "masuk",
+    expect: /Masuk atau daftar/,
+    open: async (page) => {
+      await page.locator("#konsultasi").scrollIntoViewIfNeeded();
+      await page.getByRole("button", { name: /Sudah punya akun\? Masuk/ }).click();
+    },
+  },
+  {
+    name: "notifikasi",
+    expect: /Notifikasi/,
+    open: async (page) => {
+      await page.getByRole("button", { name: /^Notifikasi$/ }).click();
+    },
+  },
+  {
+    name: "profil petugas",
+    expect: /Statistisi|Pranata/,
+    open: async (page) => {
+      await page.locator("#konsultasi").scrollIntoViewIfNeeded();
+      await page.getByRole("button", { name: /Lihat profil/ }).first().click();
+    },
+  },
+];
+
+const VIEWPORTS = [
+  { label: "mobile 360", width: 360, height: 740 },
+  { label: "mobile 390", width: 390, height: 844 },
+  { label: "tablet 768", width: 768, height: 1024 },
+  { label: "desktop 1440", width: 1440, height: 900 },
+];
+
+for (const vp of VIEWPORTS) {
+  test.describe(`Landing dialogs — ${vp.label}`, () => {
+    test.use({ viewport: { width: vp.width, height: vp.height } });
+
+    test.beforeEach(async ({ page }) => {
+      if (!(await isReachable(URL))) test.skip(true, `Landing page not reachable at ${URL}`);
+      await page.goto(URL, { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("load");
+      // AppSplashScreen covers everything at z-index 2147483647 for ~3s and would
+      // otherwise swallow the first click.
+      await page.waitForFunction(() => !document.querySelector('[class*="2147483647"]'), null, {
+        timeout: 20_000,
+      });
+    });
+
+    for (const dialog of DIALOGS) {
+      test(`${dialog.name}: opens, traps focus, locks scroll, closes three ways`, async ({ page }) => {
+        const dlg = page.getByRole("dialog");
+
+        await dialog.open(page);
+        await expect(dlg).toBeVisible();
+        await expect(dlg).toContainText(dialog.expect);
+
+        // Labelled for assistive tech, and focus moved inside.
+        await expect(dlg).toHaveAttribute("aria-modal", "true");
+        const labelledBy = await dlg.getAttribute("aria-labelledby");
+        expect(labelledBy).toBeTruthy();
+        await expect(page.locator(`#${labelledBy}`)).toHaveCount(1);
+        expect(await dlg.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+
+        // Never wider or taller than the viewport, and scrollable if content is tall.
+        const box = await dlg.boundingBox();
+        expect(box!.width).toBeLessThanOrEqual(vp.width + 1);
+        expect(box!.height).toBeLessThanOrEqual(vp.height + 1);
+        await expect(dlg).toHaveCSS("overflow-y", "auto");
+
+        // Bottom sheet on phones, centred card from md up: the sheet is flush with
+        // the bottom edge and square-cornered there.
+        const radiusBottom = await dlg.evaluate((d) => getComputedStyle(d).borderBottomLeftRadius);
+        if (vp.width < 768) {
+          expect(box!.y + box!.height).toBeGreaterThanOrEqual(vp.height - 2);
+          expect(radiusBottom).toBe("0px");
+        } else {
+          expect(radiusBottom).not.toBe("0px");
+        }
+
+        // Background scroll is locked while open.
+        await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+
+        // Tab stays inside the dialog.
+        await page.keyboard.press("Tab");
+        expect(await dlg.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+
+        // 1. Escape closes and releases the scroll lock.
+        await page.keyboard.press("Escape");
+        await expect(dlg).toBeHidden();
+        await expect(page.locator("body")).not.toHaveCSS("overflow", "hidden");
+
+        // 2. Backdrop click closes.
+        await dialog.open(page);
+        await expect(dlg).toBeVisible();
+        await page.mouse.click(3, 3);
+        await expect(dlg).toBeHidden();
+
+        // 3. The close button closes. Exactly one control is labelled "Tutup" —
+        // the backdrop is aria-hidden, so this cannot resolve to it.
+        await dialog.open(page);
+        await expect(dlg).toBeVisible();
+        const closeButton = page.getByRole("button", { name: /Tutup|Close/ });
+        await expect(closeButton).toHaveCount(1);
+        await closeButton.click();
+        await expect(dlg).toBeHidden();
+      });
+    }
+
+    test("page never scrolls sideways, at any scroll position", async ({ page }) => {
+      // Reveal every section so the full page is measured, not just what is on screen.
+      await page.addStyleTag({
+        content: ".landing-reveal { opacity: 1 !important; transform: none !important; }",
+      });
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      // Allow 2px for sub-pixel rounding at breakpoint edges.
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
+    });
+
+    test("header fits without the wordmark colliding with the nav", async ({ page }) => {
+      const collision = await page.evaluate(() => {
+        const header = document.querySelector("header")!;
+        const mark = header.querySelector("span.flex.flex-col");
+        const firstNavLink = header.querySelector("nav a");
+        if (!mark || !firstNavLink) return false;
+        const a = mark.getBoundingClientRect();
+        const b = firstNavLink.getBoundingClientRect();
+        return b.width > 0 && a.right > b.left + 1;
+      });
+      expect(collision).toBe(false);
+    });
+  });
+}

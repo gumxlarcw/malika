@@ -113,7 +113,7 @@ export default function Hero({ t, lang }: Props) {
 
         <AskBox t={t} lang={lang} />
 
-        <div className="mx-auto mt-5 flex max-w-full flex-nowrap justify-start gap-2 overflow-x-auto pb-1 md:justify-center md:overflow-x-visible md:pb-0">
+        <div className="mx-auto mt-5 flex max-w-full flex-nowrap justify-start gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:overflow-x-visible md:pb-0">
           {chips.map((chip, i) => (
             <Link
               key={chip}

@@ -77,7 +77,7 @@ export default function PetaPreview({ t, lang }: Props) {
     <Reveal id="peta" className={cn(SECTION, SCROLL_ANCHOR)}>
       <div className={cn("grid overflow-hidden rounded-[20px] border md:grid-cols-2", BORDER, SURFACE)}>
         {/* Left: the pitch */}
-        <div className="flex flex-col gap-1 p-6 md:p-10">
+        <div className="flex min-w-0 flex-col gap-1 p-6 md:p-10">
           <span className="inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-full bg-cyan-100 px-3 py-[5px] text-xs font-medium leading-[18px] text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300">
             Peta Tematik
           </span>
@@ -96,11 +96,11 @@ export default function PetaPreview({ t, lang }: Props) {
             <span className={cn("text-[13px] leading-5", TEXT_4)}>{t.tPetaMeta}</span>
           </div>
 
-          <div className="mt-7 flex items-center gap-2.5">
+          <div className="mt-7 flex flex-wrap items-center gap-x-2.5 gap-y-2">
             <span className={cn("text-xs leading-[18px]", TEXT_4)}>{t.tLow}</span>
             <span className="flex gap-1">
               {LEGEND.map((swatch) => (
-                <span key={swatch} className={cn("h-2.5 w-[30px] rounded-[3px]", swatch)} />
+                <span key={swatch} className={cn("h-2.5 w-5 rounded-[3px] sm:w-[30px]", swatch)} />
               ))}
             </span>
             <span className={cn("text-xs leading-[18px]", TEXT_4)}>{t.tHigh}</span>
@@ -147,7 +147,7 @@ export default function PetaPreview({ t, lang }: Props) {
         {/* Right: the map */}
         <div
           className={cn(
-            "relative flex min-h-80 flex-col items-center justify-center gap-5 border-t p-5 md:min-h-95 md:border-l md:border-t-0 md:p-8",
+            "relative flex min-w-0 flex-col items-center justify-center gap-5 border-t p-5 min-h-80 md:min-h-95 md:border-l md:border-t-0 md:p-8",
             BORDER,
             SURFACE_BRAND
           )}
@@ -177,7 +177,7 @@ export default function PetaPreview({ t, lang }: Props) {
             {view ? (
               <div
                 className={cn(
-                  "pointer-events-none absolute whitespace-nowrap rounded-xl border px-3.5 py-2.5 shadow-theme-md",
+                  "pointer-events-none absolute max-w-[40%] rounded-xl border px-3.5 py-2.5 shadow-theme-md",
                   BORDER,
                   SURFACE
                 )}
@@ -185,7 +185,7 @@ export default function PetaPreview({ t, lang }: Props) {
               >
                 <div className="flex items-center gap-2">
                   <span className="inline-block h-2.5 w-2.5 rounded-[3px] border border-gray-900/[0.12] bg-brand-500" />
-                  <span className={cn("whitespace-nowrap text-xs leading-[18px]", TEXT_4)}>
+                  <span className={cn("text-xs leading-[18px]", TEXT_4)}>
                     {view.name}
                   </span>
                 </div>
@@ -199,7 +199,7 @@ export default function PetaPreview({ t, lang }: Props) {
 
           <div
             className={cn(
-              "box-border flex w-full max-w-[420px] items-center justify-between gap-3 rounded-full border px-3.5 py-2",
+              "box-border flex w-full max-w-[420px] flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-full border px-3.5 py-2 lg:justify-between",
               BORDER,
               SURFACE
             )}

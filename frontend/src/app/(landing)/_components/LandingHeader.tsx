@@ -34,6 +34,14 @@ const MOBILE_LINKS: Array<{ href: string; key: keyof Copy | "peta" }> = [
 const label = (t: Copy, key: keyof Copy | "peta") =>
   key === "peta" ? "Peta Tematik" : t[key];
 
+/**
+ * The desktop header switches at `lg`, not `md` like the rest of the page.
+ * Logo lockup + four nav links + the control cluster need roughly 1000px; at the
+ * 768px `md` edge they collide — the wordmark overlaps the first nav link and
+ * "Install app" runs off the right edge. Between 768 and 1024 the chip nav below
+ * carries navigation instead.
+ */
+
 export default function LandingHeader({ t, lang, onLangChange, onOpenNotif }: Props) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
@@ -76,7 +84,7 @@ export default function LandingHeader({ t, lang, onLangChange, onOpenNotif }: Pr
             </span>
           </a>
 
-          <nav className="hidden items-center gap-1.5 md:flex">
+          <nav className="hidden items-center gap-1.5 lg:flex">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
@@ -126,7 +134,7 @@ export default function LandingHeader({ t, lang, onLangChange, onOpenNotif }: Pr
             <button
               type="button"
               className={cn(
-                "hidden h-10 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-medium transition-colors duration-150 md:inline-flex",
+                "hidden h-10 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-medium transition-colors duration-150 lg:inline-flex",
                 BORDER,
                 SURFACE,
                 TEXT_2,
@@ -139,7 +147,7 @@ export default function LandingHeader({ t, lang, onLangChange, onOpenNotif }: Pr
         </div>
       </header>
 
-      <nav className="flex gap-2 overflow-x-auto px-[18px] pt-3 md:hidden">
+      <nav className="flex gap-2 overflow-x-auto px-[18px] pt-3 lg:hidden">
         {MOBILE_LINKS.map((link) => (
           <a
             key={link.href}
