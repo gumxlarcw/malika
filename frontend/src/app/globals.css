@@ -144,10 +144,46 @@ textarea:focus-visible,
   to   { transform: translateX(0); }
 }
 
-/* Reduce-motion: keep functional pulse + dots, suppress rail/drawer */
+/* Landing page (/beranda) entrance accents — decorative, staggered via
+   [animation-delay:*] at the call site. Scroll-in reveals use framer-motion. */
+.landing-rise { animation: landing-rise 700ms cubic-bezier(.2, .8, .2, 1) both; }
+.landing-fade { animation: landing-fade 900ms ease both; }
+@keyframes landing-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes landing-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Slow highlight sweep across the hero's second headline line */
+.landing-sheen {
+  background-size: 300% 100%;
+  animation: landing-sheen 5s linear 1.2s infinite;
+}
+@keyframes landing-sheen {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
+}
+
+/* Landing sections are server-rendered hidden and revealed by framer-motion on
+   scroll. On paper there is no scrolling, so reveal them unconditionally. The
+   no-scripting case is handled by a <noscript> override on the page itself. */
+@media print {
+  .landing-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Reduce-motion: keep functional pulse + dots, suppress rail/drawer/landing */
 @media (prefers-reduced-motion: reduce) {
   .malika-rail-glow { animation: none !important; }
   .malika-drawer-in { animation: none !important; }
+  .landing-rise,
+  .landing-fade,
+  .landing-sheen { animation: none !important; }
   /* malika-pulse(-inner) and malika-dot intentionally NOT suppressed */
 }
 
