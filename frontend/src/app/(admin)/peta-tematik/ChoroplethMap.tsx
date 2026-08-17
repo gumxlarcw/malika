@@ -21,6 +21,17 @@ const GeoJSONLayer = dynamic(() => import("react-leaflet").then((m) => m.GeoJSON
 const MALUT_CENTER: [number, number] = [-0.78, 127.85];
 const MALUT_ZOOM = 7;
 
+/**
+ * Map height, clamped rather than a bare `60vh`.
+ *
+ * Leaflet needs a definite height, so it cannot stretch to match the ranking
+ * column beside it. A pure viewport unit made that mismatch grow with the
+ * screen: on a tall display 60vh ran to 660px against a 455px ranking, leaving
+ * a widening band of white. The clamp keeps the map readable on a laptop and
+ * stops it outrunning its neighbour on a large monitor.
+ */
+const MAP_HEIGHT = "clamp(340px, 46vh, 520px)";
+
 // Leaflet bounds expressed as [[swLat, swLng], [neLat, neLng]].
 type Bounds = [[number, number], [number, number]];
 
@@ -248,7 +259,7 @@ export default function ChoroplethMap({
     return <FallbackTable data={data} />;
   }
   if (!geojson) {
-    return <div className="h-[60vh] bg-[var(--pt-canvas-deep)] animate-pulse rounded-xl border border-[var(--pt-border)]" />;
+    return <div style={{ height: MAP_HEIGHT }} className="animate-pulse rounded-xl border border-[var(--pt-border)] bg-[var(--pt-canvas-deep)]" />;
   }
 
   const hasNoData = data.some((d) => d.value == null);
@@ -268,7 +279,7 @@ export default function ChoroplethMap({
         ref={setLeafletMap}
         center={MALUT_CENTER}
         zoom={MALUT_ZOOM}
-        style={{ height: "60vh", width: "100%", background: "var(--pt-canvas)" }}
+        style={{ height: MAP_HEIGHT, width: "100%", background: "var(--pt-canvas)" }}
         scrollWheelZoom={false}
         preferCanvas={true}
       >

@@ -53,7 +53,9 @@ export default function MapLegend({
   }
 
   return (
-    <div>
+    // The class list takes the slack (`flex-1`, rows spread evenly) so this card
+    // ends level with its neighbours instead of leaving white below the last class.
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2">
         <span className="pt-eyebrow">Legenda</span>
         <span className="pt-mono text-[11px] text-[var(--pt-ink-faint)]">
@@ -61,7 +63,7 @@ export default function MapLegend({
         </span>
       </div>
 
-      <div className="mt-2 flex flex-col gap-0.5">
+      <div className="mt-2 flex flex-1 flex-col justify-evenly gap-0.5">
         {buckets.map((b, i) => {
           const on = activeBucket === i;
           return (

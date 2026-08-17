@@ -68,7 +68,9 @@ export default function LinkedBarChart({
   };
 
   return (
-    <div className="bg-[var(--pt-canvas-elevated)] border border-[var(--pt-border)] rounded-xl p-4">
+    // Fills its grid cell and spreads the ten rows through the slack, so the
+    // column ends level with the map beside it rather than stopping short.
+    <div className="flex h-full flex-col bg-[var(--pt-canvas-elevated)] border border-[var(--pt-border)] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="pt-eyebrow">Peringkat 10 Kab/Kota</span>
         <button
@@ -83,7 +85,7 @@ export default function LinkedBarChart({
         </button>
       </div>
 
-      <ul className="space-y-1">
+      <ul className="flex flex-1 flex-col justify-between gap-1">
         {sorted.map((d) => {
           const isHovered = hoveredKdkab === d.kdkab;
           const pct = d.value != null && max > 0 ? (d.value / max) * 100 : 0;

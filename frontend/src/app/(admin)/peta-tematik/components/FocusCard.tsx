@@ -67,7 +67,7 @@ export default function FocusCard({ matrix, activeYear, selectedKode, indicatorN
 
   if (!focus) {
     return (
-      <div className="rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
+      <div className="flex h-full flex-col rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
         <p className="pt-body text-sm text-[var(--pt-ink-faint)]">
           Tidak ada nilai untuk periode ini.
         </p>
@@ -81,7 +81,17 @@ export default function FocusCard({ matrix, activeYear, selectedKode, indicatorN
   const delta = current != null && previous != null ? current - previous : null;
 
   return (
-    <div className="rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
+    // h-full + the sparkline block's mt-auto: the card fills its grid cell and
+    // the series sits on the floor, so a row of cards with unequal content ends
+    // level instead of leaving a hole under the shortest one.
+    //
+    // The indicator's full name is a tooltip rather than a footer line. It ran
+    // to three wrapped lines, made this the tallest card in the row, and only
+    // repeated the title already sitting in the banner above.
+    <div
+      title={indicatorName}
+      className="flex h-full flex-col rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4"
+    >
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
           <div className="pt-eyebrow">{focus.kind}</div>
@@ -109,7 +119,7 @@ export default function FocusCard({ matrix, activeYear, selectedKode, indicatorN
       <p className="pt-body mt-1 text-[12px] text-[var(--pt-ink-soft)]">{focus.rankLabel}</p>
 
       {spark ? (
-        <div className="mt-3">
+        <div className="mt-auto pt-3">
           <svg viewBox="0 0 100 34" width="100%" height="42" preserveAspectRatio="none" className="block overflow-visible" aria-hidden>
             <polyline
               points={spark.points}
@@ -128,10 +138,6 @@ export default function FocusCard({ matrix, activeYear, selectedKode, indicatorN
           </div>
         </div>
       ) : null}
-
-      <p className="pt-body mt-3 border-t border-[var(--pt-border)] pt-2 text-[11px] text-[var(--pt-ink-faint)]">
-        {indicatorName}
-      </p>
     </div>
   );
 }

@@ -507,7 +507,9 @@ export default function PetaTematikClient() {
             "which shape is that?" and "where does it place?" are one glance
             apart instead of stacked in a rail.
           */}
-          <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {/* Stretched, not items-start: each card fills the row and distributes
+              its own content, so the three end level with no white below. */}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             <ProvinsiTotalCard summary={summary} year={filters.year} />
 
             {matrix && (
@@ -521,7 +523,9 @@ export default function PetaTematikClient() {
             )}
 
             {legendBreaks.length > 0 && (
-              <div className="rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
+              /* Three cards in a two-column grid leave the third alone with an
+                 empty cell beside it, so at `md` the legend takes the whole row. */
+              <div className="flex flex-col rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4 md:col-span-2 lg:col-span-1">
                 <MapLegend
                   values={activeYearValues}
                   breaks={legendBreaks}
@@ -536,12 +540,10 @@ export default function PetaTematikClient() {
             )}
           </div>
 
-          {/*
-            items-start so the map card is not padded out with blank white when
-            the ranking beside it runs taller — the Leaflet canvas has a fixed
-            height and cannot fill the difference.
-          */}
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
+          {/* Stretched: the ranking fills the map's height and spreads its ten
+              rows through the slack. The map's own height is clamped so it
+              cannot outrun the ranking on a tall screen — see ChoroplethMap. */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-theme-xs overflow-hidden">
               {/* Map header bar */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
@@ -803,19 +805,22 @@ function ProvinsiTotalCard({ summary, year }: { summary: SummaryResponse | null;
     const arrow = delta >= 0 ? "▲" : "▼";
     const color = delta >= 0 ? "var(--pt-delta-pos)" : "var(--pt-delta-neg)";
     deltaEl = (
-      <div className="pt-mono text-xs mt-2" style={{ color }}>
+      <div className="pt-mono text-xs" style={{ color }}>
         {arrow} {fmtNumber(delta)} ({pct.toFixed(1)}%) dari {year - 1}
       </div>
     );
   }
   return (
-    <div className="bg-[var(--pt-canvas-elevated)] border border-[var(--pt-border)] rounded-xl p-5">
+    // This card carries the least content of the three in its row, so it fills
+    // the height and drops the change line to the floor rather than stacking
+    // everything at the top over a block of white.
+    <div className="flex h-full flex-col bg-[var(--pt-canvas-elevated)] border border-[var(--pt-border)] rounded-xl p-5">
       <div className="pt-eyebrow mb-2">Provinsi · Maluku Utara</div>
       <div className="pt-display text-4xl text-[var(--pt-ink)] font-light tracking-tight tabular-nums">
         {total != null ? fmtNumber(total) : "—"}
       </div>
       <div className="pt-mono text-[11px] text-[var(--pt-ink-faint)] mt-1">tahun {year}</div>
-      {deltaEl}
+      {deltaEl ? <div className="mt-auto pt-3">{deltaEl}</div> : null}
     </div>
   );
 }
