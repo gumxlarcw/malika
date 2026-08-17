@@ -264,6 +264,7 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
         tab={tab}
         onTab={setTab}
         generatedAt={summary.generatedAt}
+        categoryCount={categories.length}
         indicatorCount={totalIndicators}
         onRefresh={onRefresh}
         onShare={onShare}

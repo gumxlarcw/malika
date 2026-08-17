@@ -313,7 +313,14 @@ export default function PetaTematikClient() {
 
   return (
     <div className="peta-tematik-page min-w-0">
-      <EditorialHeader totalIndikator={processed.totalEligible} actions={toolbar} />
+      <EditorialHeader
+        totalIndikator={processed.totalEligible}
+        indikatorName={indikatorName}
+        activeYear={filters.year}
+        yearCount={yearsResp?.years?.length ?? 0}
+        regionCount={data?.data?.length ?? 0}
+        actions={toolbar}
+      />
 
       {/* Filter card — mega chips + indikator + waktu */}
       <section className="mb-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-theme-xs overflow-hidden">

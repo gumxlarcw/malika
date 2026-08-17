@@ -43,7 +43,9 @@ export function appNav(): { desktop: NavLink[]; mobile: NavLink[] } {
       peta,
       chat,
       data,
-      { href: "/brs", label: "BRS & Publikasi" },
+      // "?kind=all" because the label promises both catalogues. /brs and
+      // /publikasi keep their own defaults so each stays a valid deep link.
+      { href: "/brs?kind=all", label: "BRS & Publikasi" },
     ],
   };
 }

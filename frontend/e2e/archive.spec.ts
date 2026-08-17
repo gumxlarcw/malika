@@ -76,8 +76,10 @@ test.describe("Arsip BRS & Publikasi", () => {
   test("the page speaks Indonesian, not the old English chrome", async ({ page }) => {
     await openArchive(page, "/brs");
 
-    await expect(root(page).locator(".ar-brand-name")).toHaveText(/Berita Resmi Statistik/);
-    await expect(root(page).locator(".ar-brand-sub")).toHaveText(/Arsip rilis/);
+    // The title moved from the toolbar into the shared PageHero, so this reads
+    // the hero rather than the old .ar-brand-* pair.
+    await expect(page.locator(".ar-hero h1")).toContainText(/Berita Resmi Statistik/);
+    await expect(page.locator(".ar-hero")).toContainText(/Arsip resmi/);
     await expect(root(page).locator(".ar-search input")).toHaveAttribute(
       "placeholder",
       /Cari judul/,

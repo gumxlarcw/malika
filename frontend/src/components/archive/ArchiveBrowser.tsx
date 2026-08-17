@@ -9,6 +9,11 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import PageHero, {
+  HeroCalendarIcon,
+  HeroClockIcon,
+  HeroDocIcon,
+} from "@/components/site/PageHero";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import "./archive.css";
 
@@ -689,6 +694,13 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
     return out;
   }, [page, totalPages]);
 
+  /** Date of the most recent item on screen; blank while sorted oldest-first. */
+  const newestDate = useMemo(() => {
+    if (sort === "lama") return "";
+    const first = items.find((it) => it.rl_date);
+    return first ? formatDate(first.rl_date) : "";
+  }, [items, sort]);
+
   const activeSubjectLabel = useMemo(
     () => subjectOptions.find((o) => o.id === subject)?.label ?? null,
     [subjectOptions, subject],
@@ -702,6 +714,43 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
   return (
     <div className="archive-root" data-density="regular">
       <div className="ar-shell">
+        <div className="ar-hero">
+          <PageHero
+            crumbs={[{ label: "Beranda", href: "/" }, { label: "BRS & Publikasi" }]}
+            badge="Arsip resmi"
+            title="Berita Resmi Statistik &amp; Publikasi"
+            titleAccent="Maluku Utara"
+            description="Rilis dan publikasi Badan Pusat Statistik Provinsi Maluku Utara, lengkap dengan poin utama, sitasi siap tempel, dan berkas PDF-nya."
+            meta={[
+              ...(meta?.total
+                ? [
+                    {
+                      key: "total",
+                      icon: <HeroDocIcon />,
+                      label: `${meta.total.toLocaleString("id-ID")} ${
+                        kind === "publication" ? "publikasi" : "rilis"
+                      }`,
+                    },
+                  ]
+                : []),
+              {
+                key: "sejak",
+                icon: <HeroCalendarIcon />,
+                label: `Arsip sejak ${EARLIEST_YEAR[kind]}`,
+              },
+              ...(newestDate
+                ? [
+                    {
+                      key: "terbaru",
+                      icon: <HeroClockIcon />,
+                      label: `Terbaru ${newestDate}`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </div>
+
         <Toolbar
           kind={kind}
           query={query}
@@ -886,11 +935,6 @@ function Toolbar({
   ];
   return (
     <header className="ar-bar">
-      <div className="ar-bar-brand">
-        <span className="ar-brand-name">Berita Resmi Statistik &amp; Publikasi</span>
-        <span className="ar-brand-sub">Arsip rilis · BPS Provinsi Maluku Utara</span>
-      </div>
-
       <div className="ar-bar-tools">
         <div className="ar-seg" role="tablist" aria-label="Jenis dokumen">
           {tabs.map(([k, label]) => (

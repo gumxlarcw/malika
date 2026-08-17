@@ -1,42 +1,80 @@
 "use client";
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
+import PageHero, {
+  HeroCalendarIcon,
+  HeroChartIcon,
+  HeroGlobeIcon,
+  type HeroMeta,
+} from "@/components/site/PageHero";
 
 interface Props {
   totalIndikator: number;
+  /** Name of the indicator currently drawn, or "" before one is picked. */
+  indikatorName?: string;
+  activeYear?: number | null;
+  yearCount?: number;
+  regionCount?: number;
   actions?: ReactNode;
 }
 
 /**
- * Page intro: H1 + intro paragraph on the left, action toolbar slot on the right.
- * Matches design bundle's split layout (app.jsx: page intro before FilterBar).
+ * Page intro for /peta-tematik, now the shared PageHero so this page, the
+ * dashboard, the archive and /data all open the same way. It used to be a bare
+ * H1 plus a paragraph, which read as a different product from /data's hero.
+ *
+ * The meta chips describe what is actually on screen: before an indicator is
+ * picked the map is deliberately empty, so only the catalogue size is claimed.
  */
-export default function EditorialHeader({ totalIndikator, actions }: Props) {
+export default function EditorialHeader({
+  totalIndikator,
+  indikatorName,
+  activeYear,
+  yearCount,
+  regionCount,
+  actions,
+}: Props) {
+  const meta: HeroMeta[] = [
+    {
+      key: "indikator",
+      icon: <HeroChartIcon />,
+      label: `${totalIndikator} indikator`,
+    },
+  ];
+
+  if (indikatorName) {
+    meta.push({
+      key: "periode",
+      icon: <HeroCalendarIcon />,
+      label:
+        activeYear != null
+          ? `${activeYear}${yearCount && yearCount > 1 ? ` · ${yearCount} tahun tersedia` : ""}`
+          : "Periode belum dipilih",
+    });
+  }
+
+  if (regionCount && regionCount > 0) {
+    meta.push({
+      key: "wilayah",
+      icon: <HeroGlobeIcon />,
+      label: `${regionCount} kabupaten/kota`,
+    });
+  }
+
   return (
-    <header className="mb-5">
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-        className="flex items-start justify-between gap-4 flex-wrap"
-      >
-        <div className="flex-1 min-w-0">
-          <h1 className="font-semibold text-[22px] sm:text-[26px] tracking-tight leading-tight text-gray-900 dark:text-white">
-            Peta Tematik <span className="text-[#3641f5] dark:text-blue-400">Maluku Utara</span>
-          </h1>
-          <p className="mt-1 max-w-2xl text-[13.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
-            <span className="font-semibold text-gray-700 dark:text-gray-200">{totalIndikator}</span>{" "}
-            indikator dari Badan Pusat Statistik. Pilih topik di bawah, jelajahi tren antar tahun, dan bandingkan capaian antar kabupaten/kota.
-          </p>
-        </div>
-        {/*
-          The toolbar must be allowed to shrink and wrap. It measures ~477px —
-          Bandingkan, Embed, Salin Link, CSV, PNG — so `flex-shrink-0` pushed it
-          past the edge on a phone and dragged the whole document sideways by
-          105px. It wraps under the title instead now.
-        */}
-        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
-      </motion.div>
-    </header>
+    <div className="mb-5">
+      <PageHero
+        crumbs={[{ label: "Beranda", href: "/" }, { label: "Peta Tematik" }]}
+        badge="Peta resmi"
+        title="Peta Tematik"
+        titleAccent="Maluku Utara"
+        description={
+          indikatorName
+            ? indikatorName
+            : "Pilih indikator untuk menggambar sebarannya per kabupaten/kota, telusuri tren antar tahun, dan bandingkan capaian antar wilayah."
+        }
+        meta={meta}
+        actions={actions}
+      />
+    </div>
   );
 }

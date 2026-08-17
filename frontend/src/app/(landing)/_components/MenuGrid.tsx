@@ -74,7 +74,8 @@ export default function MenuGrid({ t, onOpenReservasi }: Props) {
     {
       title: "BRS & Publikasi",
       subtitle: t.tTile5s,
-      href: "/brs",
+      // Both catalogues, matching the tile's own label — see siteNav.ts.
+      href: "/brs?kind=all",
       Icon: BookIcon,
       chip: "bg-warning-100 text-warning-700 dark:bg-warning-500/15 dark:text-warning-300",
     },

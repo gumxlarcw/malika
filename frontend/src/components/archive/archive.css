@@ -988,3 +988,10 @@ html.dark .archive-root,
   color: var(--pub);
   border-color: var(--pub-line);
 }
+
+/* The shared PageHero sits above the archive toolbar. It is Tailwind-styled
+   and must not inherit the archive's own type scale, so it only gets spacing
+   here. */
+.archive-root .ar-hero { margin-bottom: 18px; }
+/* With the title moved into the hero, the toolbar is only controls. */
+.archive-root .ar-bar { justify-content: flex-start; }
