@@ -178,7 +178,7 @@ app.use("/auth", authLimiter);
 
 // Apply CSRF protection to admin routes (POST/PUT/PATCH/DELETE require token)
 app.use("/datasource", authMiddleware, csrfMiddleware, apiLimiter, createAuditLogMiddleware({ resource: 'datasource' }), datasourceRoutes);
-app.use("/dashboard/admin", authMiddleware, csrfMiddleware, apiLimiter, createAuditLogMiddleware({ resource: 'dashboard-curation' }), require("./src/routes/dashboard.admin.routes"));
+app.use("/dashboard/admin", authMiddleware, csrfMiddleware, apiLimiter, requireAdmin, createAuditLogMiddleware({ resource: 'dashboard-curation' }), require("./src/routes/dashboard.admin.routes"));
 app.use("/period", authMiddleware, csrfMiddleware, apiLimiter, periodRoutes);
 app.use("/period/available", authMiddleware, apiLimiter, periodAvailableRoutes);
 app.use("/period/available", authMiddleware, apiLimiter, periodAvailableMonthRoutes);
