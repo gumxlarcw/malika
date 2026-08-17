@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useId, useMemo } from "react";
 
 interface SparklineProps {
   /** Numeric values to plot */
@@ -28,6 +28,12 @@ interface SparklineProps {
    * things and can disagree in direction on the same card.
    */
   showTrendPct?: boolean;
+  /**
+   * Strip the surrounding card chrome — border, background, padding, header and
+   * the min/max footer — and render just the line. For callers that already
+   * supply their own container and labels.
+   */
+  bare?: boolean;
 }
 
 export function MiniSparkline({
@@ -39,6 +45,7 @@ export function MiniSparkline({
   showArea = true,
   title,
   showTrendPct = true,
+  bare = false,
 }: SparklineProps) {
   const { path, areaPath, points, yMin, yMax } = useMemo(() => {
     if (values.length < 2) return { path: "", areaPath: "", points: [], yMin: 0, yMax: 0 };
@@ -70,6 +77,10 @@ export function MiniSparkline({
     return { path: linePath, areaPath: areaP, points: pts, yMin: rawMin, yMax: rawMax };
   }, [values, labels, width, height]);
 
+  // Gradient ids must be unique: several sparklines share one page, and a
+  // hardcoded id makes every instance resolve to the first one's gradient.
+  const gradientId = `spark-grad-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
+
   if (values.length < 2) return null;
 
   // Determine trend: up, down, or flat
@@ -80,9 +91,9 @@ export function MiniSparkline({
   const trendFlat = Math.abs(trendPct) < 0.5;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900">
+    <div className={bare ? "" : "rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900"}>
       {/* Header */}
-      {(title || showTrendPct) && (
+      {!bare && (title || showTrendPct) && (
       <div className="flex items-center justify-between mb-1.5">
         {title && (
           <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate max-w-[70%]">
@@ -108,14 +119,14 @@ export function MiniSparkline({
       <svg width={width} height={height} className="w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
         {/* Gradient for area fill */}
         <defs>
-          <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.25" />
             <stop offset="100%" stopColor={color} stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
         {/* Area fill */}
-        {showArea && <path d={areaPath} fill="url(#spark-grad)" />}
+        {showArea && <path d={areaPath} fill={`url(#${gradientId})`} />}
 
         {/* Line */}
         <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -130,10 +141,12 @@ export function MiniSparkline({
       </svg>
 
       {/* Min/Max labels */}
+      {!bare && (
       <div className="flex justify-between text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 px-1">
         <span>{labels?.[0] || ""}: {formatSparkValue(firstVal)}</span>
         <span>{labels?.[labels.length - 1] || ""}: {formatSparkValue(lastVal)}</span>
       </div>
+      )}
     </div>
   );
 }

@@ -2,8 +2,9 @@
 
 import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { BORDER, SURFACE, TEXT, TEXT_4 } from "@/lib/surfaceTokens";
+import { BORDER, MONO, SURFACE, TEXT, TEXT_4, TEXT_5 } from "@/lib/surfaceTokens";
 import { IndicatorCard } from "./IndicatorCard";
+import { IndicatorRow } from "./IndicatorRow";
 import type { DashboardSummary } from "../_lib/types";
 
 export default function DashboardClient({ summary }: { summary: DashboardSummary | null }) {
@@ -56,10 +57,15 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
 
       {summary.headline.length > 0 && !query ? (
         <section aria-label="Angka utama">
-          <h2 className={cn("mb-3 text-sm font-semibold uppercase tracking-wide", TEXT_4)}>
-            Angka utama
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className={cn("mb-4 flex items-baseline justify-between gap-4 border-b pb-2", BORDER)}>
+            <h2 className={cn("text-xs font-semibold uppercase tracking-[0.08em]", TEXT_4)}>
+              Angka utama
+            </h2>
+            <span className={cn("text-xs tabular-nums", MONO, TEXT_4)}>
+              Badan Pusat Statistik
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {summary.headline.map((card) => (
               <IndicatorCard key={`headline-${card.sourceId}`} card={card} />
             ))}
@@ -72,13 +78,17 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
       ) : (
         categories.map((category) => (
           <section key={category.name} aria-label={category.name}>
-            <h2 className={cn("mb-3 text-sm font-semibold uppercase tracking-wide", TEXT_4)}>
-              {category.name}
-              <span className="ml-2 font-normal normal-case">({category.indicators.length})</span>
-            </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className={cn("mb-1 flex items-baseline justify-between gap-4 border-b pb-2", BORDER)}>
+              <h2 className={cn("text-xs font-semibold uppercase tracking-[0.08em]", TEXT_4)}>
+                {category.name}
+              </h2>
+              <span className={cn("text-xs tabular-nums", MONO, TEXT_5)}>
+                {category.indicators.length}
+              </span>
+            </div>
+            <div>
               {category.indicators.map((card) => (
-                <IndicatorCard key={card.sourceId} card={card} />
+                <IndicatorRow key={card.sourceId} card={card} />
               ))}
             </div>
           </section>

@@ -67,3 +67,52 @@ test.describe("Dashboard (/dashboard)", () => {
     }
   });
 });
+
+/**
+ * The redesign splits the page into two registers: headline cards carry a figure,
+ * the long tail is an aligned index. These pin that split down, because the
+ * failure it replaced — 118 bordered cards reading "Rincian tersedia" — looked
+ * like a styling problem but was a format mismatch.
+ */
+test.describe("Dashboard layout registers", () => {
+  test.beforeEach(async ({ page }) => {
+    if (!(await isReachable(URL))) test.skip(true, `Dashboard not reachable at ${URL}`);
+    await page.goto(URL, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+    await page.waitForFunction(() => !document.querySelector('[class*="2147483647"]'), null, {
+      timeout: 20_000,
+    });
+  });
+
+  test("indicators without a province figure are rows, not empty cards", async ({ page }) => {
+    // The old build rendered these as full cards saying "Rincian tersedia".
+    await expect(page.getByText("Rincian tersedia")).toHaveCount(0);
+
+    // A row with no figure shows an em dash rather than a fabricated zero.
+    const dashes = page.locator('main a[href^="/data?source="]').getByText("—", { exact: true });
+    expect(await dashes.count()).toBeGreaterThan(0);
+  });
+
+  test("headline figures are never truncated, however long", async ({ page }) => {
+    const overflowing = await page.evaluate(() => {
+      const bad: string[] = [];
+      document.querySelectorAll('section[aria-label="Angka utama"] a').forEach((card) => {
+        const cr = card.getBoundingClientRect();
+        card.querySelectorAll("*").forEach((child) => {
+          const r = child.getBoundingClientRect();
+          if (r.width > 0 && r.right > cr.right + 1) bad.push((child.textContent || "").slice(0, 30));
+        });
+      });
+      return bad;
+    });
+    expect(overflowing).toEqual([]);
+  });
+
+  test("figures use tabular numerals so columns align", async ({ page }) => {
+    const variant = await page.evaluate(() => {
+      const el = document.querySelector('section[aria-label="Angka utama"] a span span');
+      return el ? getComputedStyle(el).fontVariantNumeric : "";
+    });
+    expect(variant).toContain("tabular-nums");
+  });
+});

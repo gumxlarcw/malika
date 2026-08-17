@@ -4,97 +4,108 @@ import React from "react";
 import Link from "next/link";
 import MiniSparkline from "@/components/chat/MiniSparkline";
 import { cn } from "@/lib/utils";
-import {
-  BORDER,
-  BRAND_TEXT,
-  CARD_HOVER,
-  MONO,
-  SURFACE,
-  TEXT,
-  TEXT_4,
-  TEXT_5,
-} from "@/lib/surfaceTokens";
+import { BORDER, MONO, SURFACE, TEXT, TEXT_4, TEXT_5 } from "@/lib/surfaceTokens";
 import { formatDelta, formatValue, parseUnit } from "../_lib/format";
 import type { IndicatorCardData } from "../_lib/types";
+
+/**
+ * Headline figure — the page's thesis, used only for the curated few.
+ *
+ * Everything else is an IndicatorRow. A card is a container for a value, and
+ * most indicators have no provincial figure to put in one; giving them cards
+ * produced a screen of bordered boxes reading "Rincian tersedia".
+ */
 
 function Unit({ unit }: { unit: string | null }) {
   const parts = parseUnit(unit);
   if (!parts.length) return null;
   return (
-    <span className={cn("ml-1 text-sm font-normal", TEXT_4)}>
+    <span className={cn("ml-1.5 text-base font-normal", TEXT_4)}>
       {parts.map((p, i) => (p.sup ? <sup key={i}>{p.text}</sup> : <span key={i}>{p.text}</span>))}
     </span>
   );
 }
 
+/**
+ * Figures range from "0,299" to "1.525.405.628.617,00". Official statistics must
+ * stay exact, so long values are never truncated or abbreviated — the type scales
+ * down instead and the number is always readable in full.
+ */
+function figureSizeClass(text: string): string {
+  const n = text.length;
+  if (n <= 7) return "text-[38px]";
+  if (n <= 10) return "text-[30px]";
+  if (n <= 14) return "text-[23px]";
+  if (n <= 18) return "text-[18px]";
+  return "text-[15px]";
+}
+
 export function IndicatorCard({ card }: { card: IndicatorCardData }) {
   const delta = formatDelta(card.trend.delta, card.decimalPlaces);
+  const figure = card.latest ? formatValue(card.latest.value, card.decimalPlaces) : "";
   const href = card.shape === "regional" ? "/peta-tematik" : `/data?source=${card.sourceId}`;
 
   return (
     <Link
       href={href}
-      className={cn("flex flex-col gap-3 rounded-2xl border p-5", BORDER, SURFACE, CARD_HOVER)}
+      className={cn(
+        "group flex flex-col gap-4 rounded-2xl border p-6 transition-colors duration-150 hover:border-brand-300 dark:hover:border-brand-500/60",
+        BORDER,
+        SURFACE
+      )}
     >
-      <span className={cn("line-clamp-2 text-sm font-medium leading-5", TEXT)}>{card.name}</span>
+      <span className={cn("line-clamp-2 text-sm leading-5", TEXT_4)}>{card.name}</span>
 
-      {card.error ? (
-        <span className={cn("text-sm", TEXT_5)}>Data tidak tersedia</span>
-      ) : card.shape === "province" && card.latest ? (
+      {card.error || !card.latest ? (
+        <span className={cn("text-sm", TEXT_5)}>Angka provinsi tidak tersedia</span>
+      ) : (
         <>
-          <span className="flex items-baseline">
-            <span className={cn("text-2xl font-medium leading-8", MONO, TEXT)}>
-              {formatValue(card.latest.value, card.decimalPlaces)}
+          {/* The figure is the point of the card, so it gets the weight. */}
+          <span className="flex min-w-0 flex-wrap items-baseline">
+            <span
+              className={cn(
+                "font-medium leading-none tabular-nums break-all",
+                figureSizeClass(figure),
+                MONO,
+                TEXT
+              )}
+            >
+              {figure}
             </span>
             <Unit unit={card.unit} />
           </span>
-          <span className="flex flex-wrap items-center gap-2">
+
+          <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             {delta ? (
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-medium",
+                  "text-sm font-medium tabular-nums break-all",
+                  MONO,
                   delta.direction === "up"
-                    ? "bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400"
+                    ? "text-success-700 dark:text-success-400"
                     : delta.direction === "down"
-                      ? "bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400"
-                      : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                      ? "text-error-700 dark:text-error-400"
+                      : TEXT_4
                 )}
               >
                 {delta.direction === "up" ? "▲" : delta.direction === "down" ? "▼" : "="} {delta.text}
               </span>
             ) : null}
-            <span className={cn("text-xs", TEXT_4)}>{card.latest.periodLabel}</span>
+            {/* Period stamp: the thing a statistics reader checks first. */}
+            <span className={cn("text-xs tabular-nums", MONO, TEXT_5)}>{card.latest.periodLabel}</span>
           </span>
+
           {card.trend.points.length > 1 ? (
-            // The delta pill above already states the period-over-period change.
-            // MiniSparkline's own figure is first-vs-last across the window, which
-            // can point the opposite way on the same card, so it is suppressed.
             <MiniSparkline
               values={card.trend.points.map((p) => p.value)}
-              labels={card.trend.points.map((p) => p.periodLabel)}
-              width={180}
-              height={36}
+              width={220}
+              height={40}
               showArea
-              showTrendPct={false}
+              bare
             />
           ) : null}
         </>
-      ) : (
-        <>
-          <span className={cn("text-sm", TEXT_4)}>
-            {card.shape === "regional"
-              ? "Tersedia per kabupaten/kota"
-              : card.dimKey
-                ? `Rincian menurut ${card.dimKey}`
-                : "Rincian tersedia"}
-          </span>
-          <span className={cn("text-xs", TEXT_5)}>{card.periodCount} periode</span>
-        </>
       )}
-
-      <span className={cn("mt-auto text-xs font-medium", BRAND_TEXT)}>
-        {card.shape === "regional" ? "Lihat peta" : "Lihat data"}
-      </span>
     </Link>
   );
 }
