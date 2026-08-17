@@ -21,9 +21,8 @@ export default function AdminLayout({
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const pathname = usePathname();
   const router = useRouter();
-  // The Metabase embed needs the full-bleed, non-scrolling main area. It moved to
-  // /dashboard when the public landing page took over "/".
-  const isDashboard = pathname === "/dashboard";
+  // Only /chat needs the full-bleed, non-scrolling main area. /dashboard used to
+  // as well, for the Metabase iframe; it is a normal scrolling page now.
   const isChat = pathname === "/chat";
 
   // Handle pull-to-refresh
@@ -73,13 +72,13 @@ export default function AdminLayout({
           aria-label="Konten utama"
           tabIndex={-1}
           className={
-            isDashboard || isChat
+            isChat
               ? "min-w-0 min-h-0 flex-1 overflow-hidden p-0 pt-[60px] pb-16 lg:pt-[73px] lg:pb-0 outline-none"
               : "min-w-0 flex-1 overflow-y-auto px-4 pt-[76px] pb-20 md:px-6 md:pt-[89px] lg:pb-6 outline-none"
           }
         >
           {/* Pull-to-Refresh wrapper for touch devices on non-dashboard pages */}
-          {isTouchDevice && !isDashboard && !isChat ? (
+          {isTouchDevice && !isChat ? (
             <PullToRefresh onRefresh={handleRefresh}>
               {children}
             </PullToRefresh>
