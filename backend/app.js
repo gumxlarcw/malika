@@ -103,6 +103,15 @@ const petaTematikPublicLimiter = rateLimit({
 });
 app.use("/peta-tematik/public", petaTematikPublicLimiter, require("./src/routes/peta-tematik.public.routes"));
 
+// Dashboard public (PWA) — no auth, rate-limited (120/min)
+const dashboardPublicLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use("/dashboard/public", dashboardPublicLimiter, require("./src/routes/dashboard.public.routes"));
+
 // AI helpers (public but rate-limited; server-side only)
 const aiLimiter = rateLimit({
     windowMs: 60 * 1000,
