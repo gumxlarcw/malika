@@ -10,10 +10,26 @@ import DataTable from "./_components/DataTable";
 import StuckContextBar from "./_components/StuckContextBar";
 import ChartCard from "./_components/ChartCard";
 import InterpretationCard from "./_components/InterpretationCard";
+import StatStrip from "./_components/StatStrip";
+import ComparePanel, { type CompareMode } from "./_components/ComparePanel";
 import {
   asSourceType,
   type SourceType,
 } from "./_lib/sourceTypePalette";
+import {
+  buildCompareSeries,
+  computeMetricStats,
+  describeSort,
+  filterRowsByQuery,
+  nextSortState,
+  sortRows,
+  togglePin,
+  type SortState,
+} from "./_lib/tableStats";
+
+// Four is the ceiling because the trend chart has four distinguishable hues;
+// a fifth line would have to reuse one and stop being readable.
+const PIN_LIMIT = 4;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Number parsing/formatting (preserved from original — handles id-ID +
@@ -169,6 +185,11 @@ export default function DataPageClient({
   // ── State ─────────────────────────────────────────────────────────────────
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  const [sort, setSort] = useState<SortState>({ key: null, dir: "desc" });
+  const [query, setQuery] = useState("");
+  const [metricOverride, setMetricOverride] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [compareMode, setCompareMode] = useState<CompareMode>("wilayah");
   const insightsCacheRef = useRef<Map<string, InsightResponse>>(new Map());
 
   const stype = asSourceType(sourceType);
@@ -289,23 +310,40 @@ export default function DataPageClient({
     return best && (best as Candidate).coverage > 0 ? (best as Candidate).col : null;
   }, [allColumns, allYearsData, labelColumn]);
 
+  // Columns a reader may choose as the "variabel utama". Kept to the measures
+  // that actually parse as numbers — offering a text column would leave every
+  // bar, stat card and trend line blank with no explanation.
+  const metricChoices = useMemo(
+    () => allColumns.filter((c) => c !== labelColumn && numericColumns.has(c)),
+    [allColumns, labelColumn, numericColumns],
+  );
+
+  // The reader's pick wins; otherwise fall back to the coverage-scored guess.
+  // The override is dropped when the chosen column disappears — switching to a
+  // source without it would otherwise leave the page pointed at nothing.
+  const activeMetric = useMemo(() => {
+    if (metricOverride && metricChoices.includes(metricOverride)) return metricOverride;
+    if (aggregateColumn && metricChoices.includes(aggregateColumn)) return aggregateColumn;
+    return metricChoices[0] ?? aggregateColumn ?? null;
+  }, [metricOverride, metricChoices, aggregateColumn]);
+
   // Total provincial series for hero sparkline. Uses the chosen aggregate col;
   // returns NaN where no provincial-total row exists, falling back to a sum
   // across rows for source types where summation is meaningful.
   const totalSeries = useMemo(() => {
-    if (!labelColumn || !aggregateColumn) return [];
+    if (!labelColumn || !activeMetric) return [];
     const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
     return yearsAsc.map((yd) => {
       // Prefer a row labeled "Maluku Utara" / "Total" / "Provinsi"; otherwise sum non-total rows.
       const totalRow = yd.rows.find((r) => isProvincialTotalRow(r, labelColumn));
       if (totalRow) {
-        const parsed = toNumberLoose(totalRow[aggregateColumn]);
+        const parsed = toNumberLoose(totalRow[activeMetric]);
         return parsed === null ? NaN : parsed;
       }
       let sum = 0;
       let any = false;
       for (const r of yd.rows) {
-        const parsed = toNumberLoose(r[aggregateColumn]);
+        const parsed = toNumberLoose(r[activeMetric]);
         if (parsed !== null) {
           sum += parsed;
           any = true;
@@ -313,7 +351,7 @@ export default function DataPageClient({
       }
       return any ? sum : NaN;
     });
-  }, [labelColumn, aggregateColumn, allYearsData]);
+  }, [labelColumn, activeMetric, allYearsData]);
 
   // Per-row sparkline series across all years. Now uses `aggregateColumn` so
   // it agrees with the hero `totalSeries` column choice — without this, sources
@@ -322,16 +360,16 @@ export default function DataPageClient({
   // `lastDataCol` heuristic (audit C2, second pass).
   const buildRowSeries = useCallback(
     (regionLabel: string): number[] => {
-      if (!labelColumn || !aggregateColumn) return [];
+      if (!labelColumn || !activeMetric) return [];
       const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
       return yearsAsc.map((yd) => {
         const row = yd.rows.find((r) => String(r[labelColumn] ?? "") === regionLabel);
         if (!row) return NaN;
-        const parsed = toNumberLoose(row[aggregateColumn]);
+        const parsed = toNumberLoose(row[activeMetric]);
         return parsed === null ? NaN : parsed;
       });
     },
-    [labelColumn, aggregateColumn, allYearsData],
+    [labelColumn, activeMetric, allYearsData],
   );
 
   const regionsCount = useMemo(() => {
@@ -344,7 +382,99 @@ export default function DataPageClient({
     return set.size;
   }, [labelColumn, rawRows]);
 
+  // Rows as displayed: narrowed by the in-table search, then ordered. Kept
+  // separate from `rawRows` on purpose — the stat strip and the comparison
+  // chart rank every wilayah, so a search must not make "Tertinggi" mean
+  // "highest among what you typed".
+  const displayRows = useMemo(() => {
+    const filtered = filterRowsByQuery({
+      rows: rawRows,
+      labelColumn,
+      query,
+      isTotalRow: isProvincialTotalRow,
+    });
+    return sortRows({
+      rows: filtered,
+      sort,
+      labelColumn,
+      numericColumns,
+      toNumber: toNumberLoose,
+      isTotalRow: isProvincialTotalRow,
+    });
+  }, [rawRows, labelColumn, query, sort, numericColumns]);
+
+  const metricStats = useMemo(
+    () =>
+      computeMetricStats({
+        rows: rawRows,
+        labelColumn,
+        metricColumn: activeMetric,
+        toNumber: toNumberLoose,
+        isTotalRow: isProvincialTotalRow,
+      }),
+    [rawRows, labelColumn, activeMetric],
+  );
+
+  // Decimals follow the data rather than a fixed two: a column of whole counts
+  // reads wrong as "132.400,00", and a rate column reads wrong as "3".
+  const metricDecimals = useMemo(() => {
+    const sample = metricStats.ranked.slice(0, 24).map((r) => r.value);
+    if (sample.length === 0) return 2;
+    return sample.every((v) => Number.isInteger(v)) ? 0 : 2;
+  }, [metricStats]);
+
+  const formatMetric = useCallback(
+    (value: number) =>
+      new Intl.NumberFormat("id-ID", {
+        minimumFractionDigits: metricDecimals,
+        maximumFractionDigits: metricDecimals,
+      }).format(value),
+    [metricDecimals],
+  );
+
+  const yearsAscList = useMemo(
+    () => [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year)),
+    [allYearsData],
+  );
+
+  const compareSeries = useMemo(
+    () =>
+      buildCompareSeries({
+        labels: pinned,
+        yearsAsc: yearsAscList.map((yd) => ({ year: yd.year, rows: yd.rows })),
+        labelColumn,
+        metricColumn: activeMetric,
+        toNumber: toNumberLoose,
+      }),
+    [pinned, yearsAscList, labelColumn, activeMetric],
+  );
+
   // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleSortColumn = useCallback(
+    (col: string) => {
+      setSort((prev) => nextSortState(prev, col, col === labelColumn));
+    },
+    [labelColumn],
+  );
+
+  const handleTogglePin = useCallback(
+    (regionLabel: string) => {
+      // The cap is enforced inside the updater, where `prev` is the value React
+      // will actually apply — checking `pinned.length` out here reads the last
+      // rendered value, so a burst of clicks would all pass the same check.
+      setPinned((prev) => togglePin(prev, regionLabel, PIN_LIMIT));
+      // Adding a region is a request to see it compared, so the panel follows
+      // the click instead of waiting for a second one on the mode tab.
+      if (!pinned.includes(regionLabel) && pinned.length < PIN_LIMIT) setCompareMode("tren");
+    },
+    [pinned],
+  );
+
+  const handleClearPins = useCallback(() => {
+    setPinned([]);
+    setCompareMode("wilayah");
+  }, []);
+
   const handleToggleColumn = useCallback((col: string) => {
     setHiddenColumns((prev) => (prev.includes(col) ? prev.filter((c) => c !== col) : prev.concat(col)));
   }, []);
@@ -353,7 +483,7 @@ export default function DataPageClient({
 
   const handleDownload = useCallback(
     async (format: DownloadFormat) => {
-      if (visibleColumns.length === 0 || rawRows.length === 0) return;
+      if (visibleColumns.length === 0 || displayRows.length === 0) return;
       const sanitizedName = sourceName.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50);
       const filename = `${sanitizedName}_${selectedYear}`;
       try {
@@ -362,7 +492,7 @@ export default function DataPageClient({
           const wb = new ExcelJS.Workbook();
           const ws = wb.addWorksheet(`${selectedYear}`);
           ws.columns = visibleColumns.map((c) => ({ header: isExim ? eximColumnLabel(c, eximMode) : c, key: c, width: 18 }));
-          for (const r of rawRows) {
+          for (const r of displayRows) {
             const obj: Record<string, unknown> = {};
             for (const c of visibleColumns) obj[c] = formatCell(c, r);
             ws.addRow(obj);
@@ -372,7 +502,7 @@ export default function DataPageClient({
         } else if (format === "csv") {
           const lines = [
             visibleColumns.map((c) => csvEscape(isExim ? eximColumnLabel(c, eximMode) : c)).join(","),
-            ...rawRows.map((r) => visibleColumns.map((c) => csvEscape(formatCell(c, r))).join(",")),
+            ...displayRows.map((r) => visibleColumns.map((c) => csvEscape(formatCell(c, r))).join(",")),
           ];
           downloadBlob(new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" }), `${filename}.csv`);
         } else if (format === "pdf") {
@@ -390,14 +520,14 @@ export default function DataPageClient({
           doc.text(`${sourceName} — ${selectedYear}`, 40, 40);
           autoTable(doc, {
             head: [visibleColumns.map((c) => (isExim ? eximColumnLabel(c, eximMode) : c))],
-            body: rawRows.map((r) => visibleColumns.map((c) => formatCell(c, r))),
+            body: displayRows.map((r) => visibleColumns.map((c) => formatCell(c, r))),
             startY: 60,
             styles: { fontSize: 9 },
           });
           doc.save(`${filename}.pdf`);
         } else if (format === "json") {
           const json = JSON.stringify(
-            { source: sourceName, period: selectedYear, columns: visibleColumns, data: rawRows },
+            { source: sourceName, period: selectedYear, columns: visibleColumns, data: displayRows },
             null,
             2,
           );
@@ -407,14 +537,14 @@ export default function DataPageClient({
         console.error("Download failed:", err);
       }
     },
-    [visibleColumns, rawRows, sourceName, selectedYear, isExim, eximMode, formatCell],
+    [visibleColumns, displayRows, sourceName, selectedYear, isExim, eximMode, formatCell],
   );
 
   // Print: build the popup DOM with createElement (no document.write — safer +
   // hook-friendly). User-controlled strings flow through textContent so HTML
   // injection is structurally impossible.
   const handlePrint = useCallback(() => {
-    if (visibleColumns.length === 0 || rawRows.length === 0) return;
+    if (visibleColumns.length === 0 || displayRows.length === 0) return;
     const win = window.open("", "print-table");
     if (!win) return;
     const doc = win.document;
@@ -446,7 +576,7 @@ export default function DataPageClient({
     table.appendChild(thead);
 
     const tbody = doc.createElement("tbody");
-    for (const r of rawRows.slice(0, 200)) {
+    for (const r of displayRows.slice(0, 200)) {
       const tr = doc.createElement("tr");
       for (const c of visibleColumns) {
         const td = doc.createElement("td");
@@ -460,7 +590,7 @@ export default function DataPageClient({
 
     win.focus();
     setTimeout(() => win.print(), 250);
-  }, [visibleColumns, rawRows, sourceName, selectedYear, isExim, eximMode, formatCell]);
+  }, [visibleColumns, displayRows, sourceName, selectedYear, isExim, eximMode, formatCell]);
 
   const handleCopyLink = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -472,7 +602,7 @@ export default function DataPageClient({
   // tabular-nums), passthrough formatted strings for non-numeric, preserve
   // value_codes for the cell-tooltip / superscript chip.
   const tableRows = useMemo(() => {
-    return rawRows.map((row) => {
+    return displayRows.map((row) => {
       const out: Record<string, unknown> = {};
       for (const c of visibleColumns) {
         const formatted = formatCell(c, row);
@@ -488,7 +618,7 @@ export default function DataPageClient({
       if (codes) (out as Record<string, unknown>).value_codes = codes;
       return out;
     });
-  }, [rawRows, visibleColumns, formatCell]);
+  }, [displayRows, visibleColumns, formatCell]);
 
   const lastUpdate = currentYearData?.lastUpdate ?? null;
 
@@ -589,9 +719,23 @@ export default function DataPageClient({
           onHideAllColumns={handleHideAllColumns}
           onDownload={handleDownload}
           onPrint={handlePrint}
-          rowsCount={rawRows.length}
+          rowsCount={displayRows.length}
+          query={query}
+          onQueryChange={setQuery}
+          metricColumns={metricChoices}
+          metricColumn={activeMetric}
+          onMetricChange={setMetricOverride}
         />
       </div>
+
+      <StatStrip
+        stats={metricStats}
+        metricColumn={activeMetric}
+        selectedYear={selectedYear}
+        unit={unit}
+        sourceType={stype}
+        format={formatMetric}
+      />
 
       {visibleColumns.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
@@ -618,11 +762,35 @@ export default function DataPageClient({
           totalRowMatcher={isProvincialTotalRow}
           rowSeries={buildRowSeries}
           lastUpdate={lastUpdate}
+          sort={sort}
+          onSortColumn={handleSortColumn}
+          sortDescription={describeSort(sort, labelColumn)}
+          metricColumn={activeMetric}
+          metricMaxAbs={metricStats.maxAbs}
+          pinned={pinned}
+          onTogglePin={handleTogglePin}
+          pinLimit={PIN_LIMIT}
         />
       )}
 
       <div className="grid gap-5 lg:grid-cols-12">
-        <div className="lg:col-span-7">
+        <div className="space-y-5 lg:col-span-7">
+          <ComparePanel
+            mode={compareMode}
+            onModeChange={setCompareMode}
+            stats={metricStats}
+            series={compareSeries}
+            yearsAsc={yearsAscList.map((yd) => yd.year)}
+            pinned={pinned}
+            onClearPins={handleClearPins}
+            onRemovePin={handleTogglePin}
+            pinLimit={PIN_LIMIT}
+            metricColumn={activeMetric}
+            selectedYear={selectedYear}
+            unit={unit}
+            sourceType={stype}
+            format={formatMetric}
+          />
           <ChartCard
             rows={rawRows}
             columns={allColumns}

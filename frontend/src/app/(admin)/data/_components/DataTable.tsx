@@ -7,6 +7,7 @@ import {
   type SourceType,
 } from "../_lib/sourceTypePalette";
 import { describeValueCode } from "../_lib/valueCodeStyle";
+import { barPercent, type SortState } from "../_lib/tableStats";
 import { CellValue, Sparkline, SourceTypeBadge } from "./atoms";
 
 type Row = Record<string, unknown>;
@@ -25,6 +26,19 @@ export type DataTableProps = {
   // For sparkline column: per-row series across years. Built by parent (has access to allYearsData).
   rowSeries: (regionLabel: string) => number[];
   lastUpdate?: string | null;
+  // ── Sorting ───────────────────────────────────────────────────────────────
+  sort: SortState;
+  onSortColumn: (column: string) => void;
+  sortDescription: string;
+  // ── Data bars ─────────────────────────────────────────────────────────────
+  /** Column the in-cell bars are drawn for — the reader's chosen "variabel utama". */
+  metricColumn: string | null;
+  /** Largest magnitude in that column this year, so bars share one scale. */
+  metricMaxAbs: number;
+  // ── Compare pins ──────────────────────────────────────────────────────────
+  pinned: string[];
+  onTogglePin: (regionLabel: string) => void;
+  pinLimit: number;
 };
 
 export default function DataTable(props: DataTableProps) {
@@ -40,6 +54,14 @@ export default function DataTable(props: DataTableProps) {
     labelColumn,
     totalRowMatcher,
     rowSeries,
+    sort,
+    onSortColumn,
+    sortDescription,
+    metricColumn,
+    metricMaxAbs,
+    pinned,
+    onTogglePin,
+    pinLimit,
   } = props;
 
   const stype = SOURCE_TYPE_PALETTE[asSourceType(sourceType)];
@@ -78,6 +100,8 @@ export default function DataTable(props: DataTableProps) {
     return set;
   }, [allColumns, labelColumn, rows]);
 
+  const pinsFull = pinned.length >= pinLimit;
+
   return (
     <div
       style={trackVars}
@@ -92,6 +116,9 @@ export default function DataTable(props: DataTableProps) {
           <span className="text-[11px] tabular-nums text-gray-500 dark:text-gray-400 md:text-[12px]">
             {rows.length} baris · {dataCols.length} kolom
             {unit && ` · ${unit}`}
+          </span>
+          <span className="text-[11px] text-gray-400 dark:text-gray-500 md:text-[12px]">
+            {sortDescription}
           </span>
         </div>
         <div className="hidden items-center gap-3 text-[11.5px] text-gray-500 dark:text-gray-400 md:flex">
@@ -122,20 +149,33 @@ export default function DataTable(props: DataTableProps) {
             <tr className="bg-gray-50 dark:bg-gray-900">
               {isFirstColVisible && (
                 <th
-                  className="sticky left-0 z-20 border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-[10.5px] font-semibold uppercase tracking-wider text-gray-500 shadow-[1px_0_0_rgba(229,231,235,1)] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:shadow-[1px_0_0_rgba(31,41,55,1)] md:px-4 md:text-[11.5px]"
+                  aria-sort={ariaSort(sort, firstCol)}
+                  className="sticky left-0 z-20 border-b border-gray-200 bg-gray-50 p-0 text-left shadow-[1px_0_0_rgba(229,231,235,1)] dark:border-gray-800 dark:bg-gray-900 dark:shadow-[1px_0_0_rgba(31,41,55,1)]"
                   style={{ minWidth: 140 }}
                 >
-                  {firstCol}
+                  <SortHeader
+                    label={firstCol}
+                    column={firstCol}
+                    sort={sort}
+                    align="left"
+                    onSort={onSortColumn}
+                  />
                 </th>
               )}
               {dataCols.map((c) => (
                 <th
                   key={c}
-                  className={`whitespace-nowrap border-b border-gray-200 px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400 md:px-4 md:text-[11.5px] ${
-                    numericColumns.has(c) ? "text-right" : "text-left"
-                  }`}
+                  aria-sort={ariaSort(sort, c)}
+                  className="whitespace-nowrap border-b border-gray-200 p-0 dark:border-gray-800"
                 >
-                  {c}
+                  <SortHeader
+                    label={c}
+                    column={c}
+                    sort={sort}
+                    align={numericColumns.has(c) ? "right" : "left"}
+                    isMetric={c === metricColumn}
+                    onSort={onSortColumn}
+                  />
                 </th>
               ))}
               <th
@@ -143,6 +183,12 @@ export default function DataTable(props: DataTableProps) {
                 style={{ minWidth: 100 }}
               >
                 Tren {yrSpan}
+              </th>
+              <th
+                className="border-b border-gray-200 px-3 py-2.5 text-center text-[10.5px] font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400 md:text-[11.5px]"
+                style={{ minWidth: 52 }}
+              >
+                <span title={`Bandingkan wilayah (maksimal ${pinLimit})`}>Banding</span>
               </th>
             </tr>
           </thead>
@@ -159,6 +205,7 @@ export default function DataTable(props: DataTableProps) {
               const trendUp =
                 points.length >= 2 ? points[points.length - 1] >= points[0] : true;
               const baseBg = isTotal ? "bg-gray-50/80 dark:bg-gray-800/60" : "";
+              const isPinned = pinned.includes(region);
 
               return (
                 <tr
@@ -192,10 +239,17 @@ export default function DataTable(props: DataTableProps) {
                     const isNumeric = numericColumns.has(c);
                     const display: string | number =
                       typeof v === "object" && v !== null ? "" : (v as string | number);
+                    // Bars are drawn only on the active measure, and never on the
+                    // provincial total: the total dwarfs every kabupaten, so a
+                    // shared scale would flatten all ten regional bars to a sliver.
+                    const bar =
+                      !isTotal && c === metricColumn && typeof v === "number"
+                        ? barPercent(v, metricMaxAbs)
+                        : null;
                     return (
                       <td
                         key={c}
-                        className={`whitespace-nowrap px-3 py-2.5 tabular-nums text-gray-800 dark:text-gray-200 md:px-4 ${
+                        className={`relative whitespace-nowrap px-3 py-2.5 tabular-nums text-gray-800 dark:text-gray-200 md:px-4 ${
                           isNumeric ? "text-right" : "text-left"
                         } ${isTotal ? "font-semibold" : ""} ${code ? "cursor-help" : ""}`}
                         onMouseMove={
@@ -214,10 +268,17 @@ export default function DataTable(props: DataTableProps) {
                         onMouseLeave={code ? () => setHover(null) : undefined}
                       >
                         <CellValue value={display} code={code} />
+                        {bar !== null && (
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute bottom-0 left-0 h-[3px] rounded-r-sm opacity-60"
+                            style={{ width: `${bar.toFixed(1)}%`, background: stype.bar }}
+                          />
+                        )}
                       </td>
                     );
                   })}
-                  <td className="px-3 py-1.5">
+                  <td data-testid="row-trend" className="px-3 py-1.5">
                     {(() => {
                       // Pick first/last *valid* points so a missing boundary
                       // year doesn't blank the trend, and guard division by
@@ -259,9 +320,56 @@ export default function DataTable(props: DataTableProps) {
                       );
                     })()}
                   </td>
+                  <td data-testid="row-pin" className="px-3 py-1.5 text-center">
+                    {isTotal ? (
+                      <span className="text-[10.5px] text-gray-300 dark:text-gray-600">—</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onTogglePin(region)}
+                        aria-pressed={isPinned}
+                        // Disabling a full picker would leave the reader guessing
+                        // why nothing happens, so the button stays live and the
+                        // parent explains the limit.
+                        title={
+                          isPinned
+                            ? `Hapus ${region} dari perbandingan`
+                            : pinsFull
+                              ? `Maksimal ${pinLimit} wilayah dibandingkan sekaligus`
+                              : `Bandingkan ${region}`
+                        }
+                        aria-label={
+                          isPinned ? `Hapus ${region} dari perbandingan` : `Bandingkan ${region}`
+                        }
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition-colors ${
+                          isPinned
+                            ? "border-transparent text-white"
+                            : `border-gray-200 bg-white text-gray-400 hover:border-gray-300 hover:text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500 dark:hover:text-gray-300 ${
+                                pinsFull ? "opacity-50" : ""
+                              }`
+                        }`}
+                        style={isPinned ? { background: stype.bar } : undefined}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3.5 12.5l4-4 3 3 6-6" />
+                          <path d="M13 5.5h3.5V9" />
+                        </svg>
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
+            {rows.length === 0 && (
+              <tr>
+                <td
+                  colSpan={(isFirstColVisible ? 1 : 0) + dataCols.length + 2}
+                  className="px-4 py-8 text-center text-[13px] text-gray-500 dark:text-gray-400"
+                >
+                  Tidak ada wilayah yang cocok dengan pencarian.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         {/* right edge fade so users sense more cols when scrolling */}
@@ -286,6 +394,59 @@ export default function DataTable(props: DataTableProps) {
       {hover && <CellTooltip {...hover} sourceId={sourceId} sourceType={sourceType} unit={unit ?? ""} />}
     </div>
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SortHeader — the whole header cell is the control, so the hit area matches
+// what the reader sees. The arrow is rendered for the active column only;
+// showing a dimmed arrow on all of them made every column look half-sorted.
+// ─────────────────────────────────────────────────────────────────────────────
+function SortHeader({
+  label,
+  column,
+  sort,
+  align,
+  isMetric,
+  onSort,
+}: {
+  label: string;
+  column: string;
+  sort: SortState;
+  align: "left" | "right";
+  isMetric?: boolean;
+  onSort: (column: string) => void;
+}) {
+  const active = sort.key === column;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      className={`flex w-full items-center gap-1 px-3 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider transition-colors md:px-4 md:text-[11.5px] ${
+        align === "right" ? "justify-end" : "justify-start"
+      } ${
+        active
+          ? "text-gray-900 dark:text-white"
+          : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      {isMetric && (
+        <span
+          aria-hidden
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-light)] dark:bg-[var(--accent-dark)]"
+          title="Variabel utama"
+        />
+      )}
+      <span aria-hidden className={`shrink-0 text-[9px] ${active ? "opacity-100" : "opacity-0"}`}>
+        {sort.dir === "asc" ? "▲" : "▼"}
+      </span>
+    </button>
+  );
+}
+
+function ariaSort(sort: SortState, column: string): "ascending" | "descending" | "none" {
+  if (sort.key !== column) return "none";
+  return sort.dir === "asc" ? "ascending" : "descending";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

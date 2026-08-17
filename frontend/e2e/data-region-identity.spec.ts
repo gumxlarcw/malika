@@ -42,7 +42,9 @@ test.describe("/data row identity", () => {
 
   test("every row draws its own trend series", async ({ page }) => {
     const rows = await page.locator("table tbody tr").count();
-    const sparks = await page.locator("table tbody tr td:last-child svg").count();
+    // Addressed by test id, not by column position: the trend column stopped
+    // being last when the compare-pin column was added beside it.
+    const sparks = await page.locator('table tbody tr [data-testid="row-trend"] svg').count();
 
     // Series are looked up per row across all years; keying them on the period
     // found one point per row and the column collapsed to em dashes.
@@ -91,7 +93,7 @@ test.describe("/data row identity", () => {
 
   test("a falling trend is never drawn as a rise", async ({ page }) => {
     const RISING = "#10b981";
-    const trends = await page.locator("table tbody tr td:last-child").evaluateAll(
+    const trends = await page.locator('table tbody tr [data-testid="row-trend"]').evaluateAll(
       (cells, rising) =>
         cells
           .map((cell) => {

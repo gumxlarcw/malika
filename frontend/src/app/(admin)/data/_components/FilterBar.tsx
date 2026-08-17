@@ -44,6 +44,18 @@ export type FilterBarProps = {
   onPrint: () => void;
 
   rowsCount: number;
+
+  // In-table search over the region column. Separate from the `q` that arrives
+  // in the URL from global search: that one selects which source is shown, this
+  // one narrows the rows inside it.
+  query: string;
+  onQueryChange: (q: string) => void;
+
+  // "Variabel utama" — which measure drives the data bars, the stat strip and
+  // the comparison chart. Defaults to the column the page auto-picks.
+  metricColumns: string[];
+  metricColumn: string | null;
+  onMetricChange: (col: string) => void;
 };
 
 export default function FilterBar(props: FilterBarProps) {
@@ -63,6 +75,11 @@ export default function FilterBar(props: FilterBarProps) {
     onDownload,
     onPrint,
     rowsCount,
+    query,
+    onQueryChange,
+    metricColumns,
+    metricColumn,
+    onMetricChange,
   } = props;
 
   const stype = SOURCE_TYPE_PALETTE[asSourceType(sourceType)];
@@ -171,12 +188,103 @@ export default function FilterBar(props: FilterBarProps) {
           </span>
         </div>
       </div>
+
+      {/* Search + primary variable. Their own row at every width: folding them
+          into the desktop cluster pushed it past the sidebar-free 1200px column
+          between lg and xl, which is exactly how the header broke at 768px. */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2.5 dark:border-gray-800">
+        <SearchBox value={query} onChange={onQueryChange} />
+        {metricColumns.length > 1 && metricColumn && (
+          <MetricPicker
+            columns={metricColumns}
+            value={metricColumn}
+            onChange={onMetricChange}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SearchBox — filters rows on the region column.
+// ─────────────────────────────────────────────────────────────────────────────
+function SearchBox({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 dark:border-gray-800 dark:bg-gray-900 sm:max-w-[280px]">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="shrink-0 text-gray-400 dark:text-gray-500">
+        <circle cx="9" cy="9" r="5.2" />
+        <path d="M12.8 12.8l3.7 3.7" />
+      </svg>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Cari wilayah"
+        aria-label="Cari wilayah dalam tabel"
+        className="w-full min-w-0 border-0 bg-transparent text-[13px] text-gray-700 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-500"
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Hapus pencarian"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 transition-colors hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          <CloseIcon size={11} />
+        </button>
+      )}
+    </label>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MetricPicker — a native select, so the mobile picker is the OS one and the
+// control needs no outside-click or focus-trap handling of its own.
+// ─────────────────────────────────────────────────────────────────────────────
+function MetricPicker({
+  columns,
+  value,
+  onChange,
+}: {
+  columns: string[];
+  value: string;
+  onChange: (col: string) => void;
+}) {
+  return (
+    <label className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 dark:border-gray-800 dark:bg-gray-900">
+      <span className="whitespace-nowrap text-[12px] text-gray-500 dark:text-gray-400">
+        Variabel utama
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="Variabel utama"
+        className="max-w-[190px] cursor-pointer truncate border-0 bg-transparent text-[13px] font-medium text-gray-700 outline-none dark:text-gray-200"
+      >
+        {columns.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Desktop year scrubber — timeline rail with brand-tinted progress + dot per year
+// Long series (10+ years) overflow the scrubber's flex-1 allocation and used to
+// visually crash into the sibling chip/tools area. Inner row is now wrapped in
+// `overflow-x-auto` with a minWidth proportional to the year count, so the rail
+// + dots scroll horizontally inside the scrubber bounds and the active year
+// auto-scrolls into view.
 // ─────────────────────────────────────────────────────────────────────────────
 function YearScrubber({
   yearsAsc,
@@ -191,6 +299,23 @@ function YearScrubber({
   activeBg: string;
   onYearChange: (y: string) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+  // ~56px per year keeps the active dot's ring-4 from touching neighbors
+  const PER_YEAR_PX = 56;
+  const railMinWidth = Math.max(yearsAsc.length * PER_YEAR_PX, 280);
+
+  useEffect(() => {
+    const btn = activeRef.current;
+    const wrap = scrollRef.current;
+    if (!btn || !wrap) return;
+    const btnRect = btn.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    if (btnRect.left < wrapRect.left || btnRect.right > wrapRect.right) {
+      btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [selectedYear, yearsAsc.length]);
+
   return (
     <div className="min-w-0 flex-1">
       <div className="mb-1.5 flex items-center justify-between">
@@ -198,51 +323,54 @@ function YearScrubber({
           Tahun
         </span>
         <span className="text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
-          {yearsAsc[0]} → {yearsAsc[yearsAsc.length - 1]}
+          {yearsAsc[0]} → {yearsAsc[yearsAsc.length - 1]} · {yearsAsc.length} thn
         </span>
       </div>
-      <div className="relative">
-        <div
-          className="absolute left-2 right-2 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-gray-100 dark:bg-gray-800"
-          aria-hidden
-        />
-        <div
-          className="absolute left-2 top-1/2 h-[3px] -translate-y-1/2 rounded-full"
-          style={{ width: `calc(${progressPct}% - 4px)`, background: activeBg }}
-          aria-hidden
-        />
-        <div className="relative flex justify-between">
-          {yearsAsc.map((y) => {
-            const active = y === selectedYear;
-            return (
-              <button
-                key={y}
-                type="button"
-                onClick={() => onYearChange(y)}
-                className={`group relative flex flex-col items-center gap-1.5 px-2 py-1 transition-colors ${
-                  active ? "" : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                }`}
-                aria-label={`Tahun ${y}`}
-                aria-pressed={active}
-              >
-                <span
-                  className={`rounded-full transition-all ${
-                    active
-                      ? "h-3 w-3 ring-4 ring-white dark:ring-gray-900"
-                      : "h-2 w-2 bg-gray-300 group-hover:h-2.5 group-hover:w-2.5 dark:bg-gray-700"
+      <div ref={scrollRef} className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+        <div className="relative" style={{ minWidth: `${railMinWidth}px` }}>
+          <div
+            className="absolute left-2 right-2 top-[18px] h-[3px] rounded-full bg-gray-100 dark:bg-gray-800"
+            aria-hidden
+          />
+          <div
+            className="absolute left-2 top-[18px] h-[3px] rounded-full"
+            style={{ width: `calc(${progressPct}% - 4px)`, background: activeBg }}
+            aria-hidden
+          />
+          <div className="relative flex justify-between">
+            {yearsAsc.map((y) => {
+              const active = y === selectedYear;
+              return (
+                <button
+                  key={y}
+                  ref={active ? activeRef : undefined}
+                  type="button"
+                  onClick={() => onYearChange(y)}
+                  className={`group relative flex flex-col items-center gap-1.5 px-2 py-1 transition-colors ${
+                    active ? "" : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                   }`}
-                  style={active ? { background: activeBg } : undefined}
-                />
-                <span
-                  className={`text-[12px] font-medium tabular-nums ${
-                    active ? "text-gray-900 dark:text-white" : ""
-                  }`}
+                  aria-label={`Tahun ${y}`}
+                  aria-pressed={active}
                 >
-                  {y}
-                </span>
-              </button>
-            );
-          })}
+                  <span
+                    className={`rounded-full transition-all ${
+                      active
+                        ? "h-3 w-3 ring-4 ring-white dark:ring-gray-900"
+                        : "h-2 w-2 bg-gray-300 group-hover:h-2.5 group-hover:w-2.5 dark:bg-gray-700"
+                    }`}
+                    style={active ? { background: activeBg } : undefined}
+                  />
+                  <span
+                    className={`text-[12px] font-medium tabular-nums ${
+                      active ? "text-gray-900 dark:text-white" : ""
+                    }`}
+                  >
+                    {y}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
