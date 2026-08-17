@@ -149,4 +149,52 @@ async function getPeriodCount(indicatorId, { metric = null } = {}) {
   });
 }
 
-module.exports = { isProvinceDimValue, isRegionDimValue, getLatest, getTrend, getPeriodCount };
+/**
+ * Which kind of dimension this indicator carries.
+ *
+ * Card shape cannot be derived from getTrend: that returns province points only,
+ * so an indicator dimensioned by kabupaten/kota with no province total looks
+ * identical to one dimensioned by business sector. Both need different
+ * affordances in the UI — a regional range versus a category breakdown — so the
+ * distinction is read explicitly here.
+ */
+async function getDimensionProfile(indicatorId, { metric = null } = {}) {
+  const id = validateIndicatorId(indicatorId);
+  const watermark = await getWatermark(id);
+
+  return cache.getOrCompute('dimprofile', id, watermark, [metric], async () => {
+    const empty = { dimKey: null, hasProvince: false, hasRegion: false };
+    try {
+      const seq = getSequelizeBps();
+      if (!seq) return empty;
+      const metricClause = metric == null ? '' : 'AND metric = ?';
+      const replacements = metric == null ? [] : [metric];
+      const rows = await seq.query(
+        `SELECT DISTINCT dim_key, dim_value
+           FROM \`${tableName(id)}\`
+          WHERE value IS NOT NULL
+            AND year > 0
+            ${metricClause}
+          LIMIT 200`,
+        { replacements, type: QueryTypes.SELECT }
+      );
+      if (!rows || !rows.length) return empty;
+      return {
+        dimKey: rows[0].dim_key == null ? null : String(rows[0].dim_key),
+        hasProvince: rows.some((r) => isProvinceDimValue(r.dim_value)),
+        hasRegion: rows.some((r) => isRegionDimValue(r.dim_value)),
+      };
+    } catch {
+      return empty;
+    }
+  });
+}
+
+module.exports = {
+  isProvinceDimValue,
+  isRegionDimValue,
+  getLatest,
+  getTrend,
+  getPeriodCount,
+  getDimensionProfile,
+};

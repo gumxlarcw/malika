@@ -8,6 +8,7 @@ jest.mock('../services/indicator/read.service', () => ({
   getLatest: jest.fn(),
   getTrend: jest.fn(),
   getPeriodCount: jest.fn(),
+  getDimensionProfile: jest.fn(),
 }));
 
 const DataSource = require('../models/DataSource.model');
@@ -26,6 +27,7 @@ describe('dashboard.service', () => {
     read.getLatest.mockResolvedValue(null);
     read.getTrend.mockResolvedValue({ points: [], delta: null });
     read.getPeriodCount.mockResolvedValue(4); // eligible unless a test says otherwise
+    read.getDimensionProfile.mockResolvedValue({ dimKey: null, hasProvince: false, hasRegion: false });
   });
 
   describe('pickMetric', () => {
@@ -88,6 +90,33 @@ describe('dashboard.service', () => {
       const card = out.categories[0].indicators[0];
       expect(card.latest).toBeNull();
       expect(card.shape).not.toBe('province');
+    });
+
+    // Regression: shape used to be derived from trend.points, which holds
+    // province points only, so a region-only indicator could never be "regional".
+    test('a region-only indicator gets shape "regional", not "dimensional"', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'A', category: 'Sosial', visible: true, display_order: 1, icon: null, color: null },
+      ]);
+      read.getLatest.mockResolvedValue(null);
+      read.getTrend.mockResolvedValue({ points: [], delta: null });
+      read.getDimensionProfile.mockResolvedValue({ dimKey: 'Wilayah', hasProvince: false, hasRegion: true });
+
+      const out = await svc.getSummary();
+
+      expect(out.categories[0].indicators[0].shape).toBe('regional');
+      expect(out.categories[0].indicators[0].dimKey).toBe('Wilayah');
+    });
+
+    test('a non-geographic indicator stays "dimensional"', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'A', category: 'Ekonomi', visible: true, display_order: 1, icon: null, color: null },
+      ]);
+      read.getDimensionProfile.mockResolvedValue({ dimKey: 'Lapangan Usaha (Kategori)', hasProvince: false, hasRegion: false });
+
+      const out = await svc.getSummary();
+
+      expect(out.categories[0].indicators[0].shape).toBe('dimensional');
     });
 
     test('headline follows the appSettings list when present', async () => {

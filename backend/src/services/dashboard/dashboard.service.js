@@ -82,14 +82,19 @@ async function buildCard(source, meta, metricMetas) {
   }
 
   try {
-    const [latest, trend] = await Promise.all([
+    const [latest, trend, profile] = await Promise.all([
       read.getLatest(sourceId, { metric }),
       read.getTrend(sourceId, { metric }),
+      read.getDimensionProfile(sourceId, { metric }),
     ]);
+    // Shape comes from the dimension profile, not from trend.points: those hold
+    // province points only, so a region-only indicator would otherwise be
+    // indistinguishable from a non-geographic one and lose its map affordance.
     return {
       ...base,
       periodCount,
-      shape: latest ? 'province' : (trend.points.length ? 'regional' : 'dimensional'),
+      dimKey: profile.dimKey,
+      shape: latest ? 'province' : (profile.hasRegion ? 'regional' : 'dimensional'),
       latest,
       trend,
       error: false,
@@ -99,6 +104,7 @@ async function buildCard(source, meta, metricMetas) {
     return {
       ...base,
       periodCount,
+      dimKey: null,
       shape: 'dimensional',
       latest: null,
       trend: { points: [], delta: null },

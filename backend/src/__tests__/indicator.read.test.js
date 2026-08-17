@@ -159,4 +159,52 @@ describe('indicator/read.service', () => {
       await expect(read.getPeriodCount(999, { metric: null })).resolves.toBe(0);
     });
   });
+
+  // Card shape cannot be derived from getTrend: that returns province points
+  // only, so a region-only indicator looks identical to a non-geographic one.
+  describe('getDimensionProfile', () => {
+    test('detects a province-bearing indicator', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockResolvedValueOnce([
+        { dim_key: 'Wilayah', dim_value: 'Maluku Utara' },
+        { dim_key: 'Wilayah', dim_value: 'Kota Ternate' },
+      ]);
+
+      await expect(read.getDimensionProfile(182, { metric: null })).resolves.toEqual({
+        dimKey: 'Wilayah', hasProvince: true, hasRegion: true,
+      });
+    });
+
+    test('detects a region-only indicator', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockResolvedValueOnce([
+        { dim_key: 'Wilayah', dim_value: 'Halmahera Barat' },
+        { dim_key: 'Wilayah', dim_value: 'Kota Ternate' },
+      ]);
+
+      await expect(read.getDimensionProfile(182, { metric: null })).resolves.toEqual({
+        dimKey: 'Wilayah', hasProvince: false, hasRegion: true,
+      });
+    });
+
+    test('detects a non-geographic dimension', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockResolvedValueOnce([
+        { dim_key: 'Lapangan Usaha (Kategori)', dim_value: 'L. Real Estate' },
+      ]);
+
+      await expect(read.getDimensionProfile(293, { metric: null })).resolves.toEqual({
+        dimKey: 'Lapangan Usaha (Kategori)', hasProvince: false, hasRegion: false,
+      });
+    });
+
+    test('degrades safely when the query fails', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockRejectedValueOnce(new Error('no such table'));
+
+      await expect(read.getDimensionProfile(999, { metric: null })).resolves.toEqual({
+        dimKey: null, hasProvince: false, hasRegion: false,
+      });
+    });
+  });
 });
