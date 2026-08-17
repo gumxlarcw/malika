@@ -52,11 +52,13 @@ export default function StuckContextBar({
   return (
     <div
       aria-hidden={!visible}
-      className={`sticky top-[76px] z-30 -mx-4 transition-all duration-200 md:-mx-6 md:top-[89px] ${
+      // Offsets track the site header (60px, 68px from `md`) and the shell's
+      // gutters. They were 76/89 and -mx-4/-mx-6 for the old sidebar shell.
+      className={`sticky top-[60px] z-30 -mx-[18px] transition-all duration-200 md:-mx-8 md:top-[68px] ${
         visible ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
       }`}
     >
-      <div className="flex items-center gap-3 border-b border-gray-200/60 bg-white/85 px-4 py-2.5 backdrop-blur-md dark:border-gray-800/60 dark:bg-gray-900/85 md:px-6 lg:px-11">
+      <div className="flex items-center gap-3 border-b border-gray-200/60 bg-white/85 px-[18px] py-2.5 backdrop-blur-md dark:border-gray-800/60 dark:bg-gray-900/85 md:px-8">
         <span className="h-5 w-1 shrink-0 rounded" style={{ background: stype.bar }} aria-hidden />
         <div className="min-w-0 flex-1 truncate text-[12px] font-semibold text-gray-900 dark:text-white md:text-[13px]">
           {sourceName}

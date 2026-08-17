@@ -21,24 +21,16 @@ import "@/components/simple-tour.css";
  * now wear the same header, ground and footer as the landing page, and the
  * sidebar is gone.
  *
- * Two of them are not documents. /chat is a composer that must reach the bottom
- * of the viewport and /peta-tematik is a full-bleed map; boxing either into the
- * 1200px column, or hanging a tall footer beneath it, changes what the page is.
- * Both keep the header and take the rest of the screen.
+ * Every page reads in the same 1200px column as the landing, and ends on the
+ * same footer. One exception, below.
  */
 
 /**
  * Pins to the viewport and never scrolls: the composer has to sit on the bottom
- * edge, and the transcript scrolls inside itself.
+ * edge, and the transcript scrolls inside itself. A reading column and a tall
+ * footer would both change what that page is.
  */
 const FIXED = new Set(["/chat"]);
-
-/**
- * Scrolls like a document but declines the reading column. The map wants every
- * pixel the departed sidebar freed up, and it runs well past a screen, so
- * pinning it to the viewport would clip its lower panels out of reach.
- */
-const WIDE = new Set(["/peta-tematik"]);
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -54,8 +46,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const nav = useMemo(() => appNav(), []);
 
   const isFixed = FIXED.has(pathname);
-  const isWide = WIDE.has(pathname);
-  const showFooter = !isFixed && !isWide;
 
   const handleRefresh = useCallback(async () => {
     router.refresh();
@@ -102,16 +92,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         tabIndex={-1}
         className={cn(
           "w-full min-w-0 flex-1 outline-none",
-          isFixed && // `relative` is the anchor the chat surface positions against.
-            "relative min-h-0 overflow-hidden",
-          isWide && "px-[18px] pb-16 pt-8 md:px-8 md:pt-10",
-          showFooter && "mx-auto max-w-[1200px] px-[18px] pb-16 pt-8 md:px-8 md:pt-10"
+          isFixed
+            ? // `relative` is the anchor the chat surface positions against.
+              "relative min-h-0 overflow-hidden"
+            : "mx-auto max-w-[1200px] px-[18px] pb-16 pt-8 md:px-8 md:pt-10"
         )}
       >
         {isTouchDevice && !isFixed ? <PullToRefresh onRefresh={handleRefresh}>{children}</PullToRefresh> : children}
       </main>
 
-      {showFooter ? <SiteFooter t={t} /> : null}
+      {isFixed ? null : <SiteFooter t={t} />}
     </div>
   );
 }

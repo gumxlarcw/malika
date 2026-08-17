@@ -29,7 +29,13 @@ export default function EditorialHeader({ totalIndikator, actions }: Props) {
             indikator dari Badan Pusat Statistik. Pilih topik di bawah, jelajahi tren antar tahun, dan bandingkan capaian antar kabupaten/kota.
           </p>
         </div>
-        {actions && <div className="flex flex-shrink-0 items-center">{actions}</div>}
+        {/*
+          The toolbar must be allowed to shrink and wrap. It measures ~477px —
+          Bandingkan, Embed, Salin Link, CSV, PNG — so `flex-shrink-0` pushed it
+          past the edge on a phone and dragged the whole document sideways by
+          105px. It wraps under the title instead now.
+        */}
+        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
       </motion.div>
     </header>
   );

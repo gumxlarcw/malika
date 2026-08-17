@@ -170,7 +170,8 @@ export default function KategoriDetailClient({ category }: { category: Category 
       </section>
 
       {/* ── STICKY FILTER (search + segmented type filter) ───────────────── */}
-      <div className="sticky top-[76px] z-[5] -mx-4 border-b border-gray-200/60 bg-gray-50/85 px-4 py-3 backdrop-blur-md dark:border-gray-800/60 dark:bg-[#020617]/85 md:-mx-6 md:top-[89px] md:px-6 lg:px-11">
+      {/* Offsets and gutters track the site header + shell; see KategoriPageClient. */}
+      <div className="sticky top-[60px] z-[5] -mx-[18px] border-b border-gray-200/60 bg-gray-50/85 px-[18px] py-3 backdrop-blur-md dark:border-gray-800/60 dark:bg-[#020617]/85 md:-mx-8 md:top-[68px] md:px-8">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900 lg:max-w-md">
             <SearchIcon size={15} className="text-gray-400 dark:text-gray-500" />
