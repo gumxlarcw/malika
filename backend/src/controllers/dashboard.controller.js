@@ -27,6 +27,10 @@ async function getSummary(req, res) {
   return withGuard(req, res, () => svc.getSummary());
 }
 
+async function getSeries(req, res) {
+  return withGuard(req, res, () => svc.getSeries(req.query.ids, req.query.limit));
+}
+
 async function getCuration(req, res) {
   return withGuard(req, res, () => curation.getCuration());
 }
@@ -41,4 +45,4 @@ async function putCuration(req, res) {
   });
 }
 
-module.exports = { getSummary, getCuration, putCuration };
+module.exports = { getSummary, getSeries, getCuration, putCuration };

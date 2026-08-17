@@ -246,4 +246,85 @@ describe('dashboard.service', () => {
       expect(out.categories[0].indicators[0].error).toBe(true);
     });
   });
+
+  describe('getSeries', () => {
+    beforeEach(() => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'Inflasi Provinsi', chart_config: null },
+        { id: 164, name: 'Inflasi Kota Ternate', chart_config: null },
+      ]);
+      read.getTrend.mockResolvedValue({
+        points: [{ year: 2026, month_no: 7, periodLabel: 'Juli 2026', value: -0.67 }],
+        delta: null,
+      });
+    });
+
+    test('asks read.getTrend for the requested depth', async () => {
+      await svc.getSeries('1,164', '12');
+
+      expect(read.getTrend).toHaveBeenCalledWith(1, { metric: null, limit: 12 });
+      expect(read.getTrend).toHaveBeenCalledWith(164, { metric: null, limit: 12 });
+    });
+
+    // Callers align series into heat-map rows by index, so order is part of the
+    // contract — not an accident of how the database returned the sources.
+    test('preserves the requested id order', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 164, name: 'Inflasi Kota Ternate', chart_config: null },
+        { id: 1, name: 'Inflasi Provinsi', chart_config: null },
+      ]);
+
+      const out = await svc.getSeries('1,164');
+
+      expect(out.series.map((s) => s.sourceId)).toEqual([1, 164]);
+    });
+
+    test('defaults to twelve points when no limit is given', async () => {
+      await svc.getSeries('1');
+      expect(read.getTrend).toHaveBeenCalledWith(1, { metric: null, limit: 12 });
+    });
+
+    test('drops ids that resolve to nothing visible', async () => {
+      DataSource.findAll.mockResolvedValue([{ id: 1, name: 'Inflasi Provinsi', chart_config: null }]);
+
+      const out = await svc.getSeries('1,999');
+
+      expect(out.series.map((s) => s.sourceId)).toEqual([1]);
+    });
+
+    test('returns an empty list rather than throwing when none resolve', async () => {
+      DataSource.findAll.mockResolvedValue([]);
+      await expect(svc.getSeries('999')).resolves.toEqual({ series: [] });
+    });
+
+    test('one unreadable series does not blank the others', async () => {
+      read.getTrend.mockImplementation((id) =>
+        id === 1
+          ? Promise.reject(new Error('no such table'))
+          : Promise.resolve({ points: [{ year: 2026, month_no: 7, periodLabel: 'Juli 2026', value: 1 }], delta: null })
+      );
+
+      const out = await svc.getSeries('1,164');
+
+      expect(out.series[0].points).toEqual([]);
+      expect(out.series[1].points).toHaveLength(1);
+    });
+
+    // withGuard turns /Invalid/ into a 400, so these messages are the contract
+    // that keeps bad input off the database.
+    test.each([
+      ['', 'Invalid ids'],
+      ['abc', 'Invalid ids'],
+      ['1;DROP TABLE', 'Invalid ids'],
+      ['1,2,3,4,5,6,7,8,9', 'Invalid ids'],
+    ])('rejects ids %p', async (ids, message) => {
+      await expect(svc.getSeries(ids)).rejects.toThrow(message);
+      expect(DataSource.findAll).not.toHaveBeenCalled();
+    });
+
+    test.each([['1'], ['41'], ['x']])('rejects limit %p', async (limit) => {
+      await expect(svc.getSeries('1', limit)).rejects.toThrow('Invalid limit');
+      expect(DataSource.findAll).not.toHaveBeenCalled();
+    });
+  });
 });

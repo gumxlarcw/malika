@@ -195,11 +195,101 @@ async function getSummary() {
   return { headline, categories, generatedAt: new Date().toISOString() };
 }
 
+/**
+ * Longer series for a handful of named indicators.
+ *
+ * getSummary caps every trend at the card default, which is enough for a
+ * sparkline and not enough for a twelve-month panel. Rather than deepen every
+ * one of ~285 trends to serve a few panels, callers name the indicators they
+ * need and how far back. Reads go through read.getTrend, so they share the same
+ * watermark-keyed cache as the summary and cost nothing extra when warm.
+ */
+
+const MAX_SERIES_IDS = 8;
+const MAX_SERIES_POINTS = 40;
+const DEFAULT_SERIES_POINTS = 12;
+
+function normaliseSeriesIds(raw) {
+  const list = String(raw == null ? '' : raw)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!list.length) throw new Error('Invalid ids');
+  if (list.length > MAX_SERIES_IDS) throw new Error('Invalid ids');
+  for (const v of list) if (!/^\d+$/.test(v)) throw new Error('Invalid ids');
+  return [...new Set(list.map(Number))];
+}
+
+function normaliseSeriesLimit(raw) {
+  if (raw == null || raw === '') return DEFAULT_SERIES_POINTS;
+  if (!/^\d+$/.test(String(raw))) throw new Error('Invalid limit');
+  const n = Number(raw);
+  if (n < 2 || n > MAX_SERIES_POINTS) throw new Error('Invalid limit');
+  return n;
+}
+
+async function getSeries(idsInput, limitInput) {
+  const ids = normaliseSeriesIds(idsInput);
+  const limit = normaliseSeriesLimit(limitInput);
+
+  const sources = await DataSource.findAll({
+    where: { id: ids, visible: true },
+    attributes: ['id', 'name', 'chart_config'],
+    raw: true,
+  });
+  if (!sources.length) return { series: [] };
+
+  const presentIds = sources.map((s) => Number(s.id));
+  const [metas, metricMetas] = await Promise.all([
+    IndicatorMeta.findAll({ where: { source_id: presentIds }, raw: true }),
+    IndicatorMetricMeta.findAll({ where: { source_id: presentIds }, raw: true }),
+  ]);
+  const { metaBySource, metricsBySource } = buildIndexes(metas || [], metricMetas || []);
+  const bySource = new Map(sources.map((s) => [Number(s.id), s]));
+
+  // Requested order is preserved so callers can align series into rows without
+  // matching on id; ids that resolve to nothing visible are simply absent.
+  const series = await Promise.all(
+    ids
+      .filter((id) => bySource.has(id))
+      .map(async (id) => {
+        const source = bySource.get(id);
+        const meta = metaBySource.get(id) || null;
+        const mm = metricsBySource.get(id) || [];
+        const metric = pickMetric(mm, parseChartConfig(source.chart_config));
+        const metricMeta = mm.find((m) => m.metric_key === metric) || null;
+
+        let trend = { points: [], delta: null };
+        try {
+          trend = await read.getTrend(id, { metric, limit });
+        } catch {
+          // One unreadable indicator must not blank the whole panel.
+        }
+
+        return {
+          sourceId: id,
+          name: (meta && meta.title_clean) || source.name,
+          metric,
+          unit: (metricMeta && metricMeta.unit_id) || (meta && meta.unit_id) || null,
+          decimalPlaces: meta && meta.decimal_places != null ? Number(meta.decimal_places) : null,
+          points: trend.points,
+          delta: trend.delta,
+        };
+      })
+  );
+
+  return { series };
+}
+
 module.exports = {
   pickMetric,
   buildCard,
   getSummary,
+  getSeries,
   HEADLINE_SETTING_KEY,
   CATEGORY_ORDER_SETTING_KEY,
   MIN_PERIODS_FOR_CARD,
+  MAX_SERIES_IDS,
+  MAX_SERIES_POINTS,
+  DEFAULT_SERIES_POINTS,
 };
