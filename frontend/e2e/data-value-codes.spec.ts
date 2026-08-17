@@ -22,11 +22,13 @@ test("renders <sup title> for in-whitelist (*) and out-of-whitelist (–) value_
   const supCount = await page.locator("sup").count();
   expect.soft(supCount, "at least one <sup> rendered").toBeGreaterThan(0);
 
-  const angkaSementara = page.locator('sup[title="Angka sementara"]').first();
+  // The tooltip leads with the code itself ("* — Angka sementara"), so match on
+  // the definition rather than pinning the whole string.
+  const angkaSementara = page.locator('sup[title*="Angka sementara"]').first();
   await expect.soft(angkaSementara, "in-whitelist `*` renders 'Angka sementara' tooltip").toBeVisible();
   await expect.soft(angkaSementara, "in-whitelist text is '*'").toHaveText("*");
 
-  const dataNihil = page.locator('sup[title="Data nihil atau tidak ada"]').first();
+  const dataNihil = page.locator('sup[title*="Data nihil atau tidak ada"]').first();
   await expect.soft(dataNihil, "`–` resolves to 'Data nihil atau tidak ada'").toBeVisible();
   await expect.soft(dataNihil, "`–` text is the en-dash itself").toHaveText("–");
 
