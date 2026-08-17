@@ -157,9 +157,13 @@ it already answers publicly. Keeping the dashboard there is consistent with the
   "Angka utama" cards.
 - `CategorySection` — one per `data_sources.category`, ordered by
   `display_order`.
-- `IndicatorCard` — value, delta pill, sparkline (recharts, already a
-  dependency), unit and decimals from `IndicatorMeta`, drill-through to
-  `/data?source=NNN` or `/peta-tematik`.
+- `IndicatorCard` — value, delta pill, sparkline, unit and decimals from
+  `IndicatorMeta`, drill-through to `/data?source=NNN` or `/peta-tematik`.
+  The sparkline reuses the existing `components/chat/MiniSparkline.tsx` — pure
+  SVG, no chart library. *(Revised: the original text said recharts. Recharts is
+  a dependency, but pulling a full charting runtime in for ~285 inline
+  sparklines is the wrong trade when a purpose-built SVG component already
+  exists.)*
 - `/api/dashboard/*` proxy route matching the existing frontend convention.
 
 Reuses the landing page's token constants and card conventions rather than a new
@@ -198,11 +202,26 @@ Three shippable slices:
   Picking "the first metric" without a rule would be non-deterministic across
   re-ingestion.
 
-- **`unit_multiplier` must be applied.** `IndicatorMetricMeta.unit_multiplier`
-  (with `unit_multiplier_desc`, e.g. "ribu", "juta") means the stored `value` is
-  not always the display value. Rendering `value` raw would show figures wrong by
-  orders of magnitude. Formatting is centralised in one helper, unit-tested
-  against a multiplier fixture — not left to each card.
+- **`unit_multiplier` must NOT be applied.** *(Revised 2026-08-17 after checking
+  the data; the original text said the opposite.)* Only 84 of 1,352 metric rows
+  carry a multiplier, all `3` / "ribu", and the flag does not agree with the
+  values it describes:
+
+  | source | metric | `unit_multiplier` | sample values | reading |
+  |---|---|---|---|---|
+  | 186 | Penduduk (L+P) | 3 (ribu) | 704, 8.4, 11.2 | genuinely thousands |
+  | 179 | Rumah Tangga | 3 (ribu) | 259368, 21451, 49539 | raw counts — 259 *million* households would be absurd |
+
+  Multiplying by 10³ would inflate source 179 by a thousand; treating everything
+  as raw understates source 186 by the same factor. The flag is not reliable
+  enough to drive arithmetic **or** a "ribu" label, so the dashboard displays the
+  value exactly as replicated from BPS and does neither. Correcting the metadata
+  is a separate data task.
+
+- **`unit_id` contains HTML.** Real values include `km<sup>2</sup>`,
+  `m<sup>2</sup>`, `m<sup>3</sup>`. Rendered as text they show literal tags;
+  rendered with `dangerouslySetInnerHTML` they are an injection surface. The
+  formatter parses the `<sup>` case explicitly and escapes everything else.
 - **Period comparison.** `month_no` uses BPS sentinels (0 annual rollup, 1–12
   monthly, 31–34 quarterly, 35 annual, 36–37 semester). "Previous period" must
   compare like with like — quarter to quarter, not quarter to annual. Encoded in
