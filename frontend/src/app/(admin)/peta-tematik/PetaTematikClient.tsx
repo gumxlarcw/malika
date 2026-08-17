@@ -498,12 +498,49 @@ export default function PetaTematikClient() {
 
       {/* Map + Provinsi panel */}
       <div id="peta-tematik-export-area" className="space-y-4">
-        {/*
-          items-start: the rail is taller than the map card now that it carries
-          the focus figure and the legend, and a stretched grid item would pad
-          the map card out with blank white below a fixed-height Leaflet canvas.
-        */}
         {filters.indikator && filters.year ? (
+          <>
+          {/*
+            Reading order: what the province as a whole did, then how it is
+            spread, then the key to the colours — all before the map that uses
+            them. The map then sits beside the ranking it is a picture of, so
+            "which shape is that?" and "where does it place?" are one glance
+            apart instead of stacked in a rail.
+          */}
+          <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <ProvinsiTotalCard summary={summary} year={filters.year} />
+
+            {matrix && (
+              <FocusCard
+                matrix={matrix}
+                activeYear={filters.year}
+                selectedKode={selectedKode}
+                indicatorName={indikatorName}
+                unit={data?.meta?.unit ?? null}
+              />
+            )}
+
+            {legendBreaks.length > 0 && (
+              <div className="rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
+                <MapLegend
+                  values={activeYearValues}
+                  breaks={legendBreaks}
+                  paletteId={paletteId}
+                  binning={binning}
+                  unit={data?.meta?.unit ?? null}
+                  activeBucket={activeBucket}
+                  onPickBucket={setActiveBucket}
+                  noDataCount={activeYearValues.filter((v) => v == null).length}
+                />
+              </div>
+            )}
+          </div>
+
+          {/*
+            items-start so the map card is not padded out with blank white when
+            the ranking beside it runs taller — the Leaflet canvas has a fixed
+            height and cannot fill the difference.
+          */}
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-theme-xs overflow-hidden">
               {/* Map header bar */}
@@ -545,34 +582,7 @@ export default function PetaTematikClient() {
                 )}
               </div>
             </div>
-            <aside className="lg:col-span-1 space-y-4">
-              <ProvinsiTotalCard summary={summary} year={filters.year} />
-
-              {matrix && filters.year != null && (
-                <FocusCard
-                  matrix={matrix}
-                  activeYear={filters.year}
-                  selectedKode={selectedKode}
-                  indicatorName={indikatorName}
-                  unit={data?.meta?.unit ?? null}
-                />
-              )}
-
-              {legendBreaks.length > 0 && (
-                <div className="rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
-                  <MapLegend
-                    values={activeYearValues}
-                    breaks={legendBreaks}
-                    paletteId={paletteId}
-                    binning={binning}
-                    unit={data?.meta?.unit ?? null}
-                    activeBucket={activeBucket}
-                    onPickBucket={setActiveBucket}
-                    noDataCount={activeYearValues.filter((v) => v == null).length}
-                  />
-                </div>
-              )}
-
+            <aside className="lg:col-span-1">
               <LinkedBarChart
                 data={data?.data ?? []}
                 binning={binning}
@@ -583,6 +593,7 @@ export default function PetaTematikClient() {
               />
             </aside>
           </div>
+          </>
         ) : (
           <div className="rounded-xl border border-[var(--pt-border)] bg-[var(--pt-canvas-elevated)] p-8 text-center pt-body text-[var(--pt-ink-soft)]">
             Pilih indikator dan tahun untuk menampilkan peta.
