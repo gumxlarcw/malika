@@ -21,6 +21,7 @@ import MapLegend from "./components/MapLegend";
 import FocusCard from "./components/FocusCard";
 import YearMatrixTable from "./components/YearMatrixTable";
 import { useYearMatrix } from "./useYearMatrix";
+import { sparklinePoints } from "./panelData";
 import { readUrlState, useSyncUrl } from "./useUrlState";
 import { fmtNumber, computeBins, type BinningMethod, type PaletteId, PALETTES, DEFAULT_PALETTE, getPalette } from "./colorScale";
 import "./styles.css";
@@ -175,18 +176,16 @@ export default function PetaTematikClient() {
         return;
       }
 
-      // Fallback: pick first eligible from first non-empty meta group (skip Inti
-      // since it's curated — fall through to the first content-bearing group)
-      let defaultId: number | null = null;
-      for (const meta of META_GROUPS) {
-        if (meta.key === "indikator-inti") continue;
-        for (const kat of meta.kategoris) {
-          const items = proc.kategoriMap[kat];
-          if (items?.length) { defaultId = items[0].sourceId; break; }
-        }
-        if (defaultId != null) { setSelectedMeta(meta.key); break; }
-      }
-      if (defaultId != null) setFilters((f) => ({ ...f, indikator: defaultId }));
+      /*
+       * No indicator is chosen for the reader.
+       *
+       * This used to fall back to the first item of the first non-empty group,
+       * which meant the page opened on an arbitrary indicator — a real map, with
+       * real figures, that nobody asked to see. On a portal of 196 indicators
+       * that reads as an editorial claim about which one matters. The map stays
+       * empty until a choice is made; a URL that names one still deep-links
+       * straight to it, handled above.
+       */
     }).catch((e) => {
       console.error(e);
       setListError("Gagal memuat daftar indikator.");
@@ -805,22 +804,51 @@ function ProvinsiTotalCard({ summary, year }: { summary: SummaryResponse | null;
     const arrow = delta >= 0 ? "▲" : "▼";
     const color = delta >= 0 ? "var(--pt-delta-pos)" : "var(--pt-delta-neg)";
     deltaEl = (
-      <div className="pt-mono text-xs" style={{ color }}>
+      <div className="pt-mono mt-2 text-xs" style={{ color }}>
         {arrow} {fmtNumber(delta)} ({pct.toFixed(1)}%) dari {year - 1}
       </div>
     );
   }
+  /*
+   * The provincial series, already in the summary payload.
+   *
+   * Without it this card held a label, a number and a change line, and pinning
+   * the change line to the floor to match the row's height just moved the empty
+   * space into the middle. The five-year line is the figure's own context and
+   * costs no extra request.
+   */
+  const trendValues = summary.trend.map((t) => t.provinsi_total);
+  const spark = sparklinePoints(trendValues);
+
   return (
-    // This card carries the least content of the three in its row, so it fills
-    // the height and drops the change line to the floor rather than stacking
-    // everything at the top over a block of white.
     <div className="flex h-full flex-col bg-[var(--pt-canvas-elevated)] border border-[var(--pt-border)] rounded-xl p-5">
       <div className="pt-eyebrow mb-2">Provinsi · Maluku Utara</div>
       <div className="pt-display text-4xl text-[var(--pt-ink)] font-light tracking-tight tabular-nums">
         {total != null ? fmtNumber(total) : "—"}
       </div>
       <div className="pt-mono text-[11px] text-[var(--pt-ink-faint)] mt-1">tahun {year}</div>
-      {deltaEl ? <div className="mt-auto pt-3">{deltaEl}</div> : null}
+      {deltaEl}
+
+      {spark ? (
+        <div className="mt-auto pt-3">
+          <svg viewBox="0 0 100 34" width="100%" height="40" preserveAspectRatio="none" className="block overflow-visible" aria-hidden>
+            <polyline
+              points={spark.points}
+              fill="none"
+              stroke="var(--pt-accent)"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+            <circle cx={spark.lastX} cy={spark.lastY} r="2.2" fill="var(--pt-accent)" stroke="var(--pt-canvas-elevated)" strokeWidth="1.2" />
+          </svg>
+          <div className="pt-mono flex justify-between text-[10px] text-[var(--pt-ink-faint)]">
+            <span>{summary.trend[0]?.year}</span>
+            <span>{summary.trend[summary.trend.length - 1]?.year}</span>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
