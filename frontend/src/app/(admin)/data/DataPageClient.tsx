@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { applyTableRowOrdering, normalizeTableData } from "@/lib/tableRowOrdering";
+import { applyTableRowOrdering, findGeoKeyColumn, normalizeTableData } from "@/lib/tableRowOrdering";
 import { DATA_INSIGHT_ENABLED } from "@/lib/featureFlags";
 import { type InsightResponse } from "@/components/search/InterpretationPanel";
 import Hero from "./_components/Hero";
@@ -109,6 +109,12 @@ function detectEximModeFromName(name: string): "impor" | "ekspor" | null {
 // (audit C1, second pass).
 const COLUMN_BLOCKLIST = new Set(["value_codes"]);
 
+// Columns that carry the period rather than a measure. They parse as numbers, so
+// coverage scoring would happily elect "Tahun" as the aggregate column and plot a
+// sparkline of the years themselves.
+const PERIOD_COLUMN =
+  /^(tahun|year|bulan|month|periode|period|semester|triwulan|kuartal|quarter)$/i;
+
 // Heuristic match for "provincial total" rows (BPS uses "Maluku Utara" as the total)
 function isProvincialTotalRow(row: Record<string, unknown>, firstCol: string): boolean {
   const v = String(row[firstCol] ?? "").toLowerCase();
@@ -201,6 +207,16 @@ export default function DataPageClient({
     [allColumns, hiddenColumns],
   );
 
+  // The column that says *what* a row is. Position is not a reliable answer:
+  // BPS dynamic tables arrive as [Tahun, Wilayah, Nilai], so column 0 is the
+  // period. Keying row identity on it makes every row in a year view share one
+  // label, which silently breaks the per-row trend series, the provincial-total
+  // lookup and the region count alike.
+  const labelColumn = useMemo(
+    () => findGeoKeyColumn(allColumns) ?? allColumns[0] ?? "",
+    [allColumns],
+  );
+
   const numericColumns = useMemo(() => {
     const set = new Set<string>();
     if (isExim) {
@@ -211,6 +227,9 @@ export default function DataPageClient({
       return set;
     }
     for (const c of allColumns) {
+      // A year is a label that happens to be spelled with digits. Grouping it
+      // gives "2.025".
+      if (PERIOD_COLUMN.test(c.trim())) continue;
       if (rawRows.some((r) => typeof r[c] === "number")) set.add(c);
     }
     return set;
@@ -240,17 +259,17 @@ export default function DataPageClient({
   // design's mock data was Padi-style (single aggregate column), so just using
   // `lastCol` worked. Real tables can have 25+ commodity columns where the
   // alphabetically-last one (e.g. "Sukun") is sparse — picking it produces a
-  // sparkline of mostly NaN. Instead, score each non-first column by how many
+  // sparkline of mostly NaN. Instead, score each measure column by how many
   // year × row cells have a parseable number, and prefer the column with the
   // best coverage. Tie-break on rightmost (closer to the design's intent for
   // clean datasets) (audit-finding B1).
   const aggregateColumn = useMemo(() => {
     if (allColumns.length < 2) return null;
-    const firstCol = allColumns[0];
     type Candidate = { col: string; coverage: number; idx: number };
     let best: Candidate | null = null;
     allColumns.forEach((col, idx) => {
-      if (col === firstCol) return;
+      if (col === labelColumn) return;
+      if (PERIOD_COLUMN.test(col.trim())) return;
       let coverage = 0;
       for (const yd of allYearsData) {
         for (const row of yd.rows) {
@@ -268,18 +287,17 @@ export default function DataPageClient({
       }
     });
     return best && (best as Candidate).coverage > 0 ? (best as Candidate).col : null;
-  }, [allColumns, allYearsData]);
+  }, [allColumns, allYearsData, labelColumn]);
 
   // Total provincial series for hero sparkline. Uses the chosen aggregate col;
   // returns NaN where no provincial-total row exists, falling back to a sum
   // across rows for source types where summation is meaningful.
   const totalSeries = useMemo(() => {
-    const firstCol = allColumns[0];
-    if (!firstCol || !aggregateColumn) return [];
+    if (!labelColumn || !aggregateColumn) return [];
     const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
     return yearsAsc.map((yd) => {
       // Prefer a row labeled "Maluku Utara" / "Total" / "Provinsi"; otherwise sum non-total rows.
-      const totalRow = yd.rows.find((r) => isProvincialTotalRow(r, firstCol));
+      const totalRow = yd.rows.find((r) => isProvincialTotalRow(r, labelColumn));
       if (totalRow) {
         const parsed = toNumberLoose(totalRow[aggregateColumn]);
         return parsed === null ? NaN : parsed;
@@ -295,7 +313,7 @@ export default function DataPageClient({
       }
       return any ? sum : NaN;
     });
-  }, [allColumns, aggregateColumn, allYearsData]);
+  }, [labelColumn, aggregateColumn, allYearsData]);
 
   // Per-row sparkline series across all years. Now uses `aggregateColumn` so
   // it agrees with the hero `totalSeries` column choice — without this, sources
@@ -304,29 +322,27 @@ export default function DataPageClient({
   // `lastDataCol` heuristic (audit C2, second pass).
   const buildRowSeries = useCallback(
     (regionLabel: string): number[] => {
-      const firstCol = allColumns[0];
-      if (!firstCol || !aggregateColumn) return [];
+      if (!labelColumn || !aggregateColumn) return [];
       const yearsAsc = [...allYearsData].sort((a, b) => Number(a.year) - Number(b.year));
       return yearsAsc.map((yd) => {
-        const row = yd.rows.find((r) => String(r[firstCol] ?? "") === regionLabel);
+        const row = yd.rows.find((r) => String(r[labelColumn] ?? "") === regionLabel);
         if (!row) return NaN;
         const parsed = toNumberLoose(row[aggregateColumn]);
         return parsed === null ? NaN : parsed;
       });
     },
-    [allColumns, aggregateColumn, allYearsData],
+    [labelColumn, aggregateColumn, allYearsData],
   );
 
   const regionsCount = useMemo(() => {
-    const firstCol = allColumns[0];
-    if (!firstCol) return 0;
+    if (!labelColumn) return 0;
     const set = new Set<string>();
     for (const r of rawRows) {
-      const k = String(r[firstCol] ?? "").trim();
-      if (k && !isProvincialTotalRow(r, firstCol)) set.add(k);
+      const k = String(r[labelColumn] ?? "").trim();
+      if (k && !isProvincialTotalRow(r, labelColumn)) set.add(k);
     }
     return set.size;
-  }, [allColumns, rawRows]);
+  }, [labelColumn, rawRows]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleToggleColumn = useCallback((col: string) => {
@@ -461,8 +477,12 @@ export default function DataPageClient({
       for (const c of visibleColumns) {
         const formatted = formatCell(c, row);
         const raw = row[c];
+        // Numbers are passed through raw so the table can align them and render
+        // tabular figures — except periods, which must stay literal.
         out[c] =
-          typeof raw === "number" && Number.isFinite(raw) ? raw : formatted;
+          typeof raw === "number" && Number.isFinite(raw) && !PERIOD_COLUMN.test(c.trim())
+            ? raw
+            : formatted;
       }
       const codes = (row.value_codes ?? null) as Record<string, string> | null;
       if (codes) (out as Record<string, unknown>).value_codes = codes;
@@ -594,6 +614,7 @@ export default function DataPageClient({
           rows={tableRows}
           columns={visibleColumns}
           allColumns={allColumns}
+          labelColumn={labelColumn}
           totalRowMatcher={isProvincialTotalRow}
           rowSeries={buildRowSeries}
           lastUpdate={lastUpdate}
