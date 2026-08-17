@@ -98,6 +98,7 @@ export function HeatCard({ series }: { series: Series[] }) {
           })}
 
           <div className={cn("flex items-center gap-2.5 border-t border-gray-200 pt-3 text-xs dark:border-[#2b3648]", TEXT_5)}>
+            <span>Rendah</span>
             <span className={cn("tabular-nums", MONO)}>{formatValue(lo, decimals)}</span>
             <span
               className="h-2 flex-1 rounded-full"
@@ -105,6 +106,7 @@ export function HeatCard({ series }: { series: Series[] }) {
               aria-hidden
             />
             <span className={cn("tabular-nums", MONO)}>{formatValue(hi, decimals)}</span>
+            <span>Tinggi</span>
           </div>
         </div>
       )}

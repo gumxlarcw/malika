@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
-import type { Layer, Map as LeafletMap, PathOptions } from "leaflet";
+import type { LatLngBounds, Layer, Map as LeafletMap, PathOptions } from "leaflet";
 import type { Feature } from "geojson";
 import {
   computeBins, colorForValue, fmtNumber, getPalette,
@@ -77,6 +77,8 @@ interface Props {
   hoveredKdkab?: string | null;
   /** Legend class to isolate; every other region is dimmed. Null shows all. */
   activeBucket?: number | null;
+  /** Draw each kabupaten/kota's name on the map. */
+  showLabels?: boolean;
   onPolygonClick?: (kdkab: string, namaKab: string) => void;
   onPolygonHover?: (kdkab: string | null) => void;
 }
@@ -89,6 +91,7 @@ export default function ChoroplethMap({
   palette = getPalette("blue"),
   hoveredKdkab = null,
   activeBucket = null,
+  showLabels = false,
   onPolygonClick,
   onPolygonHover,
 }: Props) {
@@ -96,6 +99,10 @@ export default function ChoroplethMap({
   const [geoError, setGeoError] = useState(false);
   // Map of kdkab → Leaflet layer, populated by onEachFeature
   const layerByKdkab = useRef<Record<string, Layer>>({});
+  // Names captured while binding features, so the label layer never has to
+  // re-derive them from a code→name table that could drift out of step.
+  const nameByKdkab = useRef<Record<string, string>>({});
+  const [labelEpoch, setLabelEpoch] = useState(0);
   // Leaflet map instance — populated via callback ref once MapContainer mounts.
   const [leafletMap, setLeafletMap] = useState<LeafletMap | null>(null);
   // Container element for ResizeObserver — refit bounds when the map's box resizes.
@@ -190,6 +197,7 @@ export default function ChoroplethMap({
     layerByKdkab.current[kdkab] = layer;
     const namaKab = (feature.properties?.nama_kab as string)
       ?.replace(/^(Kabupaten|Kota)\s+/i, "") ?? kdkab;
+    nameByKdkab.current[kdkab] = namaKab;
     const v = valueByKdkab[kdkab];
     const prev = prevValueByKdkab[kdkab];
 
@@ -255,6 +263,48 @@ export default function ChoroplethMap({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hoveredKdkab, valueByKdkab, breaks, palette.id]);
 
+  /*
+   * Region names, drawn as standalone Leaflet tooltips rather than by
+   * re-binding each polygon's own tooltip: a layer can hold only one, and the
+   * hover tooltip carries the value, the year-on-year delta and the click hint.
+   * Leaflet is imported inside the effect because the module touches `window`
+   * at load time and this component is server-rendered.
+   */
+  useEffect(() => {
+    if (!leafletMap || !showLabels) return;
+    let cancelled = false;
+    const created: Array<{ remove: () => void }> = [];
+
+    import("leaflet").then((mod) => {
+      if (cancelled) return;
+      const L = mod.default ?? mod;
+      for (const [kdkab, layer] of Object.entries(layerByKdkab.current)) {
+        const name = nameByKdkab.current[kdkab];
+        if (!name) continue;
+        // `Layer` is the common base type; only the geometry subclasses carry
+        // getBounds, so it is narrowed here rather than cast away.
+        const bounds = (layer as Partial<{ getBounds: () => LatLngBounds }>).getBounds?.();
+        if (!bounds) continue;
+        const tooltip = L.tooltip({
+          permanent: true,
+          direction: "center",
+          className: "pt-region-label",
+          interactive: false,
+          opacity: 1,
+        })
+          .setLatLng(bounds.getCenter())
+          .setContent(name);
+        tooltip.addTo(leafletMap);
+        created.push(tooltip);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      for (const t of created) t.remove();
+    };
+  }, [leafletMap, showLabels, labelEpoch]);
+
   if (geoError) {
     return <FallbackTable data={data} />;
   }
@@ -296,6 +346,10 @@ export default function ChoroplethMap({
           data={geojson}
           style={styleFn as () => PathOptions}
           onEachFeature={onEachFeature}
+          // Remounting rebuilds every layer, so the standalone label tooltips
+          // are now anchored to objects the map no longer owns. Bumping the
+          // epoch re-runs the label pass against the new layers.
+          eventHandlers={{ add: () => setLabelEpoch((n) => n + 1) }}
         />
       </MapContainer>
       {labels.length > 0 && (

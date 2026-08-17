@@ -12,6 +12,9 @@ export type RegionColumn = {
   name: string;
   decimalPlaces: number | null;
   values: RegionValue[];
+  /** Same indicator at the previous published year — only fetched when the
+   *  reader asks to compare, so the default view costs one request per column. */
+  previousValues?: RegionValue[];
 };
 
 type SortKey = "name" | number;
@@ -28,12 +31,15 @@ type SortKey = "name" | number;
 export function RegionTable({
   columns,
   year,
+  previousYear,
   selectedRegion,
   onSelectRegion,
   onDownload,
 }: {
   columns: RegionColumn[];
   year: number | null;
+  /** Label for the compared year; null when comparison is off or unavailable. */
+  previousYear?: number | null;
   selectedRegion: string | null;
   onSelectRegion: (region: string | null) => void;
   onDownload: (csv: string, filename: string) => void;
@@ -42,14 +48,26 @@ export function RegionTable({
   const [descending, setDescending] = useState(false);
 
   const rows = useMemo(() => {
-    const byRegion = new Map<string, { kdkab: string; nama_kab: string; cells: Array<number | null> }>();
-    columns.forEach((col, index) => {
-      for (const v of col.values) {
-        if (!byRegion.has(v.kdkab)) {
-          byRegion.set(v.kdkab, { kdkab: v.kdkab, nama_kab: v.nama_kab, cells: columns.map(() => null) });
-        }
-        byRegion.get(v.kdkab)!.cells[index] = v.value;
+    const byRegion = new Map<
+      string,
+      { kdkab: string; nama_kab: string; cells: Array<number | null>; prev: Array<number | null> }
+    >();
+    const ensure = (kdkab: string, nama_kab: string) => {
+      if (!byRegion.has(kdkab)) {
+        byRegion.set(kdkab, {
+          kdkab,
+          nama_kab,
+          cells: columns.map(() => null),
+          prev: columns.map(() => null),
+        });
       }
+      return byRegion.get(kdkab)!;
+    };
+    columns.forEach((col, index) => {
+      for (const v of col.values) ensure(v.kdkab, v.nama_kab).cells[index] = v.value;
+      // A region present only in the earlier year still gets a row, so a
+      // kabupaten that stopped being published does not silently vanish.
+      for (const v of col.previousValues ?? []) ensure(v.kdkab, v.nama_kab).prev[index] = v.value;
     });
 
     const list = [...byRegion.values()];
@@ -79,12 +97,22 @@ export function RegionTable({
 
   const caret = (key: SortKey) => (key === sortKey ? (descending ? " ↓" : " ↑") : "");
 
+  const comparing = previousYear != null && columns.some((c) => c.previousValues?.length);
+
   const download = () => {
-    const header = ["Kode", "Kabupaten/kota", ...columns.map((c) => c.name)];
+    const header = [
+      "Kode",
+      "Kabupaten/kota",
+      ...columns.flatMap((c) => (comparing ? [c.name, `${c.name} (${previousYear})`] : [c.name])),
+    ];
     const body = rows.map((r) => [
       r.kdkab,
       r.nama_kab,
-      ...r.cells.map((v, i) => (v == null ? "" : formatValue(v, columns[i].decimalPlaces))),
+      ...columns.flatMap((c, i) => {
+        const now = r.cells[i] == null ? "" : formatValue(r.cells[i] as number, c.decimalPlaces);
+        if (!comparing) return [now];
+        return [now, r.prev[i] == null ? "" : formatValue(r.prev[i] as number, c.decimalPlaces)];
+      }),
     ]);
     const escape = (cell: string) => (/[";\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell);
     // Semicolon-delimited: values are formatted id-ID, where the decimal mark is
@@ -98,7 +126,9 @@ export function RegionTable({
       title="Tabel indikator kabupaten/kota"
       subtitle={
         columns.length
-          ? `${rows.length} wilayah · ${columns.length} indikator${year ? ` · ${year}` : ""}`
+          ? `${rows.length} wilayah · ${columns.length} indikator${year ? ` · ${year}` : ""}${
+              comparing ? ` · dibandingkan ${previousYear}` : ""
+            }`
           : undefined
       }
       className="col-span-12"
@@ -174,11 +204,26 @@ export function RegionTable({
                         <span className={cn("text-[13px] font-medium leading-5", TEXT_2)}>{r.nama_kab}</span>
                       </span>
                     </th>
-                    {r.cells.map((v, i) => (
-                      <td key={columns[i].sourceId} className={cn("py-2.5 pl-3 text-right text-[13px] tabular-nums", MONO, v == null ? TEXT_5 : TEXT_2)}>
-                        {v == null ? "—" : formatValue(v, columns[i].decimalPlaces)}
-                      </td>
-                    ))}
+                    {r.cells.map((v, i) => {
+                      const prev = r.prev[i];
+                      const diff = comparing && v != null && prev != null ? v - prev : null;
+                      return (
+                        <td key={columns[i].sourceId} className={cn("py-2.5 pl-3 text-right text-[13px] tabular-nums", MONO, v == null ? TEXT_5 : TEXT_2)}>
+                          {v == null ? "—" : formatValue(v, columns[i].decimalPlaces)}
+                          {comparing ? (
+                            <span className={cn("mt-0.5 block text-[11px] leading-4", TEXT_5)}>
+                              {/* Direction only, never a good/bad colour: falling
+                                  unemployment and falling output are the same
+                                  arrow, and MALIKA stores no polarity to tell
+                                  them apart. */}
+                              {diff == null
+                                ? "—"
+                                : `${diff > 0 ? "▲" : diff < 0 ? "▼" : "•"} ${formatValue(Math.abs(diff), columns[i].decimalPlaces)}`}
+                            </span>
+                          ) : null}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })}

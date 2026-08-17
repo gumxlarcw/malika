@@ -39,6 +39,7 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
   const [region, setRegion] = useState<string | null>(null);
   const [pickedIndicator, setPickedIndicator] = useState<number | null>(null);
   const [pickedYear, setPickedYear] = useState<number | null>(null);
+  const [comparePrevious, setComparePrevious] = useState(false);
   const [detail, setDetail] = useState<DetailTable | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,7 +122,20 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
     };
   }, [indicator]);
 
-  const columnsKey = `${year ?? ""}|${columnKey}`;
+  /*
+   * The year to compare against is the next one the indicator actually
+   * publishes, not `year - 1`. Subtracting one assumes an annual series; BRS
+   * indicators skip years, and querying a year with no rows would render an
+   * all-dash comparison that looks like a loss of data rather than a gap in it.
+   */
+  const previousYear = useMemo(() => {
+    if (year == null) return null;
+    const earlier = years.filter((y) => y < year);
+    return earlier.length ? Math.max(...earlier) : null;
+  }, [years, year]);
+
+  const comparing = comparePrevious && previousYear != null;
+  const columnsKey = `${year ?? ""}|${comparing ? previousYear : ""}|${columnKey}`;
   const regionColumns = fetchedColumns.key === columnsKey ? fetchedColumns.columns : [];
 
   useEffect(() => {
@@ -129,10 +143,18 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
     let cancelled = false;
     const ids = columnKey.split(",").map(Number);
     Promise.all(
-      ids.map(async (id) => ({ sourceId: id, ...describe(id), values: await fetchRegionValues(id, year) }))
+      ids.map(async (id) => ({
+        sourceId: id,
+        ...describe(id),
+        values: await fetchRegionValues(id, year),
+        previousValues:
+          comparing && previousYear != null ? await fetchRegionValues(id, previousYear) : undefined,
+      }))
     ).then((cols) => {
       // A column with no values at all is dropped: an all-dash column tells the
-      // reader nothing except that the page tried.
+      // reader nothing except that the page tried. The comparison year is not
+      // part of that test — a column is worth showing on this year's figures
+      // alone, even if the year before it published nothing.
       if (!cancelled) {
         setFetchedColumns({ key: columnsKey, columns: cols.filter((c) => c.values.some((v) => v.value != null)) });
       }
@@ -140,7 +162,7 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
     return () => {
       cancelled = true;
     };
-  }, [year, columnKey, columnsKey, describe]);
+  }, [year, columnKey, columnsKey, describe, comparing, previousYear]);
 
   const inflationIds = useMemo(() => (summary ? inflationSeriesIds(summary) : []), [summary]);
   const showHeat = HEAT_TABS.includes(tab) && inflationIds.length > 0;
@@ -258,11 +280,15 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
         regions={regionNames}
         region={region}
         onRegion={setRegion}
-        canReset={pickedIndicator != null || pickedYear != null || region != null}
+        comparePrevious={comparePrevious}
+        onComparePrevious={setComparePrevious}
+        previousYear={previousYear}
+        canReset={pickedIndicator != null || pickedYear != null || region != null || comparePrevious}
         onReset={() => {
           setPickedIndicator(null);
           setPickedYear(null);
           setRegion(null);
+          setComparePrevious(false);
         }}
       />
 
@@ -296,6 +322,7 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
         <RegionTable
           columns={regionColumns}
           year={year}
+          previousYear={comparing ? previousYear : null}
           selectedRegion={region}
           onSelectRegion={setRegion}
           onDownload={onDownload}

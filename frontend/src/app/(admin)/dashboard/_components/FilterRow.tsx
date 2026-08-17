@@ -43,6 +43,9 @@ export function FilterRow({
   regions,
   region,
   onRegion,
+  comparePrevious,
+  onComparePrevious,
+  previousYear,
   onReset,
   canReset,
 }: {
@@ -55,6 +58,10 @@ export function FilterRow({
   regions: string[];
   region: string | null;
   onRegion: (region: string | null) => void;
+  comparePrevious: boolean;
+  onComparePrevious: (on: boolean) => void;
+  /** Null when the indicator publishes only one year — nothing to compare against. */
+  previousYear: number | null;
   onReset: () => void;
   canReset: boolean;
 }) {
@@ -114,6 +121,25 @@ export function FilterRow({
           ))}
         </select>
       </Pill>
+
+      {previousYear != null ? (
+        <label
+          className={cn(
+            "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-2.5 text-[13px]",
+            BORDER,
+            SURFACE,
+            TEXT_2
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={comparePrevious}
+            onChange={(e) => onComparePrevious(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer accent-brand-500"
+          />
+          <span className="whitespace-nowrap">Bandingkan {previousYear}</span>
+        </label>
+      ) : null}
 
       {canReset ? (
         <button

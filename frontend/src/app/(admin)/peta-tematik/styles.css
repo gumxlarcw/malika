@@ -179,3 +179,36 @@
     width: 100%;
   }
 }
+
+/*
+ * Region labels drawn on the choropleth ("Label wilayah").
+ *
+ * Leaflet's default tooltip chrome — white box, border, drop shadow, caret —
+ * would put ten opaque cards over the very fills the map exists to show, so it
+ * is stripped back to text with a halo. The halo, not a background, is what
+ * keeps a name legible over both the palest and the darkest class.
+ */
+.leaflet-tooltip.pt-region-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.95),
+    0 0 6px rgba(255, 255, 255, 0.85);
+}
+
+.leaflet-tooltip.pt-region-label::before {
+  display: none;
+}
+
+.dark .leaflet-tooltip.pt-region-label {
+  color: #f9fafb;
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 0 6px rgba(0, 0, 0, 0.85);
+}

@@ -140,6 +140,7 @@ export default function PetaTematikClient() {
   // gradient where the values have none. All three methods were already
   // implemented in colorScale; only the control had been taken away.
   const [binning, setBinning] = useState<BinningMethod>("quantile");
+  const [showLabels, setShowLabels] = useState(false);
   const [paletteId, setPaletteId] = useState<PaletteId>(DEFAULT_PALETTE);
   /*
    * Legend class currently isolated on the map, stored with the classification
@@ -568,6 +569,7 @@ export default function PetaTematikClient() {
                   palette={palette}
                   hoveredKdkab={hoveredKdkab}
                   activeBucket={activeBucket}
+                  showLabels={showLabels}
                   onPolygonClick={handlePolygonClick}
                   onPolygonHover={setHoveredKdkab}
                 />
@@ -615,8 +617,24 @@ export default function PetaTematikClient() {
       )}
 
       {filters.indikator && legendBreaks.length > 0 && (
-        <div className="mt-5">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <BinningSelector value={binning} onChange={setBinning} />
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="pt-body inline-flex cursor-pointer items-center gap-2 text-[12px] text-[var(--pt-ink-soft)]">
+              <input
+                type="checkbox"
+                checked={showLabels}
+                onChange={(e) => setShowLabels(e.target.checked)}
+                className="h-3.5 w-3.5 cursor-pointer accent-brand-500"
+              />
+              Label wilayah
+            </label>
+            {/* Provenance for the geometry, not the values: the outlines are
+                the simplified 4.088-point projection, not the 11 MB source. */}
+            <span className="pt-body text-[11px] tabular-nums text-[var(--pt-ink-faint)]">
+              EPSG:4326 · geometri disederhanakan
+            </span>
+          </div>
         </div>
       )}
 
