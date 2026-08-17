@@ -15,8 +15,14 @@ import CompareMode from "./components/CompareMode";
 import CommandPalette from "./components/CommandPalette";
 import EmbedModal from "./components/EmbedModal";
 import ActiveIndikatorBanner from "./components/ActiveIndikatorBanner";
+import BinningSelector from "./components/BinningSelector";
+import MiniMapGrid from "./components/MiniMapGrid";
+import MapLegend from "./components/MapLegend";
+import FocusCard from "./components/FocusCard";
+import YearMatrixTable from "./components/YearMatrixTable";
+import { useYearMatrix } from "./useYearMatrix";
 import { readUrlState, useSyncUrl } from "./useUrlState";
-import { fmtNumber, type BinningMethod, type PaletteId, PALETTES, DEFAULT_PALETTE, getPalette } from "./colorScale";
+import { fmtNumber, computeBins, type BinningMethod, type PaletteId, PALETTES, DEFAULT_PALETTE, getPalette } from "./colorScale";
 import "./styles.css";
 import type {
   IndikatorList, YearsResponse, MetricsResponse,
@@ -127,10 +133,20 @@ export default function PetaTematikClient() {
   const [loadingData, setLoadingData] = useState(false);
   const [yearsError, setYearsError] = useState<string | null>(null);
   const [yearsAttempt, setYearsAttempt] = useState(0);
-  // Binning method is fixed to quantile (5-bin equal population) — pakai angka
-  // apa adanya tanpa expose user choice (Jenks/Equal removed per simplification)
-  const binning: BinningMethod = "quantile";
+  // Classification is the reader's choice again. It had been pinned to quantile
+  // "per simplification", but quantile guarantees a roughly even spread of
+  // colours whatever the data does — on a skewed indicator that invents a
+  // gradient where the values have none. All three methods were already
+  // implemented in colorScale; only the control had been taken away.
+  const [binning, setBinning] = useState<BinningMethod>("quantile");
   const [paletteId, setPaletteId] = useState<PaletteId>(DEFAULT_PALETTE);
+  /*
+   * Legend class currently isolated on the map, stored with the classification
+   * it was chosen under. "Class 3" means nothing once the method, indicator or
+   * year changes, so the selection is derived away rather than reset in an
+   * effect — which would leave one render showing the wrong regions highlighted.
+   */
+  const [bucketSel, setBucketSel] = useState<{ key: string; bucket: number | null }>({ key: "", bucket: null });
   const palette = useMemo(() => getPalette(paletteId), [paletteId]);
 
   // Drawer state
@@ -229,6 +245,35 @@ export default function PetaTematikClient() {
   }, []);
 
   const indikatorName = filters.indikator && processed ? processed.idToName.get(filters.indikator) ?? "" : "";
+
+  /*
+   * Periods for the comparison panels.
+   *
+   * Capped at the five most recent published years: each one is a separate
+   * query, and a source with twenty years of history would otherwise fan out to
+   * twenty requests to draw thumbnails. `years_empty` is excluded because a year
+   * that is listed but holds nothing renders as a blank map for no stated reason.
+   */
+  const panelYears = useMemo(() => {
+    if (!yearsResp?.years?.length) return [];
+    const empty = new Set(yearsResp.years_empty ?? []);
+    return yearsResp.years.filter((y) => !empty.has(y)).slice(-5);
+  }, [yearsResp]);
+
+  const { matrix } = useYearMatrix(filters.indikator, panelYears, filters.metric);
+
+  /** Breaks for the active year, shared by the legend and the map. */
+  const legendBreaks = useMemo(() => {
+    const values = (data?.data ?? []).map((d) => d.value).filter((v): v is number => v != null);
+    return values.length ? computeBins(values, binning, 5) : [];
+  }, [data, binning]);
+
+  const activeYearValues = useMemo(() => (data?.data ?? []).map((d) => d.value ?? null), [data]);
+  const selectedKode = drawerKab ? `82${drawerKab.kdkab}` : null;
+
+  const bucketKey = `${binning}|${filters.indikator}|${filters.year}`;
+  const activeBucket = bucketSel.key === bucketKey ? bucketSel.bucket : null;
+  const setActiveBucket = (bucket: number | null) => setBucketSel({ key: bucketKey, bucket });
 
   if (listError) {
     return (
@@ -453,8 +498,13 @@ export default function PetaTematikClient() {
 
       {/* Map + Provinsi panel */}
       <div id="peta-tematik-export-area" className="space-y-4">
+        {/*
+          items-start: the rail is taller than the map card now that it carries
+          the focus figure and the legend, and a stretched grid item would pad
+          the map card out with blank white below a fixed-height Leaflet canvas.
+        */}
         {filters.indikator && filters.year ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-theme-xs overflow-hidden">
               {/* Map header bar */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
@@ -479,6 +529,7 @@ export default function PetaTematikClient() {
                   binning={binning}
                   palette={palette}
                   hoveredKdkab={hoveredKdkab}
+                  activeBucket={activeBucket}
                   onPolygonClick={handlePolygonClick}
                   onPolygonHover={setHoveredKdkab}
                 />
@@ -496,6 +547,32 @@ export default function PetaTematikClient() {
             </div>
             <aside className="lg:col-span-1 space-y-4">
               <ProvinsiTotalCard summary={summary} year={filters.year} />
+
+              {matrix && filters.year != null && (
+                <FocusCard
+                  matrix={matrix}
+                  activeYear={filters.year}
+                  selectedKode={selectedKode}
+                  indicatorName={indikatorName}
+                  unit={data?.meta?.unit ?? null}
+                />
+              )}
+
+              {legendBreaks.length > 0 && (
+                <div className="rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
+                  <MapLegend
+                    values={activeYearValues}
+                    breaks={legendBreaks}
+                    paletteId={paletteId}
+                    binning={binning}
+                    unit={data?.meta?.unit ?? null}
+                    activeBucket={activeBucket}
+                    onPickBucket={setActiveBucket}
+                    noDataCount={activeYearValues.filter((v) => v == null).length}
+                  />
+                </div>
+              )}
+
               <LinkedBarChart
                 data={data?.data ?? []}
                 binning={binning}
@@ -521,6 +598,58 @@ export default function PetaTematikClient() {
             years={yearsResp.years}
             value={filters.year}
             onChange={(y) => setFilters((f) => ({ ...f, year: y }))}
+          />
+        </div>
+      )}
+
+      {filters.indikator && legendBreaks.length > 0 && (
+        <div className="mt-5">
+          <BinningSelector value={binning} onChange={setBinning} />
+        </div>
+      )}
+
+      {matrix && matrix.years.length >= 2 && filters.year != null && (
+        <section className="mt-6 rounded-2xl border border-[var(--pt-border)] bg-[var(--pt-canvas)] p-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="pt-display text-[15px] font-semibold text-[var(--pt-ink)]">Perubahan antar tahun</h2>
+              <p className="pt-body mt-0.5 text-[12px] text-[var(--pt-ink-faint)]">
+                Satu peta per periode, klasifikasi mengikuti tahun aktif. Klik untuk pindah periode.
+              </p>
+            </div>
+            <span className="pt-mono text-[11px] text-[var(--pt-ink-faint)]">{indikatorName}</span>
+          </div>
+          <div className="mt-3">
+            <MiniMapGrid
+              matrix={matrix}
+              activeYear={filters.year}
+              onPickYear={(y) => setFilters((f) => ({ ...f, year: y }))}
+              binning={binning}
+              paletteId={paletteId}
+              selectedKode={selectedKode}
+            />
+          </div>
+        </section>
+      )}
+
+      {matrix && matrix.rows.length > 0 && filters.year != null && (
+        <div className="mt-6">
+          <YearMatrixTable
+            matrix={matrix}
+            activeYear={filters.year}
+            indicatorName={indikatorName}
+            unit={data?.meta?.unit ?? null}
+            binning={binning}
+            paletteId={paletteId}
+            selectedKode={selectedKode}
+            onPickRegion={(kode) => {
+              if (!kode) {
+                setDrawerOpen(false);
+                return;
+              }
+              const row = matrix.rows.find((r) => r.kode === kode);
+              if (row) handlePolygonClick(kode.slice(2), row.nama_kab);
+            }}
           />
         </div>
       )}

@@ -10,6 +10,7 @@ import {
   type BinningMethod, type Palette,
 } from "./colorScale";
 import type { DataPoint } from "./types";
+import { bucketOf } from "./panelData";
 
 const MapContainer = dynamic(() => import("react-leaflet").then((m) => m.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then((m) => m.TileLayer), { ssr: false });
@@ -63,6 +64,8 @@ interface Props {
   binning?: BinningMethod;
   palette?: Palette;
   hoveredKdkab?: string | null;
+  /** Legend class to isolate; every other region is dimmed. Null shows all. */
+  activeBucket?: number | null;
   onPolygonClick?: (kdkab: string, namaKab: string) => void;
   onPolygonHover?: (kdkab: string | null) => void;
 }
@@ -74,6 +77,7 @@ export default function ChoroplethMap({
   binning = "quantile",
   palette = getPalette("blue"),
   hoveredKdkab = null,
+  activeBucket = null,
   onPolygonClick,
   onPolygonHover,
 }: Props) {
@@ -150,12 +154,15 @@ export default function ChoroplethMap({
   const styleFn = (feature?: Feature): PathOptions => {
     const kdkab = feature?.properties?.kdkab as string;
     const v = valueByKdkab[kdkab];
+    // Isolating a legend class dims the rest rather than hiding it: the shape of
+    // the province has to stay readable, or the reader loses where they are.
+    const dimmed = activeBucket != null && bucketOf(v ?? null, breaks) !== activeBucket;
     return {
       fillColor: v == null ? palette.noData : colorForValue(v, breaks, palette),
-      fillOpacity: v == null ? 0.5 : 0.88,
+      fillOpacity: dimmed ? 0.15 : v == null ? 0.5 : 0.88,
       color: baseStrokeColor,
       weight: 1,
-      opacity: 0.4,
+      opacity: dimmed ? 0.2 : 0.4,
     };
   };
 
@@ -272,7 +279,9 @@ export default function ChoroplethMap({
           maxZoom={19}
         />
         <GeoJSONLayer
-          key={`${filterKey}-${dataHash}`}
+          // activeBucket is in the key because Leaflet caches a layer's style;
+          // without a remount, isolating a class would leave the map unchanged.
+          key={`${filterKey}-${dataHash}-${activeBucket ?? "all"}`}
           data={geojson}
           style={styleFn as () => PathOptions}
           onEachFeature={onEachFeature}
