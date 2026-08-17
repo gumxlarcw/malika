@@ -8,10 +8,21 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import "./archive.css";
 
 type Kind = "all" | "report" | "publication";
+type SortKey = "baru" | "lama";
+
+/**
+ * Subjects come from the items themselves, not from webapi's `subject` model.
+ * That endpoint answers with a different taxonomy — `sub_id` 108 "Agama",
+ * 40 "Gender" — while releases are tagged with CSA subjects (`subcsa_id` 520
+ * "Tenaga Kerja"). Filtering by an id from the wrong scheme returns nothing,
+ * so the options are accumulated from the releases actually seen.
+ */
+type SubjectOption = { id: string; label: string };
 
 type ArchiveItem = {
   kind: "report" | "publication";
@@ -26,6 +37,8 @@ type ArchiveItem = {
   hue: number;
   label: string;
   eyebrow: string;
+  subjectId?: string;
+  subject?: string;
 };
 
 type BpsListMeta = {
@@ -43,6 +56,8 @@ type BrsRaw = {
   rl_date?: string;
   pdf?: string;
   thumbnail?: string;
+  subcsa?: string;
+  subcsa_id?: number | string;
 };
 
 type PubRaw = {
@@ -53,6 +68,9 @@ type PubRaw = {
   cover?: string;
   pdf?: string;
   size?: string;
+  /* Array through `/api/publikasi`, which parses it; the stringified list
+     `"['A', 'B']"` if the raw webapi is ever read directly. */
+  subject_csa?: string | string[] | null;
 };
 
 const MONTHS_ID = [
@@ -174,6 +192,28 @@ function labelFromTitle(title: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
+/**
+ * First subject of a publication, for display only.
+ *
+ * Two shapes reach this: `/api/publikasi` parses `subject_csa` into a real
+ * array, while the raw webapi sends the stringified list `"['Gender…', …]"`.
+ * Both are handled — assuming the string form threw `e.match is not a
+ * function` on the very first publication and took the whole page to its
+ * error state.
+ *
+ * Label-only on purpose: webapi accepts `subject/{id}` on publications and
+ * answers with the unfiltered 572 regardless, so it is never used to filter.
+ */
+function parseFirstSubject(raw?: string | string[] | null): string | undefined {
+  if (!raw || raw === "None") return undefined;
+  const first = Array.isArray(raw)
+    ? raw.find((v) => typeof v === "string" && v.trim())
+    : (raw.match(/'([^']+)'|"([^"]+)"/) ?? [])[1] ?? raw;
+  if (typeof first !== "string") return undefined;
+  const clean = sanitizeText(first).trim();
+  return clean || undefined;
+}
+
 function brsToItem(b: BrsRaw): ArchiveItem {
   const id = `BRS-${b.brs_id}`;
   return {
@@ -187,7 +227,11 @@ function brsToItem(b: BrsRaw): ArchiveItem {
     pdf: b.pdf || undefined,
     hue: hueFromString(id),
     label: labelFromTitle(b.title),
-    eyebrow: "Statistical Report",
+    eyebrow: "Berita Resmi Statistik",
+    // webapi sends the literal string "None" rather than omitting the field.
+    subjectId:
+      b.subcsa_id != null && String(b.subcsa_id) !== "None" ? String(b.subcsa_id) : undefined,
+    subject: b.subcsa && b.subcsa !== "None" ? sanitizeText(b.subcsa) : undefined,
   };
 }
 
@@ -204,7 +248,8 @@ function pubToItem(p: PubRaw): ArchiveItem {
     pdf: p.pdf || undefined,
     hue: hueFromString(id),
     label: labelFromTitle(p.title),
-    eyebrow: "Publication",
+    eyebrow: "Publikasi",
+    subject: parseFirstSubject(p.subject_csa),
   };
 }
 
@@ -212,10 +257,14 @@ const BPS_API_KEY =
   process.env.NEXT_PUBLIC_BPS_API_KEY || "e5d1be11320576d466bdeb2f7f210387";
 const BPS_DOMAIN = "8200";
 
-function buildBrsListUrl(opts: { page: number; keyword?: string; year?: string }) {
+function buildBrsListUrl(opts: { page: number; keyword?: string; year?: string; subject?: string }) {
   let url = `https://webapi.bps.go.id/v1/api/list/model/pressrelease/domain/${BPS_DOMAIN}/page/${opts.page}`;
   if (opts.keyword?.trim()) url += `/keyword/${encodeURIComponent(opts.keyword.trim())}`;
   if (opts.year) url += `/year/${opts.year}`;
+  // Measured against the live API: `subject/{subcsa_id}` narrows pressrelease
+  // (774 releases down to 25 for Tenaga Kerja). `subcat` — the name the docs
+  // suggest — is accepted and silently ignored, which is why it is not used.
+  if (opts.subject) url += `/subject/${encodeURIComponent(opts.subject)}`;
   url += `/key/${BPS_API_KEY}/`;
   return url;
 }
@@ -228,10 +277,20 @@ function buildPubListUrl(opts: { page: number; keyword?: string; year?: string }
   return `/api/publikasi?${params.toString()}`;
 }
 
-function getYearOptions(): string[] {
+/*
+ * Earliest year each catalogue actually holds, read off the last page of the
+ * live API: pressrelease bottoms out at 2014-01-04 (78 pages), publication at
+ * 2003-04-21 (58 pages). The list used to stop at 2020, which put eleven years
+ * of releases and seventeen years of publications out of reach of the filter —
+ * they were in the archive, just unselectable.
+ */
+const EARLIEST_YEAR: Record<Kind, number> = { all: 2003, report: 2014, publication: 2003 };
+
+function getYearOptions(kind: Kind): string[] {
   const cur = new Date().getFullYear();
+  const floor = EARLIEST_YEAR[kind];
   const ys: string[] = [];
-  for (let y = cur; y >= 2020; y--) ys.push(String(y));
+  for (let y = cur; y >= floor; y--) ys.push(String(y));
   return ys;
 }
 
@@ -253,7 +312,14 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
   const [kind, setKind] = useState<Kind>(initialKind);
   const [query, setQuery] = useState<string>(() => searchParams?.get("keyword") || "");
   const [year, setYear] = useState<string>(() => searchParams?.get("year") || "");
+  const [subject, setSubject] = useState<string>(() => searchParams?.get("subject") || "");
+  const [sort, setSort] = useState<SortKey>(() =>
+    searchParams?.get("sort") === "lama" ? "lama" : "baru",
+  );
+  const [view, setView] = useState<"kartu" | "daftar">("kartu");
   const [page, setPage] = useState<number>(1);
+  // Grows as pages are browsed; see SubjectOption on why it is not fetched.
+  const [subjectOptions, setSubjectOptions] = useState<SubjectOption[]>([]);
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [items, setItems] = useState<ArchiveItem[]>([]);
@@ -263,10 +329,17 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openedForIdRef = useRef<string | null>(null);
 
-  const yearOptions = useMemo(() => getYearOptions(), []);
+  const yearOptions = useMemo(() => getYearOptions(kind), [kind]);
 
   const pushUrl = useCallback(
-    (next: { kind?: Kind; keyword?: string; year?: string; id?: string | null }) => {
+    (next: {
+      kind?: Kind;
+      keyword?: string;
+      year?: string;
+      subject?: string;
+      sort?: SortKey;
+      id?: string | null;
+    }) => {
       const params = new URLSearchParams(searchParams?.toString() || "");
       if (next.kind !== undefined) {
         if (next.kind === defaultKind) params.delete("kind");
@@ -279,6 +352,14 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
       if (next.year !== undefined) {
         if (next.year) params.set("year", next.year);
         else params.delete("year");
+      }
+      if (next.subject !== undefined) {
+        if (next.subject) params.set("subject", next.subject);
+        else params.delete("subject");
+      }
+      if (next.sort !== undefined) {
+        if (next.sort === "lama") params.set("sort", "lama");
+        else params.delete("sort");
       }
       if (next.id !== undefined) {
         params.delete("brs_id");
@@ -325,6 +406,49 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
     [pushUrl],
   );
 
+  /** Accumulates subject options from releases already fetched. */
+  const collectSubjects = useCallback((list: ArchiveItem[]) => {
+    setSubjectOptions((prev) => {
+      const byId = new Map(prev.map((o) => [o.id, o]));
+      let added = false;
+      for (const it of list) {
+        if (!it.subjectId || !it.subject || byId.has(it.subjectId)) continue;
+        byId.set(it.subjectId, { id: it.subjectId, label: it.subject });
+        added = true;
+      }
+      if (!added) return prev;
+      return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, "id"));
+    });
+  }, []);
+
+  const handleSubjectChange = useCallback(
+    (v: string) => {
+      const next = v === "all" ? "" : v;
+      setSubject(next);
+      setPage(1);
+      pushUrl({ subject: next });
+    },
+    [pushUrl],
+  );
+
+  const handleSortChange = useCallback(
+    (v: SortKey) => {
+      setSort(v);
+      setPage(1);
+      pushUrl({ sort: v });
+    },
+    [pushUrl],
+  );
+
+  const handleClearFilters = useCallback(() => {
+    setQuery("");
+    setYear("");
+    setSubject("");
+    setSort("baru");
+    setPage(1);
+    pushUrl({ keyword: "", year: "", subject: "", sort: "baru" });
+  }, [pushUrl]);
+
   // ── Data fetch ───────────────────────────────────────────────────────
   useEffect(() => {
     const controller = new AbortController();
@@ -334,7 +458,7 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
       try {
         if (kind === "all") {
           const [brsRes, pubRes] = await Promise.all([
-            fetch(buildBrsListUrl({ page: 1, keyword: query, year }), {
+            fetch(buildBrsListUrl({ page: 1, keyword: query, year, subject }), {
               signal: controller.signal,
               cache: "no-store",
             }).then((r) => r.json()).catch(() => null),
@@ -359,45 +483,80 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
 
           if (controller.signal.aborted) return;
           setItems(merged);
+          collectSubjects(brsItems);
           setMeta(null);
           setStatus("ready");
           return;
         }
 
         if (kind === "report") {
-          const res = await fetch(buildBrsListUrl({ page, keyword: query, year }), {
+          /*
+           * webapi only ever serves newest-first, ten at a time, with no page
+           * size or order parameter. "Terlama" therefore reads the archive from
+           * the far end: probe for the page count, mirror the requested page
+           * onto it, and reverse the ten rows that come back. That costs one
+           * extra request and gives the genuine oldest releases — sorting the
+           * ten rows already on screen would only relabel the newest page.
+           */
+          let apiPage = page;
+          if (sort === "lama") {
+            const probe = await fetch(buildBrsListUrl({ page: 1, keyword: query, year, subject }), {
+              signal: controller.signal,
+              cache: "no-store",
+            }).then((r) => r.json()).catch(() => null);
+            const pages = Number(probe?.data?.[0]?.pages) || 1;
+            apiPage = Math.max(1, pages - (page - 1));
+          }
+          const res = await fetch(buildBrsListUrl({ page: apiPage, keyword: query, year, subject }), {
             signal: controller.signal,
             cache: "no-store",
           });
           const raw = (await res.json()) as { data?: [BpsListMeta, BrsRaw[]] };
           if (controller.signal.aborted) return;
           const m = (raw?.data?.[0] || null) as BpsListMeta | null;
-          const list = Array.isArray(raw?.data?.[1]) ? raw.data![1].map(brsToItem) : [];
-          setMeta(m);
+          let list = Array.isArray(raw?.data?.[1]) ? raw.data![1].map(brsToItem) : [];
+          if (sort === "lama") list = list.slice().reverse();
+          setMeta(m ? { ...m, page } : m);
           setItems(list);
+          collectSubjects(list);
           setStatus("ready");
           return;
         }
 
         // kind === "publication"
-        const res = await fetch(buildPubListUrl({ page, keyword: query, year }), {
+        let pubApiPage = page;
+        if (sort === "lama") {
+          const probe = await fetch(buildPubListUrl({ page: 1, keyword: query, year }), {
+            signal: controller.signal,
+            cache: "no-store",
+          }).then((r) => r.json()).catch(() => null);
+          const pages = Number(probe?.meta?.pages) || 1;
+          pubApiPage = Math.max(1, pages - (page - 1));
+        }
+        const res = await fetch(buildPubListUrl({ page: pubApiPage, keyword: query, year }), {
           signal: controller.signal,
           cache: "no-store",
         });
         const raw = (await res.json()) as { meta?: BpsListMeta | null; items?: PubRaw[] };
         if (controller.signal.aborted) return;
-        setMeta((raw?.meta || null) as BpsListMeta | null);
-        setItems(Array.isArray(raw?.items) ? raw.items.map(pubToItem) : []);
+        const pubMeta = (raw?.meta || null) as BpsListMeta | null;
+        let pubList = Array.isArray(raw?.items) ? raw.items.map(pubToItem) : [];
+        if (sort === "lama") pubList = pubList.slice().reverse();
+        setMeta(pubMeta ? { ...pubMeta, page } : pubMeta);
+        setItems(pubList);
         setStatus("ready");
-      } catch {
+      } catch (err) {
         if (controller.signal.aborted) return;
+        // The bare `catch {}` here hid a mapping bug behind a generic "Gagal"
+        // even though the request had returned 200.
+        console.error("ArchiveBrowser load failed:", err);
         setStatus("error");
       }
     };
 
     load();
     return () => controller.abort();
-  }, [kind, query, year, page]);
+  }, [kind, query, year, subject, sort, page, collectSubjects]);
 
   // ── Deep-link to a single item ──────────────────────────────────────
   const deepLinkId = useMemo<string | null>(() => {
@@ -520,6 +679,11 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
     return out;
   }, [page, totalPages]);
 
+  const activeSubjectLabel = useMemo(
+    () => subjectOptions.find((o) => o.id === subject)?.label ?? null,
+    [subjectOptions, subject],
+  );
+
   const featured = items[0] || null;
   const rest = items.slice(1);
   const isEmpty = status === "ready" && items.length === 0;
@@ -533,28 +697,53 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
           query={query}
           year={year}
           yearOptions={yearOptions}
+          subject={subject}
+          subjectOptions={subjectOptions}
+          sort={sort}
+          showSort={canPaginate}
+          view={view}
           onKindChange={handleKindChange}
           onSearchChange={handleSearchChange}
           onYearChange={handleYearChange}
+          onSubjectChange={handleSubjectChange}
+          onSortChange={handleSortChange}
+          onViewChange={setView}
+        />
+
+        <FilterChips
+          query={query}
+          year={year}
+          subjectLabel={activeSubjectLabel}
+          sort={canPaginate ? sort : "baru"}
+          onClearQuery={() => handleSearchChange("")}
+          onClearYear={() => handleYearChange("all")}
+          onClearSubject={() => handleSubjectChange("all")}
+          onClearSort={() => handleSortChange("baru")}
+          onClearAll={handleClearFilters}
         />
 
         <div className="ar-section-head">
           <h2 className="ar-section-h">
-            <span className="ar-section-h-pre">— </span>Latest releases
+            <span className="ar-section-h-pre">— </span>
+            {sort === "lama" && canPaginate ? "Rilis terlama" : "Rilis terbaru"}
           </h2>
           <span className="ar-section-count">
             {status === "loading"
-              ? "Loading…"
+              ? "Memuat…"
               : status === "error"
-                ? "Error"
-                : `${items.length}${meta?.total ? ` of ${meta.total}` : ""}`}
+                ? "Gagal"
+                : `${items.length}${meta?.total ? ` dari ${meta.total}` : ""}`}
           </span>
         </div>
 
         {status === "error" ? (
           <ErrorState onRetry={() => setPage((p) => p)} />
         ) : isEmpty ? (
-          <EmptyState query={query} />
+          <EmptyState
+            query={query}
+            earliestYear={EARLIEST_YEAR[kind]}
+            onClear={handleClearFilters}
+          />
         ) : status === "loading" ? (
           <div className="ar-grid">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -563,12 +752,22 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
           </div>
         ) : (
           <>
-            {featured && <FeaturedCard item={featured} onOpen={openItem} />}
-            <div className="ar-grid">
-              {rest.map((it) => (
-                <ItemCard key={it.id} item={it} onOpen={openItem} />
-              ))}
-            </div>
+            {view === "daftar" ? (
+              <ul className="ar-list">
+                {items.map((it) => (
+                  <ListRow key={it.id} item={it} onOpen={openItem} />
+                ))}
+              </ul>
+            ) : (
+              <>
+                {featured && <FeaturedCard item={featured} onOpen={openItem} />}
+                <div className="ar-grid">
+                  {rest.map((it) => (
+                    <ItemCard key={it.id} item={it} onOpen={openItem} />
+                  ))}
+                </div>
+              </>
+            )}
             {canPaginate && totalPages > 1 && (
               <div className="ar-pag">
                 <button
@@ -577,7 +776,7 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
                   disabled={page <= 1 || status !== "ready"}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  ← Prev
+                  ← Sebelumnya
                 </button>
                 {paginationItems.map((it) =>
                   it.type === "ellipsis" ? (
@@ -600,12 +799,34 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
                   disabled={page >= totalPages || status !== "ready"}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
-                  Next →
+                  Berikutnya →
                 </button>
               </div>
             )}
           </>
         )}
+        <section className="ar-cta">
+          <div className="ar-cta-text">
+            <h3 className="ar-cta-h">Butuh angka spesifik?</h3>
+            <p className="ar-cta-p">
+              Rilis memuat ringkasan. Angka per kabupaten/kota dan deret antar tahun ada di data
+              statistik dan peta tematik.
+            </p>
+          </div>
+          <div className="ar-cta-links">
+            <Link href="/kategori" className="ar-cta-btn ar-cta-btn--primary">
+              Jelajahi data statistik
+            </Link>
+            <Link href="/peta-tematik" className="ar-cta-btn">
+              Lihat peta tematik
+            </Link>
+          </div>
+        </section>
+
+        <p className="ar-source">
+          Sumber: <a href="https://webapi.bps.go.id" target="_blank" rel="noopener noreferrer">webapi BPS</a>{" "}
+          · domain {BPS_DOMAIN} (Maluku Utara)
+        </p>
       </div>
 
       <Preview item={active} onClose={closePreview} />
@@ -619,33 +840,49 @@ function Toolbar({
   query,
   year,
   yearOptions,
+  subject,
+  subjectOptions,
+  sort,
+  showSort,
+  view,
   onKindChange,
   onSearchChange,
   onYearChange,
+  onSubjectChange,
+  onSortChange,
+  onViewChange,
 }: {
   kind: Kind;
   query: string;
   year: string;
   yearOptions: string[];
+  subject: string;
+  subjectOptions: SubjectOption[];
+  sort: SortKey;
+  /** Hidden on "Semua", which merges one page of each source and cannot order the archive. */
+  showSort: boolean;
+  view: "kartu" | "daftar";
   onKindChange: (k: Kind) => void;
   onSearchChange: (v: string) => void;
   onYearChange: (v: string) => void;
+  onSubjectChange: (v: string) => void;
+  onSortChange: (v: SortKey) => void;
+  onViewChange: (v: "kartu" | "daftar") => void;
 }) {
   const tabs: Array<[Kind, string]> = [
-    ["all", "All"],
-    ["report", "Reports"],
-    ["publication", "Publications"],
+    ["all", "Semua"],
+    ["report", "Berita Resmi Statistik"],
+    ["publication", "Publikasi"],
   ];
   return (
     <header className="ar-bar">
       <div className="ar-bar-brand">
-        <span className="ar-brand-mark">◆</span>
-        <span className="ar-brand-name">ARCHIVE</span>
-        <span className="ar-brand-sub">/ Statistical releases</span>
+        <span className="ar-brand-name">Berita Resmi Statistik &amp; Publikasi</span>
+        <span className="ar-brand-sub">Arsip rilis · BPS Provinsi Maluku Utara</span>
       </div>
 
       <div className="ar-bar-tools">
-        <div className="ar-seg" role="tablist" aria-label="Document kind">
+        <div className="ar-seg" role="tablist" aria-label="Jenis dokumen">
           {tabs.map(([k, label]) => (
             <button
               key={k}
@@ -667,25 +904,156 @@ function Toolbar({
           </svg>
           <input
             type="text"
-            placeholder="Search titles, topics…"
+            placeholder="Cari judul atau topik…"
+            aria-label="Cari rilis"
             value={query}
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </label>
 
+        {subjectOptions.length > 0 && (
+          <select
+            className="ar-select"
+            value={subject || "all"}
+            onChange={(e) => onSubjectChange(e.target.value)}
+            aria-label="Subjek"
+            /* webapi only honours subject on pressrelease, so the control is
+               disabled rather than hidden on Publikasi: hiding it would make
+               the toolbar reflow every time the reader switches tab. */
+            disabled={kind === "publication"}
+            title={
+              kind === "publication"
+                ? "webapi tidak menyaring publikasi menurut subjek"
+                : undefined
+            }
+          >
+            <option value="all">Semua subjek</option>
+            {subjectOptions.map((o) => (
+              <option key={o.id} value={o.id}>{o.label}</option>
+            ))}
+          </select>
+        )}
+
         <select
           className="ar-select"
           value={year || "all"}
           onChange={(e) => onYearChange(e.target.value)}
-          aria-label="Year"
+          aria-label="Tahun"
         >
-          <option value="all">All years</option>
+          <option value="all">Semua tahun</option>
           {yearOptions.map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
         </select>
+
+        {showSort && (
+          <select
+            className="ar-select"
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value === "lama" ? "lama" : "baru")}
+            aria-label="Urutkan"
+          >
+            <option value="baru">Terbaru</option>
+            <option value="lama">Terlama</option>
+          </select>
+        )}
+
+        <div className="ar-view" role="group" aria-label="Tampilan">
+          <button
+            type="button"
+            className={`ar-view-btn ${view === "kartu" ? "is-on" : ""}`}
+            aria-pressed={view === "kartu"}
+            onClick={() => onViewChange("kartu")}
+            title="Tampilan kartu"
+          >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+              <rect x="3" y="3" width="6" height="6" rx="1.5" />
+              <rect x="11" y="3" width="6" height="6" rx="1.5" />
+              <rect x="3" y="11" width="6" height="6" rx="1.5" />
+              <rect x="11" y="11" width="6" height="6" rx="1.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={`ar-view-btn ${view === "daftar" ? "is-on" : ""}`}
+            aria-pressed={view === "daftar"}
+            onClick={() => onViewChange("daftar")}
+            title="Tampilan daftar"
+          >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+              <path d="M3 5.5h14M3 10h14M3 14.5h14" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
+  );
+}
+
+// ── Active filter chips ────────────────────────────────────────────────
+function FilterChips({
+  query,
+  year,
+  subjectLabel,
+  sort,
+  onClearQuery,
+  onClearYear,
+  onClearSubject,
+  onClearSort,
+  onClearAll,
+}: {
+  query: string;
+  year: string;
+  subjectLabel: string | null;
+  sort: SortKey;
+  onClearQuery: () => void;
+  onClearYear: () => void;
+  onClearSubject: () => void;
+  onClearSort: () => void;
+  onClearAll: () => void;
+}) {
+  const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+  if (query.trim()) chips.push({ key: "q", label: `"${query.trim()}"`, clear: onClearQuery });
+  if (subjectLabel) chips.push({ key: "s", label: subjectLabel, clear: onClearSubject });
+  if (year) chips.push({ key: "y", label: year, clear: onClearYear });
+  if (sort === "lama") chips.push({ key: "o", label: "Terlama", clear: onClearSort });
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="ar-chips">
+      <span className="ar-chips-label">Filter aktif</span>
+      {chips.map((c) => (
+        <button key={c.key} type="button" className="ar-chip" onClick={c.clear}>
+          {c.label}
+          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+            <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+          </svg>
+          <span className="ar-sr">Hapus filter {c.label}</span>
+        </button>
+      ))}
+      <button type="button" className="ar-chips-clear" onClick={onClearAll}>
+        Bersihkan semua
+      </button>
+    </div>
+  );
+}
+
+// ── List row ───────────────────────────────────────────────────────────
+function ListRow({ item, onOpen }: { item: ArchiveItem; onOpen: (it: ArchiveItem) => void }) {
+  return (
+    <li>
+      <button type="button" className="ar-row" onClick={() => onOpen(item)}>
+        <span className="ar-row-date">{formatDate(item.rl_date)}</span>
+        <span className="ar-row-main">
+          <span className="ar-row-title">{item.title}</span>
+          <span className="ar-row-meta">
+            {item.eyebrow}
+            {item.subject ? ` · ${item.subject}` : ""}
+          </span>
+        </span>
+        <span className="ar-row-open">Buka rilis →</span>
+      </button>
+    </li>
   );
 }
 
@@ -788,7 +1156,15 @@ function CardSkeleton() {
 }
 
 // ── Empty / Error ──────────────────────────────────────────────────────
-function EmptyState({ query }: { query: string }) {
+function EmptyState({
+  query,
+  earliestYear,
+  onClear,
+}: {
+  query: string;
+  earliestYear: number;
+  onClear: () => void;
+}) {
   return (
     <div className="ar-empty">
       <svg width="48" height="48" viewBox="0 0 48 48" className="ar-empty-mark" aria-hidden="true">
@@ -800,9 +1176,14 @@ function EmptyState({ query }: { query: string }) {
         <line x1="38" y1="41" x2="44" y2="46" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
       <h3 className="ar-empty-h">
-        No releases match{query ? <> &ldquo;<em>{query}</em>&rdquo;</> : null}
+        Tidak ada rilis yang cocok{query ? <> dengan &ldquo;<em>{query}</em>&rdquo;</> : null}.
       </h3>
-      <p className="ar-empty-p">Try clearing filters, or browse the full archive going back to 2020.</p>
+      <p className="ar-empty-p">
+        Coba longgarkan subjek atau tahun — arsip tersedia sejak {earliestYear}.
+      </p>
+      <button type="button" className="ar-pv-btn" onClick={onClear} style={{ marginTop: 18 }}>
+        Bersihkan filter
+      </button>
     </div>
   );
 }
@@ -815,10 +1196,10 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         <line x1="24" y1="18" x2="24" y2="28" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         <circle cx="24" cy="34" r="1.4" fill="currentColor" />
       </svg>
-      <h3 className="ar-empty-h">Couldn&rsquo;t load releases</h3>
-      <p className="ar-empty-p">The catalogue service didn&rsquo;t respond. Check the connection or try again.</p>
+      <h3 className="ar-empty-h">Gagal memuat rilis</h3>
+      <p className="ar-empty-p">Layanan katalog BPS tidak merespons. Periksa koneksi, lalu coba lagi.</p>
       <button type="button" className="ar-pv-btn ar-pv-btn--primary" onClick={onRetry} style={{ marginTop: 18 }}>
-        Retry
+        Coba lagi
       </button>
     </div>
   );
@@ -827,6 +1208,10 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 // ── Preview overlay ────────────────────────────────────────────────────
 function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  // Which item's citation was copied, rather than a bare boolean: keyed this
+  // way the flag resets itself when a different release is opened, with no
+  // effect that would fire a second render just to clear it.
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!item) return;
@@ -847,6 +1232,19 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
 
   const bullets = parseBullets(item.abstract);
   const isPub = item.kind === "publication";
+  const copied = copiedId === item.id;
+
+  /*
+   * Author–year form, Sofifi being the seat of BPS Maluku Utara.
+   *
+   * The catalogue number is appended only for releases, whose id is the short
+   * quotable "BRS-875". Publication ids are 24-character hashes
+   * ("PUB-8a23b4e3962d12edc08727d4") — meaningless to a reader and pure noise
+   * once the citation is pasted into a document, so they are left out.
+   */
+  const pubYear = (item.rl_date || "").slice(0, 4) || "t.t.";
+  const catalogueNo = isPub ? "" : ` ${item.id}.`;
+  const citation = `BPS Provinsi Maluku Utara. ${pubYear}. ${item.title}. Sofifi: BPS Provinsi Maluku Utara.${catalogueNo}`;
 
   const overlay = (
     <div className="ar-pv-scrim" onClick={onClose} role="dialog" aria-modal="true">
@@ -874,19 +1272,19 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
             </div>
           </div>
           <div className="ar-pv-doc-controls">
-            <span>{item.pages ? `Page 1 of ${item.pages}` : "Press release"}</span>
+            <span>{item.pages ? `Halaman 1 dari ${item.pages}` : "Berita Resmi Statistik"}</span>
           </div>
         </div>
 
         {/* Metadata side */}
         <div className="ar-pv-side">
           <div className="ar-pv-side-top">
-            <div className="ar-pv-tag">{isPub ? "Publication" : "Statistical Report"}</div>
+            <div className="ar-pv-tag">{isPub ? "Publikasi" : "Berita Resmi Statistik"}</div>
             <button
               ref={closeRef}
               className="ar-pv-close"
               onClick={onClose}
-              aria-label="Close"
+              aria-label="Tutup"
               type="button"
             >
               <svg width="14" height="14" viewBox="0 0 14 14">
@@ -906,21 +1304,21 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
             <div className="ar-pv-stats">
               <div>
                 <div className="ar-pv-stat-n">{String(item.rawId).slice(0, 8)}</div>
-                <div className="ar-pv-stat-l">Catalogue</div>
+                <div className="ar-pv-stat-l">Katalog</div>
               </div>
               <div>
                 <div className="ar-pv-stat-n">PDF</div>
                 <div className="ar-pv-stat-l">Format</div>
               </div>
               <div>
-                <div className="ar-pv-stat-n">{isPub ? "PUB" : "RPT"}</div>
-                <div className="ar-pv-stat-l">Kind</div>
+                <div className="ar-pv-stat-n">{isPub ? "PUB" : "BRS"}</div>
+                <div className="ar-pv-stat-l">Jenis</div>
               </div>
             </div>
 
             {bullets.length > 0 && (
               <>
-                <h3 className="ar-pv-h3">Highlights</h3>
+                <h3 className="ar-pv-h3">Poin utama</h3>
                 <ul className="ar-pv-bullets">
                   {bullets.map((b, i) => (
                     <li key={i}>{b}</li>
@@ -928,6 +1326,22 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
                 </ul>
               </>
             )}
+
+            <h3 className="ar-pv-h3">Sitasi</h3>
+            <p className="ar-pv-cite">{citation}</p>
+            <button
+              type="button"
+              className="ar-pv-cite-copy"
+              onClick={() => {
+                if (typeof navigator === "undefined" || !navigator.clipboard) return;
+                navigator.clipboard.writeText(citation).then(
+                  () => setCopiedId(item.id),
+                  () => setCopiedId(null),
+                );
+              }}
+            >
+              {copied ? "Tersalin" : "Salin"}
+            </button>
           </div>
 
           <div className="ar-pv-side-foot">
@@ -948,11 +1362,11 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
                     strokeLinejoin="round"
                   />
                 </svg>
-                Open PDF
+                Buka PDF
               </a>
             ) : (
               <span className="ar-pv-btn" style={{ opacity: 0.5, cursor: "not-allowed" }}>
-                No PDF available
+                PDF tidak tersedia
               </span>
             )}
             <button
@@ -964,7 +1378,7 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
                 }
               }}
             >
-              Share link
+              Bagikan
             </button>
           </div>
         </div>

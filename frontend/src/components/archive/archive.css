@@ -735,3 +735,198 @@ html.dark .archive-root,
 .dark .archive-root {
   color-scheme: light;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MALIKA BRS Publikasi — page header, filters, list view, citation, CTA
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* The brand row was a mono, uppercase, .22em-tracked "ARCHIVE" wordmark.
+   The page title that replaced it is a five-word Indonesian sentence, which
+   that treatment stretches past the toolbar and makes unreadable. */
+.archive-root .ar-bar-brand {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-family: var(--ar-sans);
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  min-width: 0;
+}
+.archive-root .ar-brand-name {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  text-transform: none;
+}
+.archive-root .ar-brand-sub {
+  font-size: 12px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.archive-root .ar-select:disabled { opacity: .45; cursor: not-allowed; }
+
+/* View toggle */
+.archive-root .ar-view {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--paper-2);
+}
+.archive-root .ar-view-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 26px; width: 30px;
+  border: 0; border-radius: 999px;
+  background: transparent; color: var(--ink-3);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+.archive-root .ar-view-btn:hover { color: var(--ink); }
+.archive-root .ar-view-btn.is-on { background: var(--paper); color: var(--ink); }
+
+/* Active filter chips */
+.archive-root .ar-chips {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+.archive-root .ar-chips-label {
+  font-family: var(--ar-mono);
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.archive-root .ar-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.archive-root .ar-chip:hover { border-color: var(--accent); color: var(--ink); }
+.archive-root .ar-chips-clear {
+  border: 0; background: transparent;
+  color: var(--ink-3);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.archive-root .ar-chips-clear:hover { color: var(--ink); }
+
+/* Screen-reader-only text, so a chip's icon still announces what it clears */
+.archive-root .ar-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Compact list view */
+.archive-root .ar-list { list-style: none; margin: 0; padding: 0; }
+.archive-root .ar-row {
+  display: flex; align-items: baseline; gap: 16px;
+  width: 100%;
+  padding: 13px 6px;
+  border: 0; border-bottom: 1px solid var(--rule);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.archive-root .ar-row:hover { background: var(--paper-2); }
+.archive-root .ar-row-date {
+  flex: 0 0 auto; width: 92px;
+  font-family: var(--ar-mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.archive-root .ar-row-main { flex: 1 1 auto; min-width: 0; }
+.archive-root .ar-row-title {
+  display: block;
+  font-size: 14px; line-height: 1.4; font-weight: 500;
+  color: var(--ink);
+}
+.archive-root .ar-row-meta {
+  display: block; margin-top: 3px;
+  font-size: 11.5px; color: var(--ink-3);
+}
+.archive-root .ar-row-open {
+  flex: 0 0 auto;
+  font-size: 12px; color: var(--accent);
+  opacity: 0; transition: opacity 160ms ease;
+}
+.archive-root .ar-row:hover .ar-row-open,
+.archive-root .ar-row:focus-visible .ar-row-open { opacity: 1; }
+
+/* Citation */
+.archive-root .ar-pv-cite {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  background: var(--paper-2);
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-2);
+}
+.archive-root .ar-pv-cite-copy {
+  height: 28px; padding: 0 12px;
+  border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--paper); color: var(--ink-2);
+  font-size: 12px; cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.archive-root .ar-pv-cite-copy:hover { border-color: var(--accent); color: var(--ink); }
+
+/* Closing call to action */
+.archive-root .ar-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+  margin-top: 36px; padding: 20px 22px;
+  border: 1px solid var(--rule); border-radius: var(--ar-r);
+  background: var(--paper-2);
+}
+.archive-root .ar-cta-text { min-width: 0; flex: 1 1 320px; }
+.archive-root .ar-cta-h {
+  margin: 0; font-size: 15px; font-weight: 600; color: var(--ink);
+}
+.archive-root .ar-cta-p {
+  margin: 4px 0 0; max-width: 52ch;
+  font-size: 13px; line-height: 1.55; color: var(--ink-3);
+}
+.archive-root .ar-cta-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.archive-root .ar-cta-btn {
+  display: inline-flex; align-items: center;
+  height: 38px; padding: 0 16px;
+  border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--paper); color: var(--ink-2);
+  font-size: 13px; font-weight: 500;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.archive-root .ar-cta-btn:hover { border-color: var(--accent); color: var(--ink); }
+.archive-root .ar-cta-btn--primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+.archive-root .ar-cta-btn--primary:hover { color: #fff; opacity: .92; }
+
+/* Provenance */
+.archive-root .ar-source {
+  margin: 18px 0 0;
+  font-size: 11.5px; color: var(--ink-3);
+}
+.archive-root .ar-source a { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .archive-root .ar-row { flex-wrap: wrap; gap: 4px 12px; }
+  .archive-root .ar-row-date { width: auto; }
+  .archive-root .ar-row-open { display: none; }
+  .archive-root .ar-cta { flex-direction: column; align-items: flex-start; }
+}
