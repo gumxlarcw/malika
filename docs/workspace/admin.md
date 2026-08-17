@@ -44,6 +44,7 @@ Vitest + React Testing Library + jsdom. Run with `npm test`. Coverage focused on
 ## Change Log
 | Date | Change | Files Affected |
 |---|---|---|
+| 2026-08-17 | **Halaman Kurasi Dashboard** (`/backend/dashboard-curation`, grup Overview di sidebar). Memilih indikator untuk strip "Angka utama" dan mengatur urutan seksi kategori pada `/dashboard` PWA, lewat `GET`/`PUT /dashboard/admin/curation`. Hanya indikator berbentuk `province` yang bisa dipilih — indikator lain tidak punya satu angka tingkat provinsi untuk ditampilkan. Kontrol sengaja sederhana: checkbox dan tombol naik/turun, bukan drag-and-drop, agar tidak menambah dependensi dan tetap bisa dipakai lewat papan ketik. Halaman dibungkus `RequireAuth`, dan endpointnya di backend dibatasi `requireAdmin`. | `app/dashboard-curation/page.tsx`, `components/Sidebar.tsx` |
 | 2026-03-02 | Initial audit & documentation | - |
 | 2026-05-09 | Post-audit refresh: page count corrected (27, not 35+); ErrorBoundary added; Modal focus trap; html2canvas → html2canvas-pro; lib/axios migrated to TS; Vitest + RTL test infrastructure added | per `2026-05-09-admin-panel-audit-fixes` plan |
 | 2026-05-24 | New page /webapi-bps-status: WebAPI BPS health probe + dashboard | spec 2026-05-24 |
