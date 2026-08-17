@@ -16,7 +16,9 @@ import type { IndicatorCardData } from "../_lib/types";
  * scan the period down the page, which is what a statistics reader checks first.
  */
 export function IndicatorRow({ card }: { card: IndicatorCardData }) {
-  const href = card.shape === "regional" ? "/peta-tematik" : `/data?source=${card.sourceId}`;
+  // `source_id`, not `source` — /data reads `searchParams.source_id` and renders
+  // "Parameter `source_id` tidak valid" for anything else.
+  const href = card.shape === "regional" ? "/peta-tematik" : `/data?source_id=${card.sourceId}`;
   const unit = parseUnit(card.unit);
 
   return (
