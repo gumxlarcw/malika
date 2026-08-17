@@ -48,6 +48,21 @@ describe('dashboard.service', () => {
     test('returns null when there are no metrics', () => {
       expect(svc.pickMetric([])).toBeNull();
     });
+
+    // The hook the spec reserved: metric_type ranking cannot know which of
+    // several measures an indicator is normally reported by.
+    test('a curated default_metric beats the type heuristic', () => {
+      const metas = [
+        { id: 1, metric_key: 'month-to-month', metric_type: 'numeric' },
+        { id: 2, metric_key: 'year-on-year', metric_type: 'numeric' },
+      ];
+      expect(svc.pickMetric(metas, { default_metric: 'year-on-year' })).toBe('year-on-year');
+    });
+
+    test('ignores a default_metric the indicator does not actually have', () => {
+      const metas = [{ id: 1, metric_key: 'Nilai', metric_type: 'percent' }];
+      expect(svc.pickMetric(metas, { default_metric: 'tidak-ada' })).toBe('Nilai');
+    });
   });
 
   describe('getSummary', () => {
@@ -117,6 +132,36 @@ describe('dashboard.service', () => {
       const out = await svc.getSummary();
 
       expect(out.categories[0].indicators[0].shape).toBe('dimensional');
+    });
+
+    // A card showing one of several measures must name it.
+    test('names the measure when the indicator reports more than one', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'Inflasi', category: 'Harga', visible: true, display_order: 1, icon: null, color: null,
+          chart_config: JSON.stringify({ default_metric: 'year-on-year' }) },
+      ]);
+      IndicatorMetricMeta.findAll.mockResolvedValue([
+        { source_id: 1, id: 1, metric_key: 'month-to-month', metric_type: 'numeric', metric_label_id: 'month-to-month' },
+        { source_id: 1, id: 2, metric_key: 'year-on-year', metric_type: 'numeric', metric_label_id: 'year-on-year' },
+      ]);
+
+      const out = await svc.getSummary();
+      const card = out.categories[0].indicators[0];
+
+      expect(card.metric).toBe('year-on-year');
+      expect(card.metricLabel).toBe('year-on-year');
+    });
+
+    test('does not name the measure when there is only one', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'TPT', category: 'Sosial', visible: true, display_order: 1, icon: null, color: null, chart_config: null },
+      ]);
+      IndicatorMetricMeta.findAll.mockResolvedValue([
+        { source_id: 1, id: 1, metric_key: 'Nilai', metric_type: 'percent', metric_label_id: 'Nilai' },
+      ]);
+
+      const out = await svc.getSummary();
+      expect(out.categories[0].indicators[0].metricLabel).toBeNull();
     });
 
     test('headline follows the appSettings list when present', async () => {

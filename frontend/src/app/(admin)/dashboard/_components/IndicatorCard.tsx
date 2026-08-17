@@ -54,7 +54,13 @@ export function IndicatorCard({ card }: { card: IndicatorCardData }) {
         SURFACE
       )}
     >
-      <span className={cn("line-clamp-2 text-sm leading-5", TEXT_4)}>{card.name}</span>
+      <span className="flex flex-col gap-0.5">
+        <span className={cn("line-clamp-2 text-sm leading-5", TEXT_4)}>{card.name}</span>
+        {/* Several measures exist for this indicator; say which one this is. */}
+        {card.metricLabel ? (
+          <span className={cn("text-[11px] uppercase tracking-wide", MONO, TEXT_5)}>{card.metricLabel}</span>
+        ) : null}
+      </span>
 
       {card.error || !card.latest ? (
         <span className={cn("text-sm", TEXT_5)}>Angka provinsi tidak tersedia</span>
@@ -63,6 +69,7 @@ export function IndicatorCard({ card }: { card: IndicatorCardData }) {
           {/* The figure is the point of the card, so it gets the weight. */}
           <span className="flex min-w-0 flex-wrap items-baseline">
             <span
+              data-figure
               className={cn(
                 "font-medium leading-none tabular-nums break-all",
                 figureSizeClass(figure),

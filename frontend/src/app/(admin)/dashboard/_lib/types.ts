@@ -30,6 +30,8 @@ export type IndicatorCardData = {
   icon: string | null;
   color: string | null;
   metric: string | null;
+  /** Set only when the indicator reports several measures, so the card can name it. */
+  metricLabel: string | null;
   unit: string | null;
   /** Present in the payload but deliberately never applied — see the spec. */
   unitMultiplier: number | null;

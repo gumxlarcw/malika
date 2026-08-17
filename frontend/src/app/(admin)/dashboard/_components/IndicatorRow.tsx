@@ -30,6 +30,9 @@ export function IndicatorRow({ card }: { card: IndicatorCardData }) {
     >
       <span className={cn("text-sm leading-5", TEXT_2, "group-hover:text-brand-600 dark:group-hover:text-brand-300")}>
         {card.name}
+        {card.metricLabel ? (
+          <span className={cn("ml-2 text-[11px]", MONO, TEXT_5)}>{card.metricLabel}</span>
+        ) : null}
       </span>
 
       {/* Figure column — deliberately empty when the source has no province row. */}

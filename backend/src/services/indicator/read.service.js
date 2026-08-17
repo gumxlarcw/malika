@@ -35,6 +35,26 @@ function isProvinceDimValue(dimValue) {
   return PROVINCE_ALIASES.includes(normalise(dimValue));
 }
 
+/**
+ * Some tables carry no dimension at all — every row has an empty `dim_value`
+ * — because the table itself is the series, e.g. "Inflasi Provinsi Maluku
+ * Utara". There is no province-named row to match, but every row *is* the
+ * province, so the figure is provincial.
+ *
+ * Checked across the whole result rather than per row: 23 indicators are
+ * entirely undimensioned and none mix empty with non-empty values, so a single
+ * dimensioned row is enough to fall back to the strict province rule.
+ */
+function isUndimensioned(rows) {
+  return rows.length > 0 && rows.every((r) => String(r.dim_value == null ? '' : r.dim_value).trim() === '');
+}
+
+/** The rows that represent the province, under either rule. */
+function provinceRowsOf(rows) {
+  if (isUndimensioned(rows)) return rows;
+  return rows.filter((r) => isProvinceDimValue(r.dim_value));
+}
+
 async function fetchRows(id, metric) {
   const seq = getSequelizeBps();
   if (!seq) return [];
@@ -65,7 +85,7 @@ async function getLatest(indicatorId, { metric = null } = {}) {
     }
     if (!rows.length) return null;
 
-    const provinceRows = rows.filter((r) => isProvinceDimValue(r.dim_value));
+    const provinceRows = provinceRowsOf(rows);
     if (!provinceRows.length) return null; // See PROVINCE RULE above.
 
     const newest = sortPeriodsDesc(provinceRows)[0];
@@ -92,7 +112,7 @@ async function getTrend(indicatorId, { metric = null, limit = 6 } = {}) {
       return { points: [], delta: null };
     }
 
-    const provinceRows = sortPeriodsDesc(rows.filter((r) => isProvinceDimValue(r.dim_value)));
+    const provinceRows = sortPeriodsDesc(provinceRowsOf(rows));
     if (!provinceRows.length) return { points: [], delta: null };
 
     const newest = provinceRows[0];
@@ -179,9 +199,10 @@ async function getDimensionProfile(indicatorId, { metric = null } = {}) {
         { replacements, type: QueryTypes.SELECT }
       );
       if (!rows || !rows.length) return empty;
+      const undimensioned = isUndimensioned(rows);
       return {
-        dimKey: rows[0].dim_key == null ? null : String(rows[0].dim_key),
-        hasProvince: rows.some((r) => isProvinceDimValue(r.dim_value)),
+        dimKey: undimensioned ? null : rows[0].dim_key == null ? null : String(rows[0].dim_key),
+        hasProvince: undimensioned || rows.some((r) => isProvinceDimValue(r.dim_value)),
         hasRegion: rows.some((r) => isRegionDimValue(r.dim_value)),
       };
     } catch {
@@ -193,6 +214,7 @@ async function getDimensionProfile(indicatorId, { metric = null } = {}) {
 module.exports = {
   isProvinceDimValue,
   isRegionDimValue,
+  isUndimensioned,
   getLatest,
   getTrend,
   getPeriodCount,

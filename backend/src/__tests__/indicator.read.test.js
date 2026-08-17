@@ -160,6 +160,45 @@ describe('indicator/read.service', () => {
     });
   });
 
+  // Some tables carry no dimension at all — the table itself is the series, e.g.
+  // "Inflasi Provinsi Maluku Utara". Every row is the province.
+  describe('undimensioned tables', () => {
+    test('treats a table with no dim_value at all as provincial', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockResolvedValueOnce([
+        { year: 2026, month_no: 7, dim_value: '', value: 2.41 },
+        { year: 2026, month_no: 6, dim_value: '', value: 2.29 },
+      ]);
+
+      await expect(read.getLatest(1, { metric: null })).resolves.toMatchObject({
+        value: 2.41,
+        periodLabel: 'Juli 2026',
+        scope: 'province',
+      });
+    });
+
+    // One dimensioned row is enough to fall back to the strict rule, so a table
+    // that merely happens to have a blank row is never promoted.
+    test('does not promote a dimensioned table that contains a blank row', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockResolvedValueOnce([
+        { year: 2026, month_no: 35, dim_value: '', value: 1 },
+        { year: 2026, month_no: 35, dim_value: 'Kota Ternate', value: 8.21 },
+      ]);
+
+      await expect(read.getLatest(2, { metric: null })).resolves.toBeNull();
+    });
+
+    test('getDimensionProfile reports an undimensioned table as province, no dimKey', async () => {
+      mockWatermark(1000);
+      getSequelizeBps()._queryMock.mockResolvedValueOnce([{ dim_key: '', dim_value: '' }]);
+
+      await expect(read.getDimensionProfile(1, { metric: null })).resolves.toEqual({
+        dimKey: null, hasProvince: true, hasRegion: false,
+      });
+    });
+  });
+
   // Card shape cannot be derived from getTrend: that returns province points
   // only, so a region-only indicator looks identical to a non-geographic one.
   describe('getDimensionProfile', () => {

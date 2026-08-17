@@ -29,8 +29,27 @@ const MIN_PERIODS_FOR_CARD = 2;
  */
 const METRIC_TYPE_RANK = ['percent', 'index', 'count', 'numeric', 'currency', 'weight', 'area', 'text'];
 
-function pickMetric(metricMetas) {
+/** `chart_config` is stored as a JSON string on data_sources. */
+function parseChartConfig(raw) {
+  if (!raw) return null;
+  try {
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return null;
+  }
+}
+
+function pickMetric(metricMetas, chartConfig) {
   if (!Array.isArray(metricMetas) || !metricMetas.length) return null;
+
+  // A curated default wins over any heuristic. The spec reserved this hook
+  // precisely because metric_type ranking cannot know which of several measures
+  // an indicator is normally reported by.
+  const preferred = chartConfig && typeof chartConfig.default_metric === 'string'
+    ? chartConfig.default_metric
+    : null;
+  if (preferred && metricMetas.some((m) => m.metric_key === preferred)) return preferred;
+
   const ranked = [...metricMetas].sort((a, b) => {
     const ra = METRIC_TYPE_RANK.indexOf(a.metric_type);
     const rb = METRIC_TYPE_RANK.indexOf(b.metric_type);
@@ -57,7 +76,8 @@ function buildIndexes(metas, metricMetas) {
 
 async function buildCard(source, meta, metricMetas) {
   const sourceId = Number(source.id);
-  const metric = pickMetric(metricMetas);
+  const chartConfig = parseChartConfig(source.chart_config);
+  const metric = pickMetric(metricMetas, chartConfig);
   const metricMeta = (metricMetas || []).find((m) => m.metric_key === metric) || null;
 
   const base = {
@@ -71,6 +91,13 @@ async function buildCard(source, meta, metricMetas) {
     // Raw value + multiplier: formatting happens once, in the frontend helper.
     unitMultiplier: (metricMeta && metricMeta.unit_multiplier) || null,
     decimalPlaces: meta && meta.decimal_places != null ? Number(meta.decimal_places) : null,
+    // When an indicator reports several measures, the card must say which one it
+    // is showing. "Inflasi" alone over a month-to-month figure reads as the
+    // headline year-on-year rate, which it is not.
+    metricLabel:
+      (metricMetas || []).length > 1
+        ? (metricMeta && (metricMeta.metric_label_id || metricMeta.metric_key)) || metric
+        : null,
   };
 
   // Fetched separately from latest/trend: a failing trend query must not zero the
@@ -117,7 +144,7 @@ async function buildCard(source, meta, metricMetas) {
 async function getSummary() {
   const sources = await DataSource.findAll({
     where: { visible: true },
-    attributes: ['id', 'name', 'category', 'icon', 'color', 'display_order', 'visible'],
+    attributes: ['id', 'name', 'category', 'icon', 'color', 'display_order', 'visible', 'chart_config'],
     order: [['display_order', 'ASC'], ['id', 'ASC']],
     raw: true,
   });

@@ -109,10 +109,14 @@ test.describe("Dashboard layout registers", () => {
   });
 
   test("figures use tabular numerals so columns align", async ({ page }) => {
-    const variant = await page.evaluate(() => {
-      const el = document.querySelector('section[aria-label="Angka utama"] a span span');
-      return el ? getComputedStyle(el).fontVariantNumeric : "";
-    });
-    expect(variant).toContain("tabular-nums");
+    // Target the figure explicitly: a positional selector broke the moment the
+    // card gained a metric-label line above the number.
+    const variants = await page.evaluate(() =>
+      [...document.querySelectorAll('section[aria-label="Angka utama"] [data-figure]')].map(
+        (el) => getComputedStyle(el).fontVariantNumeric
+      )
+    );
+    expect(variants.length).toBeGreaterThan(0);
+    variants.forEach((v) => expect(v).toContain("tabular-nums"));
   });
 });
