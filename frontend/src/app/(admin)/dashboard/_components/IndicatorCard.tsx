@@ -66,12 +66,16 @@ export function IndicatorCard({ card }: { card: IndicatorCardData }) {
             <span className={cn("text-xs", TEXT_4)}>{card.latest.periodLabel}</span>
           </span>
           {card.trend.points.length > 1 ? (
+            // The delta pill above already states the period-over-period change.
+            // MiniSparkline's own figure is first-vs-last across the window, which
+            // can point the opposite way on the same card, so it is suppressed.
             <MiniSparkline
               values={card.trend.points.map((p) => p.value)}
               labels={card.trend.points.map((p) => p.periodLabel)}
               width={180}
               height={36}
               showArea
+              showTrendPct={false}
             />
           ) : null}
         </>

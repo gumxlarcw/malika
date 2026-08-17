@@ -22,6 +22,12 @@ interface SparklineProps {
   showArea?: boolean;
   /** Title shown above the chart */
   title?: string;
+  /**
+   * Show the built-in first-vs-last trend percentage. Callers that display their
+   * own period-over-period delta should turn this off: the two measure different
+   * things and can disagree in direction on the same card.
+   */
+  showTrendPct?: boolean;
 }
 
 export function MiniSparkline({
@@ -32,6 +38,7 @@ export function MiniSparkline({
   color = "#6366f1",
   showArea = true,
   title,
+  showTrendPct = true,
 }: SparklineProps) {
   const { path, areaPath, points, yMin, yMax } = useMemo(() => {
     if (values.length < 2) return { path: "", areaPath: "", points: [], yMin: 0, yMax: 0 };
@@ -75,12 +82,14 @@ export function MiniSparkline({
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900">
       {/* Header */}
+      {(title || showTrendPct) && (
       <div className="flex items-center justify-between mb-1.5">
         {title && (
           <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate max-w-[70%]">
             📈 {title}
           </span>
         )}
+        {showTrendPct && (
         <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${
           trendFlat ? "text-gray-500" : trendUp ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
         }`}>
@@ -91,7 +100,9 @@ export function MiniSparkline({
           )}
           {trendFlat ? "—" : `${trendUp ? "+" : ""}${trendPct.toFixed(1)}%`}
         </div>
+        )}
       </div>
+      )}
 
       {/* SVG Sparkline */}
       <svg width={width} height={height} className="w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
