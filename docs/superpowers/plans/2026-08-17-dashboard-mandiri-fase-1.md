@@ -1478,6 +1478,14 @@ git commit -m "feat(dashboard): endpoint publik GET /dashboard/public/summary"
 
 ### Task 8: Retrofit peta-tematik onto watermark keying
 
+> **DEFERRED 2026-08-17, not executed.** `petaTematik.service.js` has uncommitted
+> changes from another session (a `years_empty` field, cache key bumped to `:v2`).
+> Editing it here would commit their unfinished work under this task. peta-tematik
+> therefore still uses its blind one-hour TTL. Two things to fix before running
+> this task: land or revert their change first, and note that the find-strings
+> below were written against the dirty working tree — in `HEAD` the key is
+> `` `ind:${id}:years` ``, not `` `ind:${id}:years:v2` ``.
+
 Fixes the pre-existing bug: `services/petaTematik/cache.service.js` uses a blind one-hour TTL with no invalidation, so the thematic map can serve figures up to an hour behind the database after a refresh.
 
 **Files:**
