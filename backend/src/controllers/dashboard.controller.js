@@ -6,6 +6,7 @@
  */
 
 const svc = require('../services/dashboard/dashboard.service');
+const curation = require('../services/dashboard/curation.service');
 
 async function withGuard(req, res, fn) {
   try {
@@ -26,4 +27,18 @@ async function getSummary(req, res) {
   return withGuard(req, res, () => svc.getSummary());
 }
 
-module.exports = { getSummary };
+async function getCuration(req, res) {
+  return withGuard(req, res, () => curation.getCuration());
+}
+
+async function putCuration(req, res) {
+  return withGuard(req, res, async () => {
+    const body = req.body || {};
+    return curation.saveCuration({
+      headline: body.headline,
+      categoryOrder: body.categoryOrder,
+    });
+  });
+}
+
+module.exports = { getSummary, getCuration, putCuration };
