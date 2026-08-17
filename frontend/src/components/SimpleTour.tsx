@@ -80,100 +80,69 @@ export default function SimpleTour({
       },
     ];
 
-    // Navigation steps - different for mobile (bottom nav) vs desktop (sidebar)
-    if (mobile) {
-      // Mobile bottom nav steps
-      tourSteps.push(
-        {
-          id: "bottom-nav",
-          title: "📱 Navigasi Bawah",
-          description:
-            "Gunakan bar navigasi di bawah layar untuk berpindah halaman dengan cepat.",
-          element: '[data-tour="bottom-nav"]',
-          position: "top",
-        },
-        {
-          id: "bottom-nav-home",
-          title: "🏠 Beranda",
-          description:
-            "Ketuk untuk kembali ke dashboard dan lihat ringkasan data statistik.",
-          element: '[data-tour="bottom-nav-home"]',
-          position: "top",
-        },
-        {
-          id: "bottom-nav-chat",
-          title: "💬 Chat MALIKA",
-          description:
-            'Tanya apapun tentang data statistik! Coba ketik "data kemiskinan 2024" atau "jumlah penduduk Ternate".',
-          element: '[data-tour="bottom-nav-chat"]',
-          position: "top",
-        },
-        {
-          id: "bottom-nav-notifications",
-          title: "🔔 Notifikasi",
-          description:
-            "Dapatkan notifikasi ketika ada data atau publikasi baru.",
-          element: '[data-tour="bottom-nav-notifications"]',
-          position: "top",
-        }
-      );
-    } else {
-      // Desktop sidebar steps
-      tourSteps.push(
-        {
-          id: "sidebar-dashboard",
-          title: "📊 Dashboard",
-          description:
-            "Lihat ringkasan data statistik penting Maluku Utara dalam bentuk visualisasi interaktif.",
-          element: '[data-tour="sidebar-dashboard"]',
-          position: "right",
-        },
-        {
-          id: "sidebar-chat",
-          title: "💬 Chat MALIKA",
-          description:
-            'Tanya apapun tentang data statistik Maluku Utara! Coba ketik "data kemiskinan 2024" atau "jumlah penduduk Ternate".',
-          element: '[data-tour="sidebar-chat"]',
-          position: "right",
-        },
-        {
-          id: "sidebar-brs",
-          title: "📰 Berita Resmi Statistik",
-          description:
-            "Akses semua publikasi Berita Resmi Statistik (BRS) BPS Maluku Utara terbaru.",
-          element: '[data-tour="sidebar-brs"]',
-          position: "right",
-        },
-        {
-          id: "sidebar-publikasi",
-          title: "📚 Publikasi",
-          description:
-            "Jelajahi publikasi statistik lengkap dari BPS Maluku Utara.",
-          element: '[data-tour="sidebar-publikasi"]',
-          position: "right",
-        },
-        {
-          id: "sidebar-notifications",
-          title: "🔔 Notifikasi",
-          description:
-            "Dapatkan notifikasi ketika ada data atau publikasi baru dari BPS Maluku Utara.",
-          element: '[data-tour="sidebar-notifications"]',
-          position: "right",
-        }
-      );
-    }
+    /*
+     * Navigation lives in the shared site header on every screen size now — the
+     * sidebar and the bottom bar are gone, so the two branches this used to have
+     * collapse into one. Only the element the header renders differs: a link bar
+     * from `lg` up, a scrollable chip row below it.
+     */
+    const navBar = mobile ? '[data-tour="site-nav-mobile"]' : '[data-tour="site-nav"]';
+    const navLink = (slug: string) => (mobile ? `[data-tour="m-nav-${slug}"]` : `[data-tour="nav-${slug}"]`);
+
+    tourSteps.push(
+      {
+        id: "site-nav",
+        title: "🧭 Navigasi",
+        description: mobile
+          ? "Geser baris pintasan ini untuk berpindah halaman dengan cepat."
+          : "Gunakan menu di bagian atas untuk berpindah antar halaman.",
+        element: navBar,
+        position: "bottom",
+      },
+      {
+        id: "nav-dashboard",
+        title: "📊 Dashboard",
+        description:
+          "Lihat ringkasan data statistik penting Maluku Utara dalam bentuk visualisasi interaktif.",
+        element: navLink("dashboard"),
+        position: "bottom",
+      },
+      {
+        id: "nav-chat",
+        title: "💬 Chat MALIKA",
+        description:
+          'Tanya apapun tentang data statistik Maluku Utara! Coba ketik "data kemiskinan 2024" atau "jumlah penduduk Ternate".',
+        element: navLink("chat"),
+        position: "bottom",
+      },
+      {
+        id: "nav-peta",
+        title: "🗺️ Peta Tematik",
+        description:
+          "Bandingkan indikator antarkabupaten/kota di peta, lalu buka rinciannya per wilayah.",
+        element: navLink("peta-tematik"),
+        position: "bottom",
+      }
+    );
 
     // Search
     tourSteps.push({
       id: "search",
       title: "🔍 Pencarian Cepat",
-      description: mobile
-        ? 'Ketuk tombol Cari di navigasi bawah untuk mencari data statistik. Coba ketik "inflasi", "PDRB", atau "ekspor".'
-        : 'Cari data statistik dengan cepat. Ketik kata kunci seperti "inflasi", "PDRB", atau "ekspor".',
-      element: mobile
-        ? '[data-tour="bottom-nav-search"]'
-        : '[data-tour="search-bar"]',
-      position: mobile ? "top" : "bottom",
+      description:
+        'Cari data statistik dengan cepat. Ketik kata kunci seperti "inflasi", "PDRB", atau "ekspor".',
+      element: '[data-tour="search"]',
+      position: "bottom",
+    });
+
+    // Notifications
+    tourSteps.push({
+      id: "notifications",
+      title: "🔔 Notifikasi",
+      description:
+        "Dapatkan notifikasi ketika ada data atau publikasi baru dari BPS Maluku Utara.",
+      element: '[data-tour="notifications"]',
+      position: "bottom",
     });
 
     // Theme toggle
@@ -182,9 +151,7 @@ export default function SimpleTour({
       title: "🌙 Mode Gelap/Terang",
       description:
         "Ubah tampilan aplikasi sesuai preferensi Anda - mode terang atau gelap.",
-      element: mobile
-        ? '[data-tour="theme-toggle"]'
-        : '[data-tour="theme-toggle-desktop"]',
+      element: '[data-tour="theme-toggle"]',
       position: "bottom",
     });
 

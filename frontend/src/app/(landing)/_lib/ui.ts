@@ -7,6 +7,7 @@
  */
 
 export {
+  PAGE_BG,
   SURFACE,
   BORDER,
   CARD,
@@ -23,9 +24,6 @@ export {
   CARD_HOVER,
   MONO,
 } from "@/lib/surfaceTokens";
-
-/** `--bg` */
-export const PAGE_BG = "bg-gray-50 dark:bg-gray-950";
 
 /** Section shell: the design's `maxWidth: 1200` + responsive gutters. */
 export const SECTION = "mx-auto max-w-[1200px] px-[18px] pt-10 md:px-8 md:pt-14";

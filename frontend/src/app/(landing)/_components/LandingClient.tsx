@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
+import { landingNav } from "@/components/site/siteNav";
 import { getCopy, type Lang } from "../_lib/copy";
 import { PAGE_BG } from "../_lib/ui";
 import AboutStrip from "./AboutStrip";
@@ -9,8 +12,6 @@ import HeadlineFigures from "./HeadlineFigures";
 import Hero from "./Hero";
 import KategoriGrid from "./KategoriGrid";
 import Konsultasi from "./Konsultasi";
-import LandingFooter from "./LandingFooter";
-import LandingHeader from "./LandingHeader";
 import LandingModals, { type ModalKind } from "./LandingModals";
 import LayananResmi from "./LayananResmi";
 import MenuGrid from "./MenuGrid";
@@ -27,6 +28,7 @@ export default function LandingClient() {
   const [modal, setModal] = useState<ModalKind | null>(null);
   const [petugas, setPetugas] = useState(0);
   const t = getCopy(lang);
+  const nav = useMemo(() => landingNav(t), [t]);
 
   const closeModal = useCallback(() => setModal(null), []);
   const openReservasi = useCallback(() => setModal("reservasi"), []);
@@ -39,7 +41,7 @@ export default function LandingClient() {
 
   return (
     <div className={cn("min-h-screen font-outfit", PAGE_BG)}>
-      <LandingHeader t={t} lang={lang} onLangChange={setLang} onOpenNotif={openNotif} />
+      <SiteHeader t={t} lang={lang} onLangChange={setLang} home="#" nav={nav} onOpenNotif={openNotif} />
 
       <main>
         <Hero t={t} lang={lang} />
@@ -58,7 +60,7 @@ export default function LandingClient() {
         <LayananResmi t={t} />
       </main>
 
-      <LandingFooter t={t} />
+      <SiteFooter t={t} onLanding />
 
       <LandingModals
         t={t}

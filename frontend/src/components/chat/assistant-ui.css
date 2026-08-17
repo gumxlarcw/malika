@@ -383,25 +383,24 @@
 /* Mobile-specific styles */
 @media (max-width: 1023px) {
   /*
-   * position:fixed is the only reliable way to prevent iOS Safari from
-   * scrolling the whole page.  Anchor between admin header (60px top)
-   * and bottom nav.
-   *
-   * Safari/iOS: env(safe-area-inset-bottom) works correctly + 2rem
-   *   clears the bottom nav without overlap.
-   * Other browsers (Chrome, Firefox, Android): env() returns 0 and
-   *   the viewport doesn't shift, so we need the full nav height (4rem).
+   * Taking the surface out of flow is the only reliable way to stop iOS Safari
+   * scrolling the whole page. It is anchored to the page's <main>, which the
+   * site shell marks `relative` on full-bleed routes, rather than to hard-coded
+   * viewport offsets: it previously read `top: 60px` for the old fixed admin
+   * header and reserved `4rem` at the bottom for a mobile nav bar. Both are
+   * gone, and both would now be wrong by a different amount at each breakpoint.
    *
    * Classes set by ChatPageClient:
    *   .chat-ios    → Safari / iOS devices
    *   .chat-non-ios → Chrome, Firefox, Android, etc.
    */
   .chat-page-root.chat-ios {
-    position: fixed !important;
-    top: 60px;
+    position: absolute !important;
+    top: 0;
     left: 0;
     right: 0;
-    bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+    /* Keep clear of the home indicator; env() only reports usefully on iOS. */
+    bottom: env(safe-area-inset-bottom, 0px);
     height: auto !important;
     max-height: none;
     overflow: hidden;
@@ -409,11 +408,8 @@
   }
 
   .chat-page-root.chat-non-ios {
-    position: fixed !important;
-    top: 60px;
-    left: 0;
-    right: 0;
-    bottom: calc(4rem + 2px); /* h-16 bottom nav (4rem=64px) + 2px safety margin */
+    position: absolute !important;
+    inset: 0;
     height: auto !important;
     max-height: none;
     overflow: hidden;

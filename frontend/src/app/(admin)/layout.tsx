@@ -1,94 +1,117 @@
 "use client";
 
-import { useSidebar } from "@/context/SidebarContext";
-import AppHeader from "@/layout/AppHeader";
-import AppSidebar from "@/layout/AppSidebar";
-import Backdrop from "@/layout/Backdrop";
-import MobileBottomNav from "@/layout/MobileBottomNav";
+import React, { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import SiteHeader from "@/components/site/SiteHeader";
+import SiteFooter from "@/components/site/SiteFooter";
+import { appNav } from "@/components/site/siteNav";
 import SimpleTour from "@/components/SimpleTour";
 import PullToRefresh from "@/components/common/PullToRefresh";
-import { usePathname, useRouter } from "next/navigation";
-import React, { useCallback } from "react";
+import { cn } from "@/lib/utils";
+import { PAGE_BG } from "@/lib/surfaceTokens";
+import { getCopy, type Lang } from "@/lib/siteCopy";
 
-// Import tour styles
 import "@/components/simple-tour.css";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+/**
+ * Shell for every page below the landing.
+ *
+ * These pages used to sit inside a sidebar + top-bar admin chrome, which gave
+ * MALIKA two different appearances depending on where a visitor arrived. They
+ * now wear the same header, ground and footer as the landing page, and the
+ * sidebar is gone.
+ *
+ * Two of them are not documents. /chat is a composer that must reach the bottom
+ * of the viewport and /peta-tematik is a full-bleed map; boxing either into the
+ * 1200px column, or hanging a tall footer beneath it, changes what the page is.
+ * Both keep the header and take the rest of the screen.
+ */
+
+/**
+ * Pins to the viewport and never scrolls: the composer has to sit on the bottom
+ * edge, and the transcript scrolls inside itself.
+ */
+const FIXED = new Set(["/chat"]);
+
+/**
+ * Scrolls like a document but declines the reading column. The map wants every
+ * pixel the departed sidebar freed up, and it runs well past a screen, so
+ * pinning it to the viewport would clip its lower panels out of reach.
+ */
+const WIDE = new Set(["/peta-tematik"]);
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Only /chat needs the full-bleed, non-scrolling main area. /dashboard used to
-  // as well, for the Metabase iframe; it is a normal scrolling page now.
-  const isChat = pathname === "/chat";
 
-  // Handle pull-to-refresh
+  /*
+   * Language lives here rather than in a provider because only the chrome reads
+   * it — the sub-page bodies are Indonesian. Resetting to ID on navigation would
+   * be wrong, but a layout is not remounted between routes, so the choice holds.
+   */
+  const [lang, setLang] = useState<Lang>("id");
+  const t = useMemo(() => getCopy(lang), [lang]);
+  const nav = useMemo(() => appNav(), []);
+
+  const isFixed = FIXED.has(pathname);
+  const isWide = WIDE.has(pathname);
+  const showFooter = !isFixed && !isWide;
+
   const handleRefresh = useCallback(async () => {
     router.refresh();
-    // Small delay to allow the refresh to process
     await new Promise((resolve) => setTimeout(resolve, 500));
   }, [router]);
 
-  // Dynamic class for main content margin based on sidebar state
-  const mainContentMargin = isMobileOpen
-    ? "ml-0"
-    : isExpanded || isHovered
-    ? "lg:ml-[290px]"
-    : "lg:ml-[90px]";
-
-  // Disable pull-to-refresh on desktop (only for touch devices)
-  const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+  // Pull-to-refresh is a touch gesture; on a mouse it only intercepts scrolling.
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   React.useEffect(() => {
     setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
   }, []);
 
   return (
-    <div className="flex h-screen h-[100dvh] overflow-hidden">
-      {/* Skip to Content Link - Accessibility */}
+    /*
+     * Document pages grow past the viewport and the document scrolls. Full-bleed
+     * pages must not: they pin to the viewport so the chat composer and the map
+     * controls stay reachable. The distinction has to be made with `height`, not
+     * `min-height` — a child asking for `h-full` cannot resolve a percentage
+     * against an auto-height ancestor, which silently collapsed the chat surface
+     * to the height of its own content.
+     */
+    <div
+      className={cn(
+        "flex flex-col font-outfit",
+        PAGE_BG,
+        isFixed ? "h-screen h-[100dvh] overflow-hidden" : "min-h-screen"
+      )}
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[99999] focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-white focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2"
       >
         Langsung ke konten utama
       </a>
-      {/* Simple Tour - shows on all pages for first-time users */}
+
       <SimpleTour />
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
-      {/* Main Content Area */}
-      <div
-        className={`flex min-w-0 min-h-0 flex-1 flex-col transition-all duration-300 ease-in-out ${mainContentMargin}`}
+
+      <SiteHeader t={t} lang={lang} onLangChange={setLang} home="/" nav={nav} activeHref={pathname} />
+
+      <main
+        id="main-content"
+        role="main"
+        aria-label="Konten utama"
+        tabIndex={-1}
+        className={cn(
+          "w-full min-w-0 flex-1 outline-none",
+          isFixed && // `relative` is the anchor the chat surface positions against.
+            "relative min-h-0 overflow-hidden",
+          isWide && "px-[18px] pb-16 pt-8 md:px-8 md:pt-10",
+          showFooter && "mx-auto max-w-[1200px] px-[18px] pb-16 pt-8 md:px-8 md:pt-10"
+        )}
       >
-        {/* Header */}
-        <AppHeader />
-        {/* Page Content - add pt for fixed header height */}
-        <main
-          id="main-content"
-          role="main"
-          aria-label="Konten utama"
-          tabIndex={-1}
-          className={
-            isChat
-              ? "min-w-0 min-h-0 flex-1 overflow-hidden p-0 pt-[60px] pb-16 lg:pt-[73px] lg:pb-0 outline-none"
-              : "min-w-0 flex-1 overflow-y-auto px-4 pt-[76px] pb-20 md:px-6 md:pt-[89px] lg:pb-6 outline-none"
-          }
-        >
-          {/* Pull-to-Refresh wrapper for touch devices on non-dashboard pages */}
-          {isTouchDevice && !isChat ? (
-            <PullToRefresh onRefresh={handleRefresh}>
-              {children}
-            </PullToRefresh>
-          ) : (
-            children
-          )}
-        </main>
-      </div>
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
+        {isTouchDevice && !isFixed ? <PullToRefresh onRefresh={handleRefresh}>{children}</PullToRefresh> : children}
+      </main>
+
+      {showFooter ? <SiteFooter t={t} /> : null}
     </div>
   );
 }

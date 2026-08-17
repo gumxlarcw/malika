@@ -2,12 +2,20 @@
 
 import React from "react";
 import Link from "next/link";
-import type { Copy } from "../_lib/copy";
-import { MalikaMark } from "./LandingIcons";
+import type { Copy } from "@/lib/siteCopy";
+import { MalikaMark } from "./SiteIcons";
 
-type Props = { t: Copy };
-
-export default function LandingFooter({ t }: Props) {
+/**
+ * The site footer, on the landing page and every document sub-page.
+ *
+ * Omitted on /chat and /peta-tematik: those fill the viewport and never scroll,
+ * so a footer below them is either unreachable or forces the surface to shrink.
+ *
+ * The "Konsultasi Langsung" link is an in-page anchor and only resolves on the
+ * landing, so off the landing it points at the landing's section instead of a
+ * fragment that matches nothing.
+ */
+export default function SiteFooter({ t, onLanding = false }: { t: Copy; onLanding?: boolean }) {
   const columns: Array<{ heading: string; links: Array<{ label: string; href: string }> }> = [
     {
       heading: t.tFootExplore,
@@ -16,7 +24,7 @@ export default function LandingFooter({ t }: Props) {
         { label: "Peta Tematik", href: "/peta-tematik" },
         { label: "Chat MALIKA", href: "/chat" },
         { label: "Data Statistik", href: "/kategori" },
-        { label: "Konsultasi Langsung", href: "#konsultasi" },
+        { label: "Konsultasi Langsung", href: onLanding ? "#konsultasi" : "/#konsultasi" },
       ],
     },
     {
@@ -60,9 +68,7 @@ export default function LandingFooter({ t }: Props) {
 
         {columns.map((column) => (
           <div key={column.heading}>
-            <div className="text-[13px] font-semibold uppercase tracking-[0.04em] text-white">
-              {column.heading}
-            </div>
+            <div className="text-[13px] font-semibold uppercase tracking-[0.04em] text-white">{column.heading}</div>
             <div className="mt-3.5 flex flex-col gap-2.5">
               {column.links.map((link) => (
                 <Link

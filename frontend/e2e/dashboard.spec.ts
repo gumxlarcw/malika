@@ -52,20 +52,20 @@ test.describe("Dashboard (/dashboard)", () => {
   });
 
   test("content scrolls — it must not inherit the iframe's clipped layout", async ({ page }) => {
-    // The admin shell is h-screen/overflow-hidden and scrolls inside <main>, so
-    // the document itself never scrolls. What matters is that <main> is
-    // scrollable rather than `overflow-hidden`, which is what the removed
-    // isDashboard gate used to force for the Metabase iframe.
-    const main = await page.evaluate(() => {
-      const m = document.querySelector("main");
-      if (!m) return null;
-      return {
-        overflowY: getComputedStyle(m).overflowY,
-        overflows: m.scrollHeight > m.clientHeight + 1,
-      };
-    });
-    expect(main?.overflowY).toBe("auto");
-    expect(main?.overflows).toBe(true);
+    // The sidebar shell used to pin the viewport and scroll inside <main>. The
+    // site shell scrolls the document instead, so what matters now is that the
+    // page is genuinely taller than the viewport and nothing clips it — which is
+    // what the removed isDashboard gate used to force for the Metabase iframe.
+    const doc = await page.evaluate(() => ({
+      scrolls: document.documentElement.scrollHeight > window.innerHeight + 1,
+      mainClipped: getComputedStyle(document.querySelector("main")!).overflowY === "hidden",
+    }));
+    expect(doc.scrolls).toBe(true);
+    expect(doc.mainClipped).toBe(false);
+
+    // And it actually moves when asked.
+    await page.mouse.wheel(0, 600);
+    await page.waitForFunction(() => window.scrollY > 100, null, { timeout: 5_000 });
   });
 
   test("never scrolls sideways at any width", async ({ page }) => {

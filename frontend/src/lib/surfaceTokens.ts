@@ -8,6 +8,9 @@
  * existing `.dark` class — no JS, and no flash of light theme on load.
  */
 
+/** `--bg` — the page ground behind every surface. Set by the site shell. */
+export const PAGE_BG = "bg-gray-50 dark:bg-gray-950";
+
 /** `--surface` + `--border` */
 export const SURFACE = "bg-white dark:bg-gray-dark";
 export const BORDER = "border-gray-200 dark:border-[#2b3648]";
