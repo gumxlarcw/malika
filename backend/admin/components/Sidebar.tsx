@@ -25,6 +25,7 @@ import {
   BarChart3,
   Target,
   Activity,
+  ListOrdered,
 } from "lucide-react";
 
 type Props = {
@@ -49,6 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+      { href: "/dashboard-curation", label: "Kurasi Dashboard", icon: <ListOrdered className="h-4 w-4" /> },
     ],
   },
   {
