@@ -8,21 +8,41 @@
      chrome — identical to how Peta Tematik's --pt-canvas-deep matches the
      body bg. The modal (.ar-pv-panel) keeps its own pure-white --paper
      to stay visually elevated above the page. */
+  /* Palette from MALIKA BRS Publikasi.dc.html, which is the globals.css brand
+     scale — --accent is brand-500 (#465fff). The page previously carried its
+     own warm editorial theme (maroon #7a2630 on #1d1916 over beige rules),
+     which matched nothing else in the app. */
   --paper:        #f9fafb;
   --paper-2:      #f2f4f7;
-  --ink:          #1d1916;
-  --ink-2:        #4a4239;
-  --ink-3:        #8a7f70;
-  --rule:         #e7e2d6;
-  --rule-2:       #d4cdbb;
-  --accent:       #7a2630;
-  --accent-soft:  color-mix(in oklab, var(--accent) 12%, var(--paper));
+  --paper-3:      #fbfcfd;
+  --paper-brand:  #f2f7ff;
+  --ink:          #101828;
+  --ink-2:        #344054;
+  --ink-3:        #667085;
+  --ink-4:        #98a2b3;
+  --rule:         #e4e7ec;
+  --rule-2:       #eff1f4;
+  --accent:       #465fff;
+  --accent-2:     #7591ff;
+  --accent-soft:  rgba(70, 95, 255, 0.10);
+  --accent-line:  rgba(70, 95, 255, 0.24);
+  --accent-text:  #2a31d8;
+  /* Per-kind accents: releases run warm, publications cool. */
+  --brs:          #b54708;
+  --brs-soft:     rgba(247, 144, 9, 0.12);
+  --brs-line:     rgba(247, 144, 9, 0.30);
+  --pub:          #026aa2;
+  --pub-soft:     rgba(2, 106, 162, 0.10);
+  --pub-line:     rgba(2, 106, 162, 0.26);
   --ar-r:         14px;
   --ar-pad:       28px;
   --ar-pad-card:  20px;
   --ar-gap-grid:  26px;
-  --ar-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
-  --ar-sans:  var(--font-ibm-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* The design sets Outfit for everything and IBM Plex Mono for figures; it
+     has no serif at all. --ar-serif is kept as a name so the nine rules that
+     reference it need no churn, but it now resolves to Outfit. */
+  --ar-serif: var(--font-outfit), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ar-sans:  var(--font-outfit), system-ui, -apple-system, "Segoe UI", sans-serif;
   --ar-mono:  var(--font-ibm-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
   background: var(--paper);
@@ -495,21 +515,24 @@
   display: flex; align-items: center; justify-content: center;
   padding: 36px;
   animation: ar-scrim-in .22s ease-out;
-  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  font-family: var(--font-outfit), system-ui, sans-serif;
 }
 @keyframes ar-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 
 .ar-pv-panel {
   --paper:        #ffffff;
-  --paper-2:      #f3f0ea;
-  --ink:          #1d1916;
-  --ink-2:        #4a4239;
-  --ink-3:        #8a7f70;
-  --rule:         #e7e2d6;
-  --rule-2:       #d4cdbb;
-  --accent:       #7a2630;
+  --paper-2:      #f2f4f7;
+  --paper-3:      #fbfcfd;
+  --ink:          #101828;
+  --ink-2:        #344054;
+  --ink-3:        #667085;
+  --ink-4:        #98a2b3;
+  --rule:         #e4e7ec;
+  --rule-2:       #eff1f4;
+  --accent:       #465fff;
+  --accent-soft:  rgba(70, 95, 255, 0.10);
   --ar-r:         14px;
-  --ar-serif: var(--font-instrument-serif), Georgia, serif;
+  --ar-serif: var(--font-outfit), system-ui, sans-serif;
   --ar-mono:  var(--font-ibm-plex-mono), ui-monospace, monospace;
 
   background: var(--paper);
@@ -929,4 +952,39 @@ html.dark .archive-root,
   .archive-root .ar-row-date { width: auto; }
   .archive-root .ar-row-open { display: none; }
   .archive-root .ar-cta { flex-direction: column; align-items: flex-start; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Typographic correction after the serif was dropped
+   ═══════════════════════════════════════════════════════════════════════
+   The headings below were sized and weighted for Instrument Serif, whose
+   400 reads as solid at display sizes. Outfit at 400 reads as thin in the
+   same slots, so the weights are restated here rather than edited into
+   nine scattered rules. Tracking tightens slightly because a geometric
+   sans needs less air at large sizes than a serif does. */
+.archive-root .ar-section-h,
+.archive-root .ar-feat-title,
+.archive-root .ar-card-title,
+.archive-root .ar-empty-h {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.archive-root .ar-cv-mark { font-weight: 600; letter-spacing: -0.01em; }
+.ar-pv-title { font-weight: 600; letter-spacing: -0.015em; }
+.ar-pv-doc-title { font-weight: 600; }
+/* Figures stay monospaced — the design uses IBM Plex Mono for every number. */
+.ar-pv-stat-n { font-family: var(--ar-mono); font-weight: 600; font-size: 18px; }
+
+/* Kind badges take the design's warm/cool coding. */
+.archive-root .ar-cv-kind,
+.ar-pv-tag {
+  background: var(--brs-soft);
+  color: var(--brs);
+  border-color: var(--brs-line);
+}
+.archive-root .ar-cv[data-kind="publication"] .ar-cv-kind,
+.ar-pv-panel[data-kind="publication"] .ar-pv-tag {
+  background: var(--pub-soft);
+  color: var(--pub);
+  border-color: var(--pub-line);
 }

@@ -176,12 +176,18 @@ function parseBullets(raw?: string, max = 8): string[] {
   return bullets.slice(0, max);
 }
 
-function hueFromString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 31 + s.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h) % 360;
+/*
+ * Cover hue by kind, not by a hash of the id.
+ *
+ * Hashing gave every release its own colour, so a page of ten was a rainbow
+ * that encoded nothing. The design codes the two catalogues instead — releases
+ * warm (#b54708), publications cool (#026aa2) — and these are those hues in
+ * the oklch space the cover gradients are authored in.
+ */
+const HUE_BY_KIND = { report: 55, publication: 245 } as const;
+
+function hueForKind(kind: "report" | "publication"): number {
+  return HUE_BY_KIND[kind];
 }
 
 function labelFromTitle(title: string): string {
@@ -225,7 +231,7 @@ function brsToItem(b: BrsRaw): ArchiveItem {
     rl_date: b.rl_date,
     cover: b.thumbnail || undefined,
     pdf: b.pdf || undefined,
-    hue: hueFromString(id),
+    hue: hueForKind("report"),
     label: labelFromTitle(b.title),
     eyebrow: "Berita Resmi Statistik",
     // webapi sends the literal string "None" rather than omitting the field.
@@ -246,27 +252,31 @@ function pubToItem(p: PubRaw): ArchiveItem {
     rl_date: p.rl_date,
     cover: p.cover || undefined,
     pdf: p.pdf || undefined,
-    hue: hueFromString(id),
+    hue: hueForKind("publication"),
     label: labelFromTitle(p.title),
     eyebrow: "Publikasi",
     subject: parseFirstSubject(p.subject_csa),
   };
 }
 
-const BPS_API_KEY =
-  process.env.NEXT_PUBLIC_BPS_API_KEY || "e5d1be11320576d466bdeb2f7f210387";
+// Kept only for the provenance line in the footer; the key now lives server-side
+// in the /api/brs and /api/bps-view routes and never reaches the client.
 const BPS_DOMAIN = "8200";
 
+/*
+ * Both catalogues go through our own server now. Calling webapi.bps.go.id
+ * straight from the browser worked from a localhost origin but failed from
+ * https://malika.bpsmalut.com with a bare "Failed to fetch", which is why
+ * /brs showed "Gagal memuat rilis" in production while /publikasi — proxied
+ * from the start — was fine. See src/app/api/brs/route.ts.
+ */
 function buildBrsListUrl(opts: { page: number; keyword?: string; year?: string; subject?: string }) {
-  let url = `https://webapi.bps.go.id/v1/api/list/model/pressrelease/domain/${BPS_DOMAIN}/page/${opts.page}`;
-  if (opts.keyword?.trim()) url += `/keyword/${encodeURIComponent(opts.keyword.trim())}`;
-  if (opts.year) url += `/year/${opts.year}`;
-  // Measured against the live API: `subject/{subcsa_id}` narrows pressrelease
-  // (774 releases down to 25 for Tenaga Kerja). `subcat` — the name the docs
-  // suggest — is accepted and silently ignored, which is why it is not used.
-  if (opts.subject) url += `/subject/${encodeURIComponent(opts.subject)}`;
-  url += `/key/${BPS_API_KEY}/`;
-  return url;
+  const params = new URLSearchParams();
+  params.set("page", String(opts.page));
+  if (opts.keyword?.trim()) params.set("keyword", opts.keyword.trim());
+  if (opts.year) params.set("year", opts.year);
+  if (opts.subject) params.set("subject", opts.subject);
+  return `/api/brs?${params.toString()}`;
 }
 
 function buildPubListUrl(opts: { page: number; keyword?: string; year?: string }) {
@@ -468,8 +478,8 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
             }).then((r) => r.json()).catch(() => null),
           ]);
 
-          const brsItems: ArchiveItem[] = Array.isArray(brsRes?.data?.[1])
-            ? (brsRes.data[1] as BrsRaw[]).map(brsToItem)
+          const brsItems: ArchiveItem[] = Array.isArray(brsRes?.items)
+            ? (brsRes.items as BrsRaw[]).map(brsToItem)
             : [];
           const pubItems: ArchiveItem[] = Array.isArray(pubRes?.items)
             ? (pubRes.items as PubRaw[]).map(pubToItem)
@@ -504,17 +514,17 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
               signal: controller.signal,
               cache: "no-store",
             }).then((r) => r.json()).catch(() => null);
-            const pages = Number(probe?.data?.[0]?.pages) || 1;
+            const pages = Number(probe?.meta?.pages) || 1;
             apiPage = Math.max(1, pages - (page - 1));
           }
           const res = await fetch(buildBrsListUrl({ page: apiPage, keyword: query, year, subject }), {
             signal: controller.signal,
             cache: "no-store",
           });
-          const raw = (await res.json()) as { data?: [BpsListMeta, BrsRaw[]] };
+          const raw = (await res.json()) as { meta?: BpsListMeta | null; items?: BrsRaw[] };
           if (controller.signal.aborted) return;
-          const m = (raw?.data?.[0] || null) as BpsListMeta | null;
-          let list = Array.isArray(raw?.data?.[1]) ? raw.data![1].map(brsToItem) : [];
+          const m = (raw?.meta || null) as BpsListMeta | null;
+          let list = Array.isArray(raw?.items) ? raw.items.map(brsToItem) : [];
           if (sort === "lama") list = list.slice().reverse();
           setMeta(m ? { ...m, page } : m);
           setItems(list);
@@ -590,7 +600,7 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
       try {
         if (deepLinkId.startsWith("BRS-")) {
           const id = deepLinkId.slice(4);
-          const url = `https://webapi.bps.go.id/v1/api/view/domain/${BPS_DOMAIN}/model/pressrelease/lang/ind/id/${id}/key/${BPS_API_KEY}/`;
+          const url = `/api/bps-view?model=pressrelease&id=${encodeURIComponent(id)}`;
           const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
           const raw = (await res.json()) as { data?: Record<string, unknown> };
           const d = raw?.data && typeof raw.data === "object" ? raw.data : null;
@@ -613,7 +623,7 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
         }
         if (deepLinkId.startsWith("PUB-")) {
           const id = deepLinkId.slice(4);
-          const url = `https://webapi.bps.go.id/v1/api/view/domain/${BPS_DOMAIN}/model/publication/lang/ind/id/${encodeURIComponent(id)}/key/${BPS_API_KEY}/`;
+          const url = `/api/bps-view?model=publication&id=${encodeURIComponent(id)}`;
           const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
           const raw = (await res.json()) as { data?: Record<string, unknown> };
           const d = raw?.data && typeof raw.data === "object" ? raw.data : null;
@@ -1069,6 +1079,7 @@ function Cover({
   return (
     <div
       className={`ar-cv ${large ? "ar-cv--lg" : ""} ${hasImg ? "ar-cv--has-img" : ""}`}
+      data-kind={item.kind}
       style={{ ["--hue" as string]: item.hue }}
     >
       {hasImg && (
@@ -1248,7 +1259,12 @@ function Preview({ item, onClose }: { item: ArchiveItem | null; onClose: () => v
 
   const overlay = (
     <div className="ar-pv-scrim" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="ar-pv-panel" onClick={(e) => e.stopPropagation()} style={{ ["--hue" as string]: item.hue }}>
+      <div
+        className="ar-pv-panel"
+        data-kind={item.kind}
+        onClick={(e) => e.stopPropagation()}
+        style={{ ["--hue" as string]: item.hue }}
+      >
         {/* PDF-page side */}
         <div className="ar-pv-doc">
           <div className="ar-pv-doc-stack" aria-hidden="true">
