@@ -17,6 +17,7 @@ const appSettings = require('../settings/appSettings.service');
 const read = require('../indicator/read.service');
 
 const HEADLINE_SETTING_KEY = 'dashboard:headline';
+const CATEGORY_ORDER_SETTING_KEY = 'dashboard:categoryOrder';
 
 /** Spec eligibility rule: a card needs at least two periods carrying values. */
 const MIN_PERIODS_FOR_CARD = 2;
@@ -121,10 +122,11 @@ async function getSummary() {
     raw: true,
   });
 
-  const [metas, metricMetas, headlineIds] = await Promise.all([
+  const [metas, metricMetas, headlineIds, categoryOrder] = await Promise.all([
     IndicatorMeta.findAll({ raw: true }),
     IndicatorMetricMeta.findAll({ raw: true }),
     appSettings.getJson(HEADLINE_SETTING_KEY),
+    appSettings.getJson(CATEGORY_ORDER_SETTING_KEY),
   ]);
 
   const { metaBySource, metricsBySource } = buildIndexes(metas || [], metricMetas || []);
@@ -152,7 +154,25 @@ async function getSummary() {
     seen.get(card.category).indicators.push(card);
   }
 
+  // Categories the saved order does not mention keep their existing position at
+  // the end, so a stale order can never hide a newly added category.
+  if (Array.isArray(categoryOrder) && categoryOrder.length) {
+    const rank = new Map(categoryOrder.map((name, i) => [String(name), i]));
+    categories.sort((a, b) => {
+      const ra = rank.has(a.name) ? rank.get(a.name) : Number.MAX_SAFE_INTEGER;
+      const rb = rank.has(b.name) ? rank.get(b.name) : Number.MAX_SAFE_INTEGER;
+      return ra - rb;
+    });
+  }
+
   return { headline, categories, generatedAt: new Date().toISOString() };
 }
 
-module.exports = { pickMetric, buildCard, getSummary, HEADLINE_SETTING_KEY, MIN_PERIODS_FOR_CARD };
+module.exports = {
+  pickMetric,
+  buildCard,
+  getSummary,
+  HEADLINE_SETTING_KEY,
+  CATEGORY_ORDER_SETTING_KEY,
+  MIN_PERIODS_FOR_CARD,
+};

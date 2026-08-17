@@ -155,6 +155,36 @@ describe('dashboard.service', () => {
       expect(out.categories).toEqual([]);
     });
 
+    test('orders categories by the saved categoryOrder', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'A', category: 'Sosial', visible: true, display_order: 1, icon: null, color: null },
+        { id: 2, name: 'B', category: 'Ekonomi', visible: true, display_order: 2, icon: null, color: null },
+      ]);
+      appSettings.getJson.mockImplementation((key) =>
+        Promise.resolve(key === 'dashboard:categoryOrder' ? ['Ekonomi', 'Sosial'] : null)
+      );
+
+      const out = await svc.getSummary();
+
+      expect(out.categories.map((c) => c.name)).toEqual(['Ekonomi', 'Sosial']);
+    });
+
+    // A saved order predates any category added since; dropping the unlisted ones
+    // would silently hide real indicators.
+    test('keeps categories that the saved order does not mention', async () => {
+      DataSource.findAll.mockResolvedValue([
+        { id: 1, name: 'A', category: 'Sosial', visible: true, display_order: 1, icon: null, color: null },
+        { id: 2, name: 'B', category: 'Baru', visible: true, display_order: 2, icon: null, color: null },
+      ]);
+      appSettings.getJson.mockImplementation((key) =>
+        Promise.resolve(key === 'dashboard:categoryOrder' ? ['Sosial'] : null)
+      );
+
+      const out = await svc.getSummary();
+
+      expect(out.categories.map((c) => c.name)).toEqual(['Sosial', 'Baru']);
+    });
+
     test('one broken indicator does not fail the whole dashboard', async () => {
       DataSource.findAll.mockResolvedValue([
         { id: 1, name: 'A', category: 'Ekonomi', visible: true, display_order: 1, icon: null, color: null },
