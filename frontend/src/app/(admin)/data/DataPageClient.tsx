@@ -137,6 +137,7 @@ interface DataPageClientProps {
   unit?: string | null;
   parentCategoryName?: string | null;
   parentCategorySlug?: string | null;
+  petaTematikEligible?: boolean;
 }
 
 export default function DataPageClient({
@@ -154,6 +155,7 @@ export default function DataPageClient({
   unit,
   parentCategoryName,
   parentCategorySlug,
+  petaTematikEligible,
 }: DataPageClientProps) {
   const isExim = sourceType === "exim";
   const eximMode = isExim ? detectEximModeFromName(sourceName) : null;
@@ -548,6 +550,7 @@ export default function DataPageClient({
         parentCategoryName={parentCategoryName ?? null}
         parentCategorySlug={parentCategorySlug ?? null}
         totalSeries={totalSeries}
+        petaTematikEligible={petaTematikEligible ?? false}
       />
 
       <div className="sticky top-[120px] z-[5] md:top-[133px]">

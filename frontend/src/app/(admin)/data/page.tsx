@@ -276,11 +276,13 @@ export default async function DataPage({
     }
   });
 
-  // Parallelize: years data + parent-category resolution (so the hero can render
-  // its category chip + back link without a second client-side fetch).
-  const [allYearsDataRaw, parentCategory] = await Promise.all([
+  // Parallelize: years data + parent-category resolution + peta-tematik
+  // eligibility (so Hero can render a "Lihat di Peta Tematik" shortcut chip
+  // without a second client-side round-trip).
+  const [allYearsDataRaw, parentCategory, petaTematikEligible] = await Promise.all([
     Promise.all(fetchPromises),
     fetchParentCategory(sourceId),
+    checkPetaTematikEligible(sourceId),
   ]);
   const allYearsData = allYearsDataRaw.filter((d): d is YearData => d !== null);
 
@@ -341,7 +343,31 @@ export default async function DataPage({
         unit={indicatorUnit}
         parentCategoryName={parentCategory?.name ?? null}
         parentCategorySlug={parentCategory?.slug ?? null}
+        petaTematikEligible={petaTematikEligible}
       />
     </div>
   );
+}
+
+/**
+ * Server-side check: is this sourceId in the peta-tematik eligible list?
+ * Backend caches /indikator-list (LRU), so this is effectively a fast lookup.
+ * Returns `false` on any error — peta-tematik link just won't show, which is
+ * the safe degradation since map view is optional for the data page.
+ */
+async function checkPetaTematikEligible(sourceId: number): Promise<boolean> {
+  try {
+    const r = await fetch(`${backendBaseUrl()}/peta-tematik/public/indikator-list`, {
+      cache: "no-store",
+    });
+    if (!r.ok) return false;
+    const data = await r.json() as { ok?: boolean; kategori?: Record<string, Array<{ sourceId: number }>> };
+    if (!data?.kategori) return false;
+    for (const items of Object.values(data.kategori)) {
+      if (items.some((it) => it.sourceId === sourceId)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
