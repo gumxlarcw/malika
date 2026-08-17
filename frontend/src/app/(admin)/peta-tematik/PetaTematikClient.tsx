@@ -23,70 +23,89 @@ import type {
   DataResponse, SummaryResponse, FilterState, IndikatorItem,
 } from "./types";
 
-// 6 mega-groups dari kategori PWA
-const META_GROUPS: { key: string; label: string; emoji: string; pwaKategori: string[] }[] = [
-  { key: "pertanian", label: "Pertanian & Pangan", emoji: "🌾",
-    pwaKategori: ["Pertanian, Kehutanan, Perikanan","Hortikultura, Perkebunan, Peternakan","Hortikultura, Khutanan, Perikanan, Perkebunan, Peternakan, Tanaman Pangan"] },
-  { key: "pendidikan-kesehatan", label: "Pendidikan & Kesehatan", emoji: "🎓",
-    pwaKategori: ["Pendidikan", "Kesehatan"] },
-  { key: "kependudukan-sosial", label: "Kependudukan & Sosial", emoji: "👥",
-    pwaKategori: ["Kependudukan dan Migrasi","Gender dan Kelompok Populasi Khusus","Pemukiman dan Perumahan","Budaya","Aktivitas Politik dan Komunitas Lainnya","Perlindungan Sosial","Peradilan Dan Kriminal","Kondisi Tempat Tinggal, Kemiskinan, dan Permasalahan Sosial Lintas Sektor","Kondisi Tempat Tinggal, Kemiskinan Dan Isu Sosial Lintas Sektor"] },
-  { key: "ekonomi", label: "Ekonomi & Industri", emoji: "💰",
-    pwaKategori: ["Neraca Ekonomi","Konsumsi dan Pendapatan","Keuangan Pemerintah, Fiskal dan Statistik Sektor Publik","Keuangan Pemerintah","Pertambangan, Manufaktur, Konstruksi","Pertambangan, Industri, Konstruksi","Energi","Statistik Regional dan Statistik Area Kecil","Harga-Harga","Statistik Bisnis","Perdagangan Internasional dan Neraca Pembayaran"] },
-  { key: "tenaga-kerja", label: "Ketenagakerjaan", emoji: "💼",
-    pwaKategori: ["Ketenagakerjaan", "Tenaga Kerja", "Penduduk dan Ketenagakerjaan"] },
-  { key: "infra-lingkungan", label: "Infrastruktur & Lingkungan", emoji: "🚛",
-    pwaKategori: ["Transportasi", "Lingkungan", "Pariwisata", "Masyarakat Informasi"] },
-  { key: "lainnya", label: "Lainnya", emoji: "📦",
-    pwaKategori: ["Lainnya", "Berita Resmi Statistik", "EXIM Ekspor", "EXIM Impor"] },
+// 13 Indikator Inti — shortcut group surfaced at the LEFT of META_GROUPS so
+// reviewers can hit the canonical KPIs without hunting through kategori.
+// Items are NOT removed from their original kategori; this is a curated view.
+// IDs resolved 2026-05-20 from /peta-tematik/public/indikator-list:
+//   450 = Persentase Penduduk Miskin (P0)
+//   428 = Indeks Pembangunan Manusia (IPM)
+//   201 = Tingkat Pengangguran Terbuka (TPT)
+//   202 = Tingkat Partisipasi Angkatan Kerja (TPAK)
+//   296 = PDRB per Kapita Atas Dasar Harga Berlaku
+//     8 = Gini Rasio
+//   251 = Pengeluaran Perkapita Riil Disesuaikan
+//    13 = Harapan Lama Sekolah
+//    16 = Rata-rata Lama Sekolah
+//    11 = Umur Harapan Hidup (UHH)
+//   182 = Kepadatan Penduduk
+//   183 = Laju Pertumbuhan Penduduk
+//   172 = Jumlah Perjalanan Wisatawan Nusantara (Kabupaten Asal)
+const INDIKATOR_INTI_IDS: number[] = [450, 428, 201, 202, 296, 8, 251, 13, 16, 11, 182, 183, 172];
+
+// Mega-groups — 1:1 mapping to backend's 8 kategori (from indicator_meta.kategori_pwa).
+// `kategoris` is the list of backend kategori names that feed this mega-group;
+// for the curated Inti, `sourceIds` overrides and filters by exact IDs.
+// Order is semantic: demographic baseline → human development → economy → catch-all.
+// `label` is the short display text in the chip; `fullLabel` is the full name
+// shown as tooltip + used in screen reader / aria-label. Shortening keeps the
+// chip row fitting in one line on common desktop widths without scrolling.
+const META_GROUPS: { key: string; label: string; fullLabel?: string; emoji: string; kategoris: string[]; sourceIds?: number[] }[] = [
+  { key: "indikator-inti", label: "13 Inti", fullLabel: "13 Indikator Inti", emoji: "⭐",
+    kategoris: [], sourceIds: INDIKATOR_INTI_IDS },
+  { key: "kependudukan", label: "Kependudukan", emoji: "👥", kategoris: ["Kependudukan"] },
+  { key: "pendidikan", label: "Pendidikan", emoji: "🎓", kategoris: ["Pendidikan"] },
+  { key: "kesehatan", label: "Kesehatan", emoji: "🏥", kategoris: ["Kesehatan"] },
+  { key: "pembangunan-sosial", label: "Pembangunan", fullLabel: "Pembangunan & Sosial", emoji: "📊", kategoris: ["Pembangunan & Sosial"] },
+  { key: "ekonomi", label: "Ekonomi", emoji: "💰", kategoris: ["Ekonomi"] },
+  { key: "ketenagakerjaan", label: "Tenaga Kerja", fullLabel: "Ketenagakerjaan", emoji: "💼", kategoris: ["Ketenagakerjaan"] },
+  { key: "pariwisata", label: "Pariwisata", fullLabel: "Pariwisata & Akomodasi", emoji: "🏖️", kategoris: ["Pariwisata & Akomodasi"] },
+  { key: "lainnya", label: "Lainnya", emoji: "📦", kategoris: ["Lainnya"] },
 ];
 
-const PWA_KAT_TO_META: Record<string, string> = (() => {
+const KAT_TO_META: Record<string, string> = (() => {
   const m: Record<string, string> = {};
-  for (const meta of META_GROUPS) for (const k of meta.pwaKategori) m[k] = meta.key;
+  for (const meta of META_GROUPS) for (const k of meta.kategoris) m[k] = meta.key;
   return m;
 })();
-const metaForPwaKat = (k: string | undefined): string =>
-  !k ? "lainnya" : PWA_KAT_TO_META[k] ?? "lainnya";
+const metaForKategori = (k: string | undefined): string =>
+  !k ? "lainnya" : KAT_TO_META[k] ?? "lainnya";
 
 const MONTH_NAMES = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
-interface PwaCategoriesResponse {
-  categories: { name: string; count: number; slug: string; sources: { id: number; name: string; type: string }[] }[];
-}
 interface ProcessedList {
-  pwaKategoriMap: Record<string, IndikatorItem[]>;
-  idToPwaKat: Map<number, string>;
+  /** Map keyed by backend kategori name → eligible IndikatorItems. */
+  kategoriMap: Record<string, IndikatorItem[]>;
+  /** Reverse lookup: source ID → backend kategori name. */
+  idToKategori: Map<number, string>;
   idToName: Map<number, string>;
   totalEligible: number;
 }
 
-function processList(elig: IndikatorList, pwa: PwaCategoriesResponse): ProcessedList {
-  const eligibleItems = new Map<number, IndikatorItem>();
-  for (const items of Object.values(elig.kategori)) for (const it of items) eligibleItems.set(it.sourceId, it);
-  const pwaKategoriMap: Record<string, IndikatorItem[]> = {};
-  const idToPwaKat = new Map<number, string>();
+function processList(elig: IndikatorList): ProcessedList {
+  // Backend /indikator-list already groups by kategori; just normalize & sort.
+  const kategoriMap: Record<string, IndikatorItem[]> = {};
+  const idToKategori = new Map<number, string>();
   const idToName = new Map<number, string>();
-  for (const cat of pwa.categories) {
-    for (const src of cat.sources) {
-      if (eligibleItems.has(src.id)) {
-        if (!pwaKategoriMap[cat.name]) pwaKategoriMap[cat.name] = [];
-        pwaKategoriMap[cat.name].push(eligibleItems.get(src.id)!);
-        idToPwaKat.set(src.id, cat.name);
-        idToName.set(src.id, eligibleItems.get(src.id)!.sourceName);
-      }
+  for (const [kat, items] of Object.entries(elig.kategori)) {
+    const sorted = [...items].sort((a, b) => a.sourceName.localeCompare(b.sourceName, "id"));
+    kategoriMap[kat] = sorted;
+    for (const it of sorted) {
+      idToKategori.set(it.sourceId, kat);
+      idToName.set(it.sourceId, it.sourceName);
     }
   }
-  for (const k of Object.keys(pwaKategoriMap)) {
-    pwaKategoriMap[k].sort((a, b) => a.sourceName.localeCompare(b.sourceName, "id"));
-  }
-  return { pwaKategoriMap, idToPwaKat, idToName, totalEligible: elig.totalEligible };
+  return { kategoriMap, idToKategori, idToName, totalEligible: elig.totalEligible };
 }
 
 function metaCount(p: ProcessedList, metaKey: string): number {
   const meta = META_GROUPS.find((m) => m.key === metaKey);
   if (!meta) return 0;
-  return meta.pwaKategori.reduce((sum, k) => sum + (p.pwaKategoriMap[k]?.length ?? 0), 0);
+  if (meta.sourceIds) {
+    // Inti view: count IDs that survived eligibility filtering (some may have
+    // dropped out of the eligible list, so the visible count can be < 13).
+    return meta.sourceIds.filter((id) => p.idToKategori.has(id)).length;
+  }
+  return meta.kategoris.reduce((sum, k) => sum + (p.kategoriMap[k]?.length ?? 0), 0);
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -97,7 +116,6 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 export default function PetaTematikClient() {
   const [list, setList] = useState<IndikatorList | null>(null);
-  const [pwaCats, setPwaCats] = useState<PwaCategoriesResponse | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [selectedMeta, setSelectedMeta] = useState<string>(META_GROUPS[0].key);
   const [filters, setFilters] = useState<FilterState>({ indikator: null, year: null, month: null, metric: null });
@@ -107,6 +125,8 @@ export default function PetaTematikClient() {
   const [prevData, setPrevData] = useState<DataResponse | null>(null);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [yearsError, setYearsError] = useState<string | null>(null);
+  const [yearsAttempt, setYearsAttempt] = useState(0);
   // Binning method is fixed to quantile (5-bin equal population) — pakai angka
   // apa adanya tanpa expose user choice (Jenks/Equal removed per simplification)
   const binning: BinningMethod = "quantile";
@@ -123,30 +143,29 @@ export default function PetaTematikClient() {
   // URL state sync — write filters to URL on change (deep-linkable)
   useSyncUrl(filters, binning, paletteId);
 
-  const processed = useMemo(() => (list && pwaCats ? processList(list, pwaCats) : null), [list, pwaCats]);
+  const processed = useMemo(() => (list ? processList(list) : null), [list]);
 
   useEffect(() => {
-    Promise.all([
-      fetchJson<IndikatorList>("/api/peta-tematik/indikator-list"),
-      fetchJson<PwaCategoriesResponse>("/api/categories"),
-    ]).then(([d, c]) => {
-      setList(d); setPwaCats(c);
-      const proc = processList(d, c);
+    fetchJson<IndikatorList>("/api/peta-tematik/indikator-list").then((d) => {
+      setList(d);
+      const proc = processList(d);
 
       // First check if URL has explicit state — that takes precedence over defaults
       const urlState = readUrlState();
       if (urlState?.palette) setPaletteId(urlState.palette);
-      if (urlState?.filters?.indikator && proc.idToPwaKat.has(urlState.filters.indikator)) {
+      if (urlState?.filters?.indikator && proc.idToKategori.has(urlState.filters.indikator)) {
         setFilters((f) => ({ ...f, ...urlState.filters }));
-        setSelectedMeta(metaForPwaKat(proc.idToPwaKat.get(urlState.filters.indikator)));
+        setSelectedMeta(metaForKategori(proc.idToKategori.get(urlState.filters.indikator)));
         return;
       }
 
-      // Fallback: pick first eligible from first non-empty meta group
+      // Fallback: pick first eligible from first non-empty meta group (skip Inti
+      // since it's curated — fall through to the first content-bearing group)
       let defaultId: number | null = null;
       for (const meta of META_GROUPS) {
-        for (const pwaKat of meta.pwaKategori) {
-          const items = proc.pwaKategoriMap[pwaKat];
+        if (meta.key === "indikator-inti") continue;
+        for (const kat of meta.kategoris) {
+          const items = proc.kategoriMap[kat];
           if (items?.length) { defaultId = items[0].sourceId; break; }
         }
         if (defaultId != null) { setSelectedMeta(meta.key); break; }
@@ -160,17 +179,31 @@ export default function PetaTematikClient() {
 
   useEffect(() => {
     if (!filters.indikator) return;
-    setYearsResp(null); setMetricsResp(null);
+    // Stale-guard: rapid indikator switches must not let an earlier response
+    // overwrite the current selection's state.
+    const currentIndikator = filters.indikator;
+    let cancelled = false;
+    setYearsResp(null); setMetricsResp(null); setYearsError(null);
     Promise.all([
-      fetchJson<YearsResponse>(`/api/peta-tematik/years?indikator=${filters.indikator}`),
-      fetchJson<MetricsResponse>(`/api/peta-tematik/metrics?indikator=${filters.indikator}`),
+      fetchJson<YearsResponse>(`/api/peta-tematik/years?indikator=${currentIndikator}`),
+      fetchJson<MetricsResponse>(`/api/peta-tematik/metrics?indikator=${currentIndikator}`),
     ]).then(([y, m]) => {
+      if (cancelled) return;
       setYearsResp(y); setMetricsResp(m);
       const latest = y.years[y.years.length - 1];
       const preferred = m.metrics.includes("value") ? "value" : m.metrics[0];
-      setFilters((f) => ({ ...f, year: latest ?? null, month: y.has_monthly ? 12 : null, metric: preferred ?? null }));
-    }).catch((e) => console.error(e));
-  }, [filters.indikator]);
+      setFilters((f) =>
+        f.indikator !== currentIndikator
+          ? f
+          : { ...f, year: latest ?? null, month: y.has_monthly ? 12 : null, metric: preferred ?? null },
+      );
+    }).catch((e) => {
+      if (cancelled) return;
+      console.error(e);
+      setYearsError("Gagal memuat data tahun untuk indikator ini.");
+    });
+    return () => { cancelled = true; };
+  }, [filters.indikator, yearsAttempt]);
 
   const filterKey = `${filters.indikator}-${filters.year}-${filters.month ?? 0}-${filters.metric ?? "*"}`;
   useEffect(() => {
@@ -228,7 +261,7 @@ export default function PetaTematikClient() {
         data={data.data}
         meta={data.meta ?? null}
         indikatorName={indikatorName}
-        kategori={processed.idToPwaKat.get(filters.indikator) ?? "Lainnya"}
+        kategori={processed.idToKategori.get(filters.indikator) ?? "Lainnya"}
       />
     </div>
   ) : null;
@@ -239,28 +272,46 @@ export default function PetaTematikClient() {
 
       {/* Filter card — mega chips + indikator + waktu */}
       <section className="mb-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-theme-xs overflow-hidden">
-        {/* Row 1: mega-group chips, scrollable on mobile */}
+        {/* Row 1: mega-group chips — wraps to next line on narrow viewports
+            instead of horizontal scroll. Labels were also shortened (e.g.
+            "Pariwisata & Akomodasi" → "Pariwisata") so 9 chips fit one row on
+            common desktop widths (≥1100px content area). */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             {META_GROUPS.map((meta) => {
               const count = metaCount(processed, meta.key);
               if (count === 0) return null;
               const active = selectedMeta === meta.key;
+              const isInti = meta.key === "indikator-inti";
+              // Inti chip uses amber to distinguish the curated shortcut from
+              // regular kategori chips (blue). Active/inactive states differ.
+              const chipClass = active
+                ? isInti
+                  ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                  : "bg-[#465fff] text-white border-[#465fff] shadow-sm"
+                : isInti
+                  ? "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700";
+              const tooltip = isInti
+                ? "13 indikator inti pembangunan daerah — shortcut tidak menghapus dari kategori asli"
+                : meta.fullLabel ?? undefined;
               return (
                 <button
                   key={meta.key}
                   onClick={() => setSelectedMeta(meta.key)}
-                  className={`flex-shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[12.5px] font-medium transition-all border ${
-                    active
-                      ? "bg-[#465fff] text-white border-[#465fff] shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
+                  className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-medium transition-all border ${chipClass}`}
+                  title={tooltip}
+                  aria-label={meta.fullLabel ?? meta.label}
                 >
                   <span className="opacity-90">{meta.emoji}</span>
                   <span>{meta.label}</span>
                   <span
-                    className={`ml-0.5 text-[10.5px] tabular-nums px-1.5 py-0 rounded-full ${
-                      active ? "bg-white/20 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    className={`ml-0.5 text-[10px] tabular-nums px-1.5 py-0 rounded-full ${
+                      active
+                        ? "bg-white/20 text-white"
+                        : isInti
+                          ? "bg-amber-200 dark:bg-amber-800/50 text-amber-900 dark:text-amber-100"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                     }`}
                   >
                     {count}
@@ -271,9 +322,13 @@ export default function PetaTematikClient() {
           </div>
         </div>
 
-        {/* Row 2: indikator picker + year pills + (month/metric) */}
-        <div className="p-4 grid grid-cols-12 gap-3 items-end">
-          <div className="col-span-12 lg:col-span-5">
+        {/* Row 2: indikator (own row, full width for truncate) → row 3: tahun + filters
+            Vertical stack avoids height-mismatch alignment issues between the
+            indikator picker (h-12) and the slimmer year/month/metric/palette
+            controls (h-10), and gives the year pills a `flex-1 min-w-0` parent
+            so its `overflow-x-auto` actually engages when there are many years. */}
+        <div className="p-4 space-y-3">
+          <div className="min-w-0">
             <div className="text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
               Indikator
             </div>
@@ -283,21 +338,47 @@ export default function PetaTematikClient() {
               metaKey={selectedMeta}
               onChange={(id) => {
                 setFilters((f) => ({ ...f, indikator: id, year: null, month: null, metric: null }));
-                setSelectedMeta(metaForPwaKat(processed.idToPwaKat.get(id)));
+                // Preserve "Indikator Inti" view if the picked id is one of them.
+                // Otherwise switch the chips back to the indikator's home kategori
+                // so the picker dropdown lists relevant peers next time.
+                const inIntiView = selectedMeta === "indikator-inti" && INDIKATOR_INTI_IDS.includes(id);
+                if (!inIntiView) {
+                  setSelectedMeta(metaForKategori(processed.idToKategori.get(id)));
+                }
               }}
             />
           </div>
-          <div className="col-span-12 lg:col-span-7 flex flex-wrap items-end gap-3 lg:justify-end">
-            {filters.indikator && yearsResp && yearsResp.years.length > 0 && (
-              <div>
+          <div className="flex flex-wrap items-end gap-3">
+            {filters.indikator && (
+              <div className="min-w-0 flex-1">
                 <div className="text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
                   Tahun
                 </div>
-                <YearPills
-                  years={yearsResp.years}
-                  value={filters.year}
-                  onChange={(y) => setFilters((f) => ({ ...f, year: y }))}
-                />
+                {yearsError ? (
+                  <div className="inline-flex items-center gap-2 h-10 px-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-[12.5px] text-red-700 dark:text-red-300">
+                    <span>{yearsError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setYearsAttempt((n) => n + 1)}
+                      className="px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800/50 text-red-700 dark:text-red-200 text-[11px] font-medium"
+                    >
+                      Coba lagi
+                    </button>
+                  </div>
+                ) : !yearsResp ? (
+                  <div className="h-10 w-56 rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 animate-pulse" />
+                ) : yearsResp.years.length > 0 ? (
+                  <YearPills
+                    years={yearsResp.years}
+                    emptyYears={yearsResp.years_empty ?? []}
+                    value={filters.year}
+                    onChange={(y) => setFilters((f) => ({ ...f, year: y }))}
+                  />
+                ) : (
+                  <div className="h-10 px-3 inline-flex items-center text-[12.5px] text-gray-500 italic">
+                    Tidak ada data tahun
+                  </div>
+                )}
               </div>
             )}
             {yearsResp?.has_monthly && filters.year && (
@@ -345,7 +426,7 @@ export default function PetaTematikClient() {
       {filters.indikator && indikatorName && (
         <div className="mb-4">
           <ActiveIndikatorBanner
-            kategori={processed.idToPwaKat.get(filters.indikator) ?? "Lainnya"}
+            kategori={processed.idToKategori.get(filters.indikator) ?? "Lainnya"}
             indikatorName={indikatorName}
             year={filters.year}
             month={filters.month}
@@ -470,6 +551,7 @@ export default function PetaTematikClient() {
         year={filters.year}
         month={filters.month}
         metric={filters.metric}
+        availableYears={yearsResp?.years ?? []}
         onClose={() => setDrawerOpen(false)}
       />
 
@@ -479,7 +561,7 @@ export default function PetaTematikClient() {
         years={yearsResp?.years ?? []}
         onPickIndikator={(id) => {
           setFilters((f) => ({ ...f, indikator: id, year: null, month: null, metric: null }));
-          setSelectedMeta(metaForPwaKat(processed.idToPwaKat.get(id)));
+          setSelectedMeta(metaForKategori(processed.idToKategori.get(id)));
         }}
         onPickYear={(y) => setFilters((f) => ({ ...f, year: y }))}
       />
@@ -531,25 +613,34 @@ function PalettePicker({ value, onChange }: PalettePickerProps) {
 
 interface YearPillsProps {
   years: number[];
+  emptyYears?: number[];
   value: number | null;
   onChange: (y: number) => void;
 }
 
-function YearPills({ years, value, onChange }: YearPillsProps) {
+function YearPills({ years, emptyYears = [], value, onChange }: YearPillsProps) {
+  const emptySet = new Set(emptyYears);
   return (
     <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-1 max-w-full overflow-x-auto">
       {years.map((y) => {
         const active = value === y;
+        const empty = emptySet.has(y);
+        // Empty years: red-tinted button. Active state still wins visually so
+        // user sees they've selected an empty year (with red ring/text accent).
+        const className = active
+          ? empty
+            ? "flex-shrink-0 h-8 px-2.5 rounded-md text-[12.5px] font-medium tabular-nums transition-colors bg-red-500 text-white shadow-sm ring-2 ring-red-300"
+            : "flex-shrink-0 h-8 px-2.5 rounded-md text-[12.5px] font-medium tabular-nums transition-colors bg-[#465fff] text-white shadow-sm"
+          : empty
+            ? "flex-shrink-0 h-8 px-2.5 rounded-md text-[12.5px] font-medium tabular-nums transition-colors bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50"
+            : "flex-shrink-0 h-8 px-2.5 rounded-md text-[12.5px] font-medium tabular-nums transition-colors text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800";
         return (
           <button
             key={y}
             type="button"
             onClick={() => onChange(y)}
-            className={`flex-shrink-0 h-8 px-2.5 rounded-md text-[12.5px] font-medium tabular-nums transition-colors ${
-              active
-                ? "bg-[#465fff] text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800"
-            }`}
+            className={className}
+            title={empty ? "Tahun ini tidak punya data untuk kabupaten/kota" : undefined}
           >
             {y}
           </button>
@@ -620,13 +711,31 @@ function IndikatorPicker({ processed, value, metaKey, onChange }: PickerProps) {
     };
   }, [open]);
 
-  const allowedKategori = useMemo(
-    () => META_GROUPS.find((m) => m.key === metaKey)?.pwaKategori ?? [],
-    [metaKey],
-  );
+  // Build the kategori → items view for the active meta-group. For curated
+  // groups with `sourceIds` (Indikator Inti), surface ONLY the listed IDs but
+  // keep them grouped under their original kategori — that preserves context
+  // without removing items from where they natively belong.
+  const viewKategoriMap = useMemo(() => {
+    const meta = META_GROUPS.find((m) => m.key === metaKey);
+    if (!meta) return {} as Record<string, IndikatorItem[]>;
+    if (meta.sourceIds) {
+      const idSet = new Set(meta.sourceIds);
+      const map: Record<string, IndikatorItem[]> = {};
+      for (const [kat, items] of Object.entries(processed.kategoriMap)) {
+        const matched = items.filter((it) => idSet.has(it.sourceId));
+        if (matched.length > 0) map[kat] = matched;
+      }
+      return map;
+    }
+    const map: Record<string, IndikatorItem[]> = {};
+    for (const kat of meta.kategoris) {
+      if (processed.kategoriMap[kat]?.length) map[kat] = processed.kategoriMap[kat];
+    }
+    return map;
+  }, [processed, metaKey]);
 
   const selectedName = useMemo(() => {
-    for (const items of Object.values(processed.pwaKategoriMap)) {
+    for (const items of Object.values(processed.kategoriMap)) {
       const f = items.find((it) => it.sourceId === value);
       if (f) return f.sourceName;
     }
@@ -654,10 +763,10 @@ function IndikatorPicker({ processed, value, metaKey, onChange }: PickerProps) {
           <Command.Empty className="py-4 text-center text-sm pt-body text-[var(--pt-ink-faint)]">
             Tidak ada hasil.
           </Command.Empty>
-          {allowedKategori.filter((k) => processed.pwaKategoriMap[k]?.length > 0).map((kategori) => (
+          {Object.keys(viewKategoriMap).map((kategori) => (
             <Command.Group
               key={kategori}
-              heading={`${kategori} · ${processed.pwaKategoriMap[kategori].length}`}
+              heading={`${kategori} · ${viewKategoriMap[kategori].length}`}
               className="
                 [&_[cmdk-group-heading]]:px-3
                 [&_[cmdk-group-heading]]:py-2
@@ -676,7 +785,7 @@ function IndikatorPicker({ processed, value, metaKey, onChange }: PickerProps) {
                 [&_[cmdk-group-heading]]:z-10
               "
             >
-              {processed.pwaKategoriMap[kategori].map((item) => (
+              {viewKategoriMap[kategori].map((item) => (
                 <Command.Item
                   key={item.sourceId}
                   value={item.sourceName}

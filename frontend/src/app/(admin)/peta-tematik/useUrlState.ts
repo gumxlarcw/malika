@@ -52,8 +52,10 @@ export function readUrlState(): Partial<FullState> | null {
 
 /**
  * Hook: write filter+binning state to URL whenever they change.
- * Uses replaceState (no history entry per change). Only writes when fully formed
- * (indikator + year set) to avoid empty URLs during init.
+ * Uses replaceState (no history entry per change). Writes as soon as `indikator`
+ * is known so reload/share captures the active selection even while the year
+ * fetch is still in flight — prevents the URL from sticking on the previous
+ * indikator when the user switches.
  */
 export function useSyncUrl(filters: FilterState, binning: BinningMethod, palette: PaletteId = DEFAULT_PALETTE) {
   const initialSkipDone = useRef(false);
@@ -64,11 +66,11 @@ export function useSyncUrl(filters: FilterState, binning: BinningMethod, palette
       initialSkipDone.current = true;
       return;
     }
-    if (!filters.indikator || !filters.year) return;
+    if (!filters.indikator) return;
 
     const sp = new URLSearchParams();
     sp.set("ind", String(filters.indikator));
-    sp.set("y", String(filters.year));
+    if (filters.year) sp.set("y", String(filters.year));
     if (filters.month != null) sp.set("m", String(filters.month));
     if (filters.metric) sp.set("metric", filters.metric);
     if (binning !== "quantile") sp.set("bin", binning);

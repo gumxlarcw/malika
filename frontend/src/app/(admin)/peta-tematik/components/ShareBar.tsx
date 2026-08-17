@@ -277,8 +277,13 @@ export default function ShareBar({ filters, binning, palette, data, meta, indika
       const html2canvas = (await import("html2canvas-pro")).default;
 
       const leafletEl = document.querySelector<HTMLElement>(".leaflet-container");
-      if (!leafletEl) throw new Error("Leaflet map not found");
-      await waitForLeafletTiles(leafletEl, 3000);
+      if (!leafletEl) throw new Error("Peta belum ter-render. Tunggu peta selesai dimuat lalu coba lagi.");
+      if (leafletEl.offsetWidth === 0 || leafletEl.offsetHeight === 0) {
+        throw new Error("Peta tidak terlihat (ukuran 0). Pastikan peta tampil di layar saat export.");
+      }
+      // Tile wait: bumped 3s → 6s. On slower connections html2canvas would
+      // otherwise capture mid-load and produce gray/checker patches.
+      await waitForLeafletTiles(leafletEl, 6000);
 
       // Map slot dimensions on the A3 canvas — drives capture scale.
       const sidePanelW = 580;
@@ -286,13 +291,17 @@ export default function ShareBar({ filters, binning, palette, data, meta, indika
       const mapSlotY = KPI_BAND_BOTTOM;
       const mapSlotW = A3_W - PAD_X * 2 - sidePanelW;
       const mapSlotH = FOOTER_BAND_TOP - KPI_BAND_BOTTOM;
-      const captureScale = Math.max(2, Math.ceil(mapSlotW / leafletEl.offsetWidth));
+      // Cap captureScale so giant viewports don't OOM the canvas. 4x is enough
+      // to oversample the leaflet element relative to A3 slot.
+      const captureScale = Math.min(4, Math.max(2, Math.ceil(mapSlotW / leafletEl.offsetWidth)));
 
       const mapCanvas = await html2canvas(leafletEl, {
         backgroundColor: "#ffffff",
         scale: captureScale,
         useCORS: true,
+        allowTaint: false,
         logging: false,
+        imageTimeout: 8000,
       });
 
       const finalCanvas = document.createElement("canvas");
@@ -385,7 +394,10 @@ export default function ShareBar({ filters, binning, palette, data, meta, indika
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error("PNG export:", e);
-      alert("Gagal export PNG.");
+      const msg = e instanceof Error ? e.message : String(e);
+      // Surface the actual error so user can report / retry intelligently
+      // instead of a generic "Gagal" with no context.
+      alert(`Gagal export PNG: ${msg}\n\nCoba: tutup overlay/drawer, tunggu peta load penuh, lalu ulang.`);
     } finally {
       setExporting(false);
     }

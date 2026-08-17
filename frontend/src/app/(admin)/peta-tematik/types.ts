@@ -13,6 +13,9 @@ export interface IndikatorList {
 export interface YearsResponse {
   ok: boolean;
   years: number[];
+  /** Years that exist in the table but have no kabko-level data (provinsi-only
+   *  or fully null). Map can't render for these — UI flags them in red. */
+  years_empty?: number[];
   has_monthly: boolean;
 }
 

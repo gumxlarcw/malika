@@ -8,7 +8,7 @@ import { Search, Sparkles, Calendar, BarChart3 } from "lucide-react";
 import type { IndikatorItem } from "../types";
 
 interface ProcessedListLite {
-  pwaKategoriMap: Record<string, IndikatorItem[]>;
+  kategoriMap: Record<string, IndikatorItem[]>;
 }
 
 interface Props {
@@ -49,7 +49,7 @@ export default function CommandPalette({
   // Flatten all eligible indikator with their kategori for search
   const allItems = useMemo(() => {
     const arr: Array<IndikatorItem & { kategori: string }> = [];
-    for (const [kat, items] of Object.entries(processed.pwaKategoriMap)) {
+    for (const [kat, items] of Object.entries(processed.kategoriMap)) {
       for (const it of items) arr.push({ ...it, kategori: kat });
     }
     return arr;
