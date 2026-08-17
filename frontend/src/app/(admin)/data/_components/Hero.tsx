@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { type CSSProperties } from "react";
+import { Map as MapIcon } from "lucide-react";
 import { getCategoryDesign } from "../../kategori/_lib/categoryIcons";
 import {
   asSourceType,
@@ -29,6 +30,9 @@ export type HeroProps = {
   parentCategoryName: string | null;
   parentCategorySlug: string | null;
   totalSeries: number[]; // one number per year (oldest → newest) for the sparkline summary
+  /** Server-resolved: true if this indikator appears in /peta-tematik/public/indikator-list.
+   *  When true, Hero renders a deep-link chip to /peta-tematik?ind=<sourceId>. */
+  petaTematikEligible?: boolean;
 };
 
 export default function Hero(props: HeroProps) {
@@ -43,6 +47,7 @@ export default function Hero(props: HeroProps) {
     parentCategoryName,
     parentCategorySlug,
     totalSeries,
+    petaTematikEligible,
   } = props;
 
   const stype = SOURCE_TYPE_PALETTE[asSourceType(sourceType)];
@@ -164,6 +169,20 @@ export default function Hero(props: HeroProps) {
               )}
               <span className="inline-flex items-center gap-1.5 md:hidden">#{sourceId}</span>
             </div>
+
+            {/* Peta Tematik CTA — only renders when this indikator has kabkota
+                data in /peta-tematik/public/indikator-list (server-resolved). */}
+            {petaTematikEligible && (
+              <Link
+                href={`/peta-tematik?ind=${sourceId}`}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-emerald-400 bg-emerald-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow dark:border-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                title="Lihat indikator ini sebagai peta choropleth per kabupaten/kota"
+              >
+                <MapIcon className="h-4 w-4" />
+                Lihat di Peta Tematik
+                <span aria-hidden className="text-base leading-none">→</span>
+              </Link>
+            )}
           </div>
 
           {/* desktop sparkline summary card */}

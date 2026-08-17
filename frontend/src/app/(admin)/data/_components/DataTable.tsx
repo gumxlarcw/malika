@@ -20,16 +20,12 @@ export type DataTableProps = {
   rows: Row[];
   columns: string[];          // already filtered by hiddenColumns by parent
   allColumns: string[];       // unfiltered (so sparkline can pick the trend column even if hidden)
+  labelColumn: string;        // the column naming each row — resolved by the parent, not by position
   totalRowMatcher?: (row: Row, firstCol: string) => boolean;
   // For sparkline column: per-row series across years. Built by parent (has access to allYearsData).
   rowSeries: (regionLabel: string) => number[];
   lastUpdate?: string | null;
 };
-
-// Heuristic: pick the first numeric column as the trend column when caller doesn't override.
-function pickFirstCol(allColumns: string[]) {
-  return allColumns[0] ?? "";
-}
 
 export default function DataTable(props: DataTableProps) {
   const {
@@ -41,12 +37,13 @@ export default function DataTable(props: DataTableProps) {
     rows,
     columns,
     allColumns,
+    labelColumn,
     totalRowMatcher,
     rowSeries,
   } = props;
 
   const stype = SOURCE_TYPE_PALETTE[asSourceType(sourceType)];
-  const firstCol = pickFirstCol(allColumns);
+  const firstCol = labelColumn;
   const dataCols = columns.filter((c) => c !== firstCol);
 
   const isFirstColVisible = columns.includes(firstCol);
@@ -73,14 +70,13 @@ export default function DataTable(props: DataTableProps) {
 
   const numericColumns = useMemo(() => {
     const set = new Set<string>();
-    const skip = allColumns[0] ?? "";
     for (const c of allColumns) {
-      if (c === skip) continue;
+      if (c === labelColumn) continue;
       const sample = rows.find((r) => typeof r[c] === "number");
       if (sample) set.add(c);
     }
     return set;
-  }, [allColumns, rows]);
+  }, [allColumns, labelColumn, rows]);
 
   return (
     <div
@@ -155,12 +151,13 @@ export default function DataTable(props: DataTableProps) {
               const region = String(row[firstCol] ?? "");
               const isTotal = !!totalRowMatcher && totalRowMatcher(row, firstCol);
               const series = rowSeries(region);
+              // The colour and the percentage beside it must read the same two
+              // points. Judging direction from the raw endpoints made any row
+              // whose earliest year is missing fall back to "rising" while its
+              // own figure said it had fallen.
+              const points = series.filter((v) => Number.isFinite(v));
               const trendUp =
-                series.length >= 2 &&
-                Number.isFinite(series[0]) &&
-                Number.isFinite(series[series.length - 1])
-                  ? series[series.length - 1] >= series[0]
-                  : true;
+                points.length >= 2 ? points[points.length - 1] >= points[0] : true;
               const baseBg = isTotal ? "bg-gray-50/80 dark:bg-gray-800/60" : "";
 
               return (

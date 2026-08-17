@@ -32,7 +32,25 @@ test.describe("Dashboard (/dashboard)", () => {
     await expect(page.getByRole("heading", { name: "Indikator Strategis" })).toBeVisible();
     // The whole point of the phase: no embed left.
     await expect(page.locator('iframe[title="Metabase Dashboard"]')).toHaveCount(0);
-    await expect(page.locator('a[href^="/data?source="], a[href="/peta-tematik"]').first()).toBeVisible();
+    await expect(page.locator('a[href^="/data?source_id="], a[href="/peta-tematik"]').first()).toBeVisible();
+  });
+
+  /*
+   * Follows the link rather than pattern-matching its href.
+   *
+   * The href assertion above passed for months while every one of these links
+   * was broken: /data reads `source_id`, the dashboard emitted `source`, and
+   * both spellings match `/data?source`. Only loading the destination catches it.
+   */
+  test("an indicator link actually opens its data page", async ({ page }) => {
+    const link = page.locator('main a[href^="/data?"]').first();
+    await expect(link).toBeVisible();
+    const href = await link.getAttribute("href");
+
+    await page.goto(`${BASE}${href}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+
+    await expect(page.getByText(/tidak valid/i)).toHaveCount(0);
   });
 
   test("shows at least one headline value with a period label", async ({ page }) => {
@@ -103,7 +121,7 @@ test.describe("Dashboard layout registers", () => {
     await expect(page.getByText("Rincian tersedia")).toHaveCount(0);
 
     // A row with no figure shows an em dash rather than a fabricated zero.
-    const dashes = page.locator('main a[href^="/data?source="]').getByText("—", { exact: true });
+    const dashes = page.locator('main a[href^="/data?source_id="]').getByText("—", { exact: true });
     expect(await dashes.count()).toBeGreaterThan(0);
   });
 

@@ -49,7 +49,8 @@ export function KpiCard({
 }) {
   const delta = formatDelta(card.trend.delta, card.decimalPlaces);
   const figure = card.latest ? formatValue(card.latest.value, card.decimalPlaces) : null;
-  const href = card.shape === "regional" ? "/peta-tematik" : `/data?source=${card.sourceId}`;
+  // `source_id`, not `source` — see IndicatorRow.
+  const href = card.shape === "regional" ? "/peta-tematik" : `/data?source_id=${card.sourceId}`;
   const values = card.trend.points.map((p) => p.value);
 
   return (
