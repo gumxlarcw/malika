@@ -5,6 +5,10 @@ const cache = require('./cache.service');
 const { dimValueToKdkab, KDKAB_TO_NAMA } = require('./regionMap.service');
 const { scanEligibility, buildIndikatorList } = require('./eligibilityScanner.service');
 const metaLookup = require('./metadataLookup.service');
+// Data-freshness watermark: MAX(last_update) of the indicator's own table.
+// Folding it into every cache key is what removes the blind 1-hour TTL —
+// refreshed data yields a new key, so a stale entry is simply never read.
+const { getWatermark } = require('../indicator/watermark.service');
 
 function validateIndikatorId(id) {
   const n = Number(id);
@@ -20,7 +24,8 @@ function tableName(id) {
 
 async function getYears(indikatorId) {
   const id = validateIndikatorId(indikatorId);
-  return cache.getOrCompute(`ind:${id}:years`, async () => {
+  const watermark = await getWatermark(id);
+  return cache.getOrCompute(`ind:${id}:${watermark}:years`, async () => {
     const seq = getSequelizeBps();
     const [yearRows] = await seq.query(
       `SELECT DISTINCT year FROM \`${tableName(id)}\`
@@ -39,7 +44,8 @@ async function getYears(indikatorId) {
 
 async function getMetrics(indikatorId) {
   const id = validateIndikatorId(indikatorId);
-  return cache.getOrCompute(`ind:${id}:metrics`, async () => {
+  const watermark = await getWatermark(id);
+  return cache.getOrCompute(`ind:${id}:${watermark}:metrics`, async () => {
     const seq = getSequelizeBps();
     const [rows] = await seq.query(
       `SELECT DISTINCT COALESCE(NULLIF(metric, ''), 'value') AS metric
@@ -76,7 +82,8 @@ async function getData({ indikator, year, month = null, metric = null }) {
   const id = validateIndikatorId(indikator);
   const y = validateYear(year);
   const m = month == null ? null : validateYear(month);
-  const cacheKey = `data:${id}:${y}:${m || 0}:${metric || '*'}`;
+  const watermark = await getWatermark(id);
+  const cacheKey = `data:${id}:${watermark}:${y}:${m || 0}:${metric || '*'}`;
 
   return cache.getOrCompute(cacheKey, async () => {
     const seq = getSequelizeBps();
@@ -127,7 +134,8 @@ async function getSummary({ indikator, year, month = null, metric = null }) {
   const id = validateIndikatorId(indikator);
   const y = validateYear(year);
   const m = month == null ? null : validateYear(month);
-  const cacheKey = `summary:${id}:${y}:${m || 0}:${metric || '*'}`;
+  const watermark = await getWatermark(id);
+  const cacheKey = `summary:${id}:${watermark}:${y}:${m || 0}:${metric || '*'}`;
 
   return cache.getOrCompute(cacheKey, async () => {
     const seq = getSequelizeBps();
