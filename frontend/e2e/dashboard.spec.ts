@@ -1,12 +1,25 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { isReachable } from "./utils";
 
 const BASE = process.env.PWA_BASE_URL || "http://127.0.0.1:3000";
 const URL = `${BASE}/dashboard`;
 
+/**
+ * The first-run tour paints a popover across the viewport and swallows clicks.
+ * It is a genuine feature, just not this page's — every context Playwright
+ * opens is a first visit, so it is marked seen before the page loads.
+ */
+async function skipFirstRunTour(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("malika_tour_completed_v1", "1");
+    localStorage.setItem("malika_tour_dismissed_v1", "1");
+  });
+}
+
 test.describe("Dashboard (/dashboard)", () => {
   test.beforeEach(async ({ page }) => {
     if (!(await isReachable(URL))) test.skip(true, `Dashboard not reachable at ${URL}`);
+    await skipFirstRunTour(page);
     await page.goto(URL, { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
     // AppSplashScreen covers the viewport for ~3s after load.
@@ -77,6 +90,7 @@ test.describe("Dashboard (/dashboard)", () => {
 test.describe("Dashboard layout registers", () => {
   test.beforeEach(async ({ page }) => {
     if (!(await isReachable(URL))) test.skip(true, `Dashboard not reachable at ${URL}`);
+    await skipFirstRunTour(page);
     await page.goto(URL, { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
     await page.waitForFunction(() => !document.querySelector('[class*="2147483647"]'), null, {
@@ -118,5 +132,86 @@ test.describe("Dashboard layout registers", () => {
     );
     expect(variants.length).toBeGreaterThan(0);
     variants.forEach((v) => expect(v).toContain("tabular-nums"));
+  });
+});
+
+/**
+ * The panels ported from the MALIKA Dasbor design. Each one is pinned to the
+ * data that backs it, because the design shipped with placeholder figures and
+ * the whole point of the port was to refuse to render those.
+ */
+test.describe("Dashboard panels", () => {
+  test.beforeEach(async ({ page }) => {
+    if (!(await isReachable(URL))) test.skip(true, `Dashboard not reachable at ${URL}`);
+    await skipFirstRunTour(page);
+    await page.goto(URL, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("load");
+    await page.waitForFunction(() => !document.querySelector('[class*="2147483647"]'), null, {
+      timeout: 20_000,
+    });
+  });
+
+  test("tabs switch which categories the index lists", async ({ page }) => {
+    const tabs = page.getByRole("tablist", { name: "Kelompok indikator" });
+    await expect(tabs).toBeVisible();
+
+    const ekonomi = page.getByRole("tab", { name: "Ekonomi" });
+    await ekonomi.click();
+    await expect(ekonomi).toHaveAttribute("aria-selected", "true");
+
+    // Ekonomi is a strict subset of Ringkasan, which owns every category.
+    const narrowed = await page.locator("main section[aria-label]").count();
+    await page.getByRole("tab", { name: "Ringkasan" }).click();
+    const all = await page.locator("main section[aria-label]").count();
+    expect(all).toBeGreaterThan(narrowed);
+  });
+
+  test("expanding a headline card shows its figures in a dialog", async ({ page }) => {
+    await page.locator('section[aria-label="Angka utama"] button[aria-label^="Lihat rincian"]').first().click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("Periode", { exact: true })).toBeVisible();
+    // A figure, not a placeholder: the table must carry digits.
+    await expect(dialog.getByText(/\d/).first()).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  });
+
+  test("the inflation heat map compares cities on the same months", async ({ page }) => {
+    const heat = page.locator('section[aria-label="Inflasi bulanan menurut kota IHK"]');
+    await expect(heat).toBeVisible();
+
+    // Every row must carry the same number of cells, or a column would mean a
+    // different month depending on which row you read it from.
+    const widths = await heat.evaluate((el) => {
+      const rows = [...el.querySelectorAll("div.flex.items-center")];
+      return rows.map((r) => r.querySelectorAll("span[title]").length).filter((n) => n > 0);
+    });
+    expect(widths.length).toBeGreaterThan(1);
+    expect(new Set(widths).size).toBe(1);
+  });
+
+  test("regional panels resolve to values or say why not", async ({ page }) => {
+    const table = page.locator('section[aria-label="Tabel indikator kabupaten/kota"]');
+    await expect(table).toBeVisible();
+
+    // The region fetch is client-side, so allow it to land before judging.
+    await expect(
+      table.locator("table tbody tr").first().or(table.getByText(/tidak tersedia per kabupaten\/kota/i))
+    ).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("the period filter offers only years the source published", async ({ page }) => {
+    const period = page.getByLabel("Periode");
+    await expect(period).toBeVisible({ timeout: 15_000 });
+
+    const options = await period.locator("option").allTextContents();
+    const years = options.filter((o) => /^\d{4}$/.test(o.trim()));
+    expect(years.length).toBeGreaterThan(0);
+    // Never offer a future year — the replica cannot hold one.
+    const nextYear = new Date().getFullYear() + 1;
+    expect(Math.max(...years.map(Number))).toBeLessThan(nextYear);
   });
 });
