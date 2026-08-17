@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import React from "react";
 import DataPageClient from "./DataPageClient";
 import EmptyState from "@/components/common/EmptyState";
+import NoSourceState from "./_components/NoSourceState";
 import { applyTableRowOrdering } from "@/lib/tableRowOrdering";
 import { fetchParentCategory } from "./_lib/parentCategory";
 import { backendBaseUrl } from "@/lib/backendBaseUrl";
@@ -160,14 +161,12 @@ export default async function DataPage({
   const qIndicatesKomoditas = /\bkomoditas\b/i.test(q);
 
   if (!Number.isFinite(sourceId) || sourceId <= 0) {
-    return (
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white/90">Data Statistik</h1>
-        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Parameter `source_id` tidak valid.</p>
-        </div>
-      </div>
-    );
+    // No parameter at all is the reader arriving from the nav rather than from
+    // an indicator, so it gets a doorway; a malformed one means some link is
+    // wrong, and saying so is what gets it reported.
+    const sourceIdGiven =
+      String(Array.isArray(sourceIdRaw) ? sourceIdRaw[0] : sourceIdRaw ?? "").trim() !== "";
+    return <NoSourceState reason={sourceIdGiven ? "invalid" : "missing"} />;
   }
 
   const endpoint = dsType === "exim" ? "exim" : dsType === "interop" ? "interop" : dsType === "static" ? "static" : "dynamic";
