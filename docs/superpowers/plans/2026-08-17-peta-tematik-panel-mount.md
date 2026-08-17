@@ -1,13 +1,16 @@
 # Peta Tematik — mounting the new panels
 
-**Status:** panels built, tested and committed. Wiring deferred.
+**Status: DONE.** Panels built (`50d5409`) and mounted (`b32e759`); live.
+Kept as the record of what was built and why. The mount steps below are what
+was actually applied — read them as history, not as a to-do.
 
-**Why deferred:** on 2026-08-17 another session held 481 uncommitted lines across
-`PetaTematikClient.tsx` (+309), `KabkotaDetailDrawer.tsx` (+283),
-`CommandPalette.tsx`, `ShareBar.tsx`, `types.ts` and `useUrlState.ts` — including a
-rebuild of the indicator taxonomy (`INDIKATOR_INTI_IDS`, `META_GROUPS`). Editing
-those files concurrently risks destroying that work. Everything below is additive
-and touches only files that were clean.
+**On the "concurrent session" that wasn't.** The wiring was initially deferred
+because six peta-tematik files carried 481 uncommitted lines and appeared to be
+under active edit. Checking mtimes showed they had not been touched since
+**2026-05-30 — 79 days**. It was abandoned work sitting in the tree, not a live
+session, and the repo simply did not match what was deployed. It is now recorded
+as-is in `8013a51`, ahead of the mount, so the history separates it from this
+session's work. **Check mtimes before assuming a dirty tree means a live editor.**
 
 **Source design:** `MALIKA Peta Tematik.dc.html` (claude.ai design project
 `2099e02b-3055-4a6b-9a33-4457345001ab`).
@@ -149,6 +152,11 @@ const dimmed = activeBucket != null && bucketOf(value, breaks) !== activeBucket;
 
 ## Still outstanding
 
+- **A two-minute outage during this deploy.** `pm2 reload` was chained after a
+  `npm run build | grep …` pipeline, and the grep's exit status masked the failed
+  build, so PM2 was reloaded onto a broken bundle. **Check the build's own exit
+  status before reloading** — `npm run build || exit 1` on its own line, not
+  behind a pipe.
 - **Region label toggle** ("Label wilayah"). Needs `ChoroplethMap.tsx`: each layer
   already has a hover `bindTooltip`, and Leaflet allows only one tooltip per
   layer, so permanent labels need either a second `L.marker` with a `divIcon` at
