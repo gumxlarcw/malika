@@ -249,8 +249,23 @@ export default function Orb({
     const container = ctnDom.current;
     if (!container) return;
 
-    const renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
-    const gl = renderer.gl;
+    /*
+     * Bail out where WebGL is unavailable — an older device, a GPU on the
+     * browser's blocklist, hardware acceleration switched off, or a headless
+     * run. ogl's Renderer logs "unable to create webgl context" and then reads
+     * `this.gl.renderer` on the null it just complained about, so the throw
+     * escapes into React and the global error boundary tears down the whole
+     * page. A decorative orb must never be able to do that; it simply does not
+     * draw instead.
+     */
+    let renderer;
+    try {
+      renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
+    } catch {
+      return;
+    }
+    const gl = renderer?.gl;
+    if (!gl) return;
     gl.clearColor(0, 0, 0, 0);
     container.appendChild(gl.canvas);
 

@@ -41,40 +41,37 @@ test("/chat still resolves as a deep link", async ({ page }) => {
   expect(txt.length).toBeGreaterThan(0);
 });
 
-test("a question typed on the landing is carried into the dialog", async ({ page }) => {
+test("a question typed on the landing is asked, not just parked", async ({ page }) => {
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(6000);
 
-  const ask = page.locator('input[type="text"]').first();
-  await ask.fill("Berapa inflasi Kota Ternate Juli 2026?");
+  await page.locator('input[type="text"]').first().fill("halo");
   await page.getByRole("link", { name: /Tanya/i }).first().click();
 
   const dlg = page.locator('[role="dialog"][aria-label="Chat MALIKA"]');
   await expect(dlg).toBeVisible({ timeout: 15000 });
   expect(page.url().replace(BASE, "")).not.toContain("/chat");
 
-  // Let the chat surface finish mounting before asking it for a thread; the
-  // rail renders before its buttons are wired.
-  await page.waitForTimeout(7000);
-
-  // The composer only mounts once a thread exists, so open one first. Scoped to
-  // the page, not the dialog: the rail's button sits outside the dialog's own
-  // subtree in the accessibility tree Playwright walks.
-  const newChat = page.getByRole("button", { name: /New Chat|Chat baru/i }).first();
-  if (await newChat.isVisible().catch(() => false)) await newChat.click();
-
+  // The question must appear as a sent message — a thread is created and the
+  // text fired without the reader touching the composer.
   await expect
     .poll(
       async () =>
-        page.evaluate(
-          () =>
-            (document.querySelector("#chat-composer textarea") as HTMLTextAreaElement | null)
-              ?.value ?? "",
-        ),
-      { timeout: 30000 },
+        page.evaluate(() => {
+          const root = document.querySelector(".chat-page-root") as HTMLElement | null;
+          return root?.innerText ?? "";
+        }),
+      { timeout: 45000 },
     )
-    .toContain("inflasi Kota Ternate");
+    .toContain("halo");
 
-  await expect(dlg).toContainText("Lanjutan dari kotak tanya di halaman");
-  console.log("CARRY: ok");
+  const state = await page.evaluate(() => {
+    const root = document.querySelector(".chat-page-root") as HTMLElement | null;
+    const text = root?.innerText ?? "";
+    const composer = document.querySelector("#chat-composer textarea") as HTMLTextAreaElement | null;
+    return { composerEmpty: (composer?.value ?? "") === "", hasNote: text.includes("Lanjutan dari kotak tanya") };
+  });
+  // Sent, not parked: the composer is clear again.
+  expect(state.composerEmpty).toBe(true);
+  console.log("ASKED:", JSON.stringify(state));
 });

@@ -97,7 +97,7 @@ function buildPipelineLine(t: { step?: string; detail?: string; label?: string; 
   return "";
 }
 
-export default function ChatPageClient() {
+export default function ChatPageClient({ initialQuestion }: { initialQuestion?: string } = {}) {
   const {
     startProcessing, finishProcessing,
     isChatProcessing, processingThreadId, processingStartedAt,
@@ -1153,6 +1153,26 @@ export default function ChatPageClient() {
     activeThreadIdRef.current = activeThreadId;
     loadMessages(activeThreadId);
   }, [activeThreadId, loadMessages]);
+
+  /*
+   * A question typed in a page's own ask box, handed over when chat opens as a
+   * dialog. It rides the same rails as the sample-query cards below — queue it,
+   * create a thread, and the effect after this one sends it once the thread
+   * lands — so the reader gets an answer instead of an empty composer.
+   *
+   * Guarded by a ref: this must fire once per mount, never again when threads
+   * reload underneath it.
+   */
+  const carriedQuestionSentRef = useRef(false);
+  useEffect(() => {
+    const question = initialQuestion?.trim();
+    // Wait for the uid: createThread() bails without one, and firing early
+    // burned the one-shot guard below, so the question was silently dropped.
+    if (!question || !malikaUid || carriedQuestionSentRef.current) return;
+    carriedQuestionSentRef.current = true;
+    pendingSampleQueryRef.current = question;
+    void createThread();
+  }, [initialQuestion, malikaUid, createThread]);
 
   // Auto-fire the sample-query queued from the EmptyState category cards.
   // Runs after activeThreadId lands and loadMessages has resolved (small
