@@ -178,6 +178,44 @@ function orderKnowledgeDocsByPeriod(docs, { requestedYear = null, band = 0.05 } 
   return out;
 }
 
+/**
+ * Clean one line of the model's reasoning before it is shown to the public.
+ *
+ * The reasoning trace renders in the chat UI, so it must not read our own system
+ * prompt back to the user. The prompt already asks the model to keep the trace
+ * free of internal instructions and in Indonesian — measured over 8 queries that
+ * held for language (0/8 English) and markdown (0/8), but 2/8 still quoted our
+ * answer-shape constraints. This is the net under that residual.
+ *
+ * Deliberately narrow: it drops lines that name prompt plumbing or restate the
+ * answer-shape rules, and nothing else. A line is not internal merely for
+ * mentioning a table or the data — that is the reasoning we want people to see.
+ *
+ * @returns {string} the cleaned line, or null when the line should be dropped
+ */
+const REASONING_INTERNAL_PATTERNS = [
+  /\bconstraint\s*:/i,
+  /\bmax(?:imal|imum)?\s+\d+[-–\s]*\d*\s*(sentence|kalimat)/i,
+  /\bbatas\s*:\s*maksimal\s+\d/i,
+  /\bdo not list\b/i,
+  /\bdata\s*preview\b/i,
+  /\bsystem\s*message\b/i,
+  /\bknowledge\s*base\b/i,
+  /\binstruksi\s+penting\b/i,
+];
+
+function sanitizeReasoningLine(lineRaw) {
+  if (typeof lineRaw !== 'string') return '';
+  if (!lineRaw.trim()) return lineRaw === '' ? '' : lineRaw;
+  if (REASONING_INTERNAL_PATTERNS.some((re) => re.test(lineRaw))) return null;
+  // Markdown leaks through as literal asterisks in the plain-text panel: emphasis
+  // markers, and list bullets that render as a stray "*" at the start of a line.
+  return lineRaw
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/(^|\s)\*(?!\s)([^*]+?)\*(?=\s|$)/g, '$1$2')
+    .replace(/^(\s*)[*+-]\s{2,}/, '$1');
+}
+
 function stripMalikaUiBlock(content) {
   return String(content || '').replace(/```\s*malika_ui\s*[\s\S]*?```/gi, '').trim();
 }
@@ -450,6 +488,7 @@ function buildDbFirstHeader({ intentResult, candidates, latestBySource }) {
 }
 
 module.exports = {
+  sanitizeReasoningLine,
   parseDocPeriod,
   orderKnowledgeDocsByPeriod,
   isNonStatisticalQuery,

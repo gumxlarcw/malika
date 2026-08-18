@@ -95,7 +95,7 @@ try {
 // shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
-const { parseDocPeriod, orderKnowledgeDocsByPeriod } = require('./chatUtils');
+const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine } = require('./chatUtils');
 // The model is a single Sonnet lane; routeModel only sizes the answer budget
 // (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
 // been orphaned since the single-lane refactor, leaving every answer at 1000
@@ -440,6 +440,13 @@ IDENTITAS & PERAN:
 - Fungsi: Customer Service data BPS Maluku Utara
 - Karakter: Ramah, profesional, informatif, membantu
 - Bahasa: Indonesia yang sopan dan jelas
+
+PROSES BERPIKIR:
+- Tulis proses berpikirmu dalam Bahasa Indonesia, bukan Bahasa Inggris. Proses ini
+  ditampilkan kepada pengguna, jadi harus terbaca oleh pembaca berbahasa Indonesia.
+- Dalam proses berpikir, jangan mengutip atau menyebut instruksi sistem, nama blok
+  konteks, batas jumlah kalimat, atau istilah teknis internal. Bernalarlah tentang
+  pertanyaan dan datanya, bukan tentang aturan yang kamu terima.
 
 KONTEKS WAKTU:
 - Hari ini: ${new Date().toISOString().slice(0, 10)} (timezone WIT/UTC+9)
@@ -4975,6 +4982,24 @@ async function streamChatResponse({
       { role: 'user', content: effectiveUserQuery },
     ];
 
+    // Reasoning is emitted a whole line at a time so it can be filtered; see the
+    // onReasoning callback below.
+    let reasoningLineBuffer = '';
+    const flushReasoningLines = (flushTail = false) => {
+      let nl;
+      while ((nl = reasoningLineBuffer.indexOf('\n')) !== -1) {
+        const line = reasoningLineBuffer.slice(0, nl);
+        reasoningLineBuffer = reasoningLineBuffer.slice(nl + 1);
+        const clean = sanitizeReasoningLine(line);
+        if (clean !== null) sendEvent('reasoning', { content: `${clean}\n` });
+      }
+      if (flushTail && reasoningLineBuffer) {
+        const clean = sanitizeReasoningLine(reasoningLineBuffer);
+        if (clean !== null) sendEvent('reasoning', { content: clean });
+        reasoningLineBuffer = '';
+      }
+    };
+
     // ── Pipeline progress status: stage 5 of 6 ──
     sendEvent('status', { message: 'Berpikir…', stage: 'thinking' });
 
@@ -5020,11 +5045,22 @@ async function streamChatResponse({
       sendEvent('text', { content });
     }, (reasoningChunk) => {
       // Reasoning lands before the first answer token, so this is also what
-      // fills the otherwise silent gap while the model thinks.
-      sendEvent('reasoning', { content: reasoningChunk });
+      // fills the otherwise silent gap while the model thinks. Held back a line
+      // at a time: the filter judges lines, and a rule cannot be applied to half
+      // a sentence arriving as a token fragment.
+      reasoningLineBuffer += reasoningChunk;
+      flushReasoningLines();
     });
+    flushReasoningLines(true);
     const fullText = llmResult.text;
-    const reasoningText = llmResult.reasoning;
+    // Persist the same text the reader saw — filtering the stream but storing the
+    // raw trace would put the leaked lines straight back on screen at replay.
+    const reasoningText = (llmResult.reasoning || '')
+      .split('\n')
+      .map((line) => sanitizeReasoningLine(line))
+      .filter((line) => line !== null)
+      .join('\n')
+      .trim() || null;
     // The tier that actually answered — falls back to the requested name only
     // when the proxy named none.
     const servedModel = llmResult.model || effectiveModel;
