@@ -3894,6 +3894,21 @@ async function streamChatResponse({
       }
     }
 
+    // Kick off the knowledge search now, and collect it at stage 4.
+    //
+    // It reads only effectiveUserQuery — settled above — and shares nothing with
+    // the datasource search below, so there was never a reason for it to wait its
+    // turn. Measured: ~5.1s of knowledge work (mostly the documentJudge LLM call)
+    // queued behind a ~10.9s datasource stage it overlaps entirely.
+    //
+    // Settled into {ok, value|err} rather than left as a bare promise: the
+    // consumption site keeps its own error handling, and an early return between
+    // here and there cannot produce an unhandled rejection.
+    const knowledgeSearchSettled = searchKnowledgeBase(effectiveUserQuery, 3).then(
+      (value) => ({ ok: true, value }),
+      (err) => ({ ok: false, err })
+    );
+
     // ── Pipeline progress status: stage 2 of 5 ──
     sendEvent('status', { message: 'Mencari sumber data…', stage: 'search' });
 
@@ -4829,12 +4844,15 @@ async function streamChatResponse({
     // ── Pipeline progress status: stage 4 of 5 ──
     sendEvent('status', { message: 'Memuat referensi BRS & publikasi…', stage: 'knowledge' });
 
-    // RAG: Search knowledge base for relevant documents
+    // RAG: collect the knowledge search started back at stage 2.
     let knowledgeContext = [];
-    try {
-      knowledgeContext = await searchKnowledgeBase(effectiveUserQuery, 3);
-    } catch (e) {
-      console.warn('[StreamChat] Knowledge search failed:', e.message);
+    {
+      const settled = await knowledgeSearchSettled;
+      if (settled.ok) {
+        knowledgeContext = settled.value;
+      } else {
+        console.warn('[StreamChat] Knowledge search failed:', settled.err?.message);
+      }
     }
 
     // If this is a knowledge-type query (non-data) and we have relevant knowledge,
