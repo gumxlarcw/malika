@@ -9,6 +9,8 @@ const logger = require('../../utils/logger');
 const { intentStats } = require('./intentStats.service');
 const { rankByQuery, applyClickPrior, deriveConfidence } = require('./fulltextRanker');
 const { recordDivergence } = require('./shadowLogger.service');
+const { normalizeRegionName } = require('../../utils/geoAnalysis');
+const { isKabKotaLevelName } = require('../chat/chatUtils');
 
 // Production guardrail: exclude noisy indicators from intent selection.
 const IGNORED_SOURCE_IDS = new Set([166, 167, 168, 169]);
@@ -676,6 +678,26 @@ async function resolveSearchIntent({ q, context = '', noLlm = false }) {
   };
 }
 
+/**
+ * How much to lift a datasource for a question that names a kabupaten/kota.
+ *
+ * Asking about Kota Ternate and being handed a province-only table is not a near
+ * miss — it is unanswerable, and the model either refuses or, worse, sums the
+ * rows and reports a provincial figure as the city's.
+ *
+ * normalizeRegionName is the province guard as well as the alias table: it
+ * resolves all ten kabupaten/kota including shorthand ("kepsul", "Tidore") and
+ * returns null for "Maluku Utara" / "malut" / "North Maluku". So a question about
+ * the province never gets dragged onto a kabupaten/kota breakdown.
+ */
+const KAB_KOTA_BOOST = 25;
+
+function kabKotaBoostFor(sourceName, geo) {
+  if (!sourceName || !geo) return 0;
+  if (!normalizeRegionName(geo)) return 0;
+  return isKabKotaLevelName(sourceName) ? KAB_KOTA_BOOST : 0;
+}
+
 async function buildDatasourceCandidates({ q, qb, limit = 20 }) {
   const query = String(q || '').trim();
   const max = Math.min(50, Math.max(1, Number.parseInt(String(limit || 20), 10) || 20));
@@ -701,6 +723,19 @@ async function buildDatasourceCandidates({ q, qb, limit = 20 }) {
           score: Math.max(prev.score || 0, it.score || 0),
           periodHit: Boolean(prev.periodHit || it.periodHit),
         });
+      }
+    }
+  }
+
+  // Level-of-detail boost. Runs before the block below and outside its
+  // !hasYearInQuery gate: whether a year was named has no bearing on whether the
+  // reader needs a source that can break out their kabupaten/kota.
+  {
+    const requestedGeo = qb?.params?.geo || null;
+    if (requestedGeo) {
+      for (const item of merged.values()) {
+        const boost = kabKotaBoostFor(item.name, requestedGeo);
+        if (boost > 0) item.score = (item.score || 0) + boost;
       }
     }
   }
@@ -830,6 +865,7 @@ async function buildDatasourceCandidates({ q, qb, limit = 20 }) {
 }
 
 module.exports = {
+  kabKotaBoostFor,
   resolveSearchIntent,
   buildDatasourceCandidates,
 };
