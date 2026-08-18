@@ -56,9 +56,17 @@ export default function PageHero({
 }: PageHeroProps) {
   const items = (meta ?? []).filter(Boolean);
 
+  /*
+   * The /data hero's chips are a solid pastel — indigo-100 fill with
+   * indigo-800 text — not a translucent wash. Mixing the accent toward white
+   * reproduces that fill for any hue, and mixing toward the ink colour (rather
+   * than pure black) darkens the text without draining the hue out of it.
+   */
   const railVars: CSSProperties = {
     ["--hero-accent" as string]: accent ?? "#465fff",
     ["--hero-accent-dark" as string]: accentDark ?? accent ?? "#7591ff",
+    ["--hero-badge-bg" as string]: `color-mix(in srgb, ${accent ?? "#465fff"} 15%, #ffffff)`,
+    ["--hero-badge-text" as string]: `color-mix(in srgb, ${accent ?? "#465fff"} 70%, #101828)`,
   } as CSSProperties;
 
   return (
@@ -71,18 +79,7 @@ export default function PageHero({
         aria-hidden
         className="absolute bottom-0 left-0 top-0 w-1 bg-[color:var(--hero-accent)] dark:bg-[color:var(--hero-accent-dark)]"
       />
-      {/* A wash of the same hue, so the colour reads as the page's rather than
-          as a stripe someone stuck on the edge. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 w-1/2 opacity-[0.05] dark:opacity-[0.09]"
-        style={{
-          background:
-            "linear-gradient(90deg, var(--hero-accent) 0%, transparent 100%)",
-        }}
-      />
-
-      <div className="relative p-4 pl-5 md:p-5 md:pl-7">
+      <div className="relative px-5 py-5 md:px-7 md:py-6">
         {crumbs && crumbs.length > 0 && (
           <nav
             aria-label="Breadcrumb"
@@ -114,14 +111,7 @@ export default function PageHero({
           <div className="min-w-0 flex-1">
             {badge && (
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span
-                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold leading-[18px]"
-                  style={{
-                    borderColor: "color-mix(in srgb, var(--hero-accent) 32%, transparent)",
-                    background: "color-mix(in srgb, var(--hero-accent) 10%, transparent)",
-                    color: "var(--hero-accent)",
-                  }}
-                >
+                <span className="hero-badge inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-[18px]">
                   {badge}
                 </span>
               </div>

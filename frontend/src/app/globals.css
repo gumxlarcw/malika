@@ -1110,3 +1110,23 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/*
+ * PageHero badge.
+ *
+ * Matches the /data hero's chips, which are a solid pastel fill with dark
+ * text (indigo-100 on indigo-800), not a translucent tint — a 10% wash read
+ * as almost white and was why the shared heroes looked colourless beside it.
+ * The values are mixed from --hero-accent in PageHero, so every page keeps
+ * its own hue. Dark mode follows /data too: an 18% alpha fill with the light
+ * accent as text.
+ */
+.hero-badge {
+  background: var(--hero-badge-bg);
+  color: var(--hero-badge-text);
+}
+
+.dark .hero-badge {
+  background: color-mix(in srgb, var(--hero-accent-dark) 18%, transparent);
+  color: var(--hero-accent-dark);
+}
