@@ -89,6 +89,10 @@ export default function ChatModal() {
    * answer it.
    */
   const question = open ? carriedDraft : "";
+  // Opening the dialog from the landing page is starting a conversation, not
+  // resuming one. The /chat route keeps the opposite default — going there
+  // deliberately should show the reader what they were last doing.
+  const startFresh = open;
 
   if (!open || typeof document === "undefined") return null;
 
@@ -143,7 +147,7 @@ export default function ChatModal() {
 
         <div className="relative min-h-0 flex-1">
           <ChatProcessProvider>
-            <ChatPageClient initialQuestion={question} />
+            <ChatPageClient initialQuestion={question} startFresh={startFresh} />
           </ChatProcessProvider>
         </div>
       </div>

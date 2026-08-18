@@ -98,7 +98,10 @@ function buildPipelineLine(t: { step?: string; detail?: string; label?: string; 
   return "";
 }
 
-export default function ChatPageClient({ initialQuestion }: { initialQuestion?: string } = {}) {
+export default function ChatPageClient({
+  initialQuestion,
+  startFresh = false,
+}: { initialQuestion?: string; startFresh?: boolean } = {}) {
   const {
     startProcessing, finishProcessing,
     isChatProcessing, processingThreadId, processingStartedAt,
@@ -1135,6 +1138,31 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
         const list = (threadsJson.threads || []) as Thread[];
         setThreads(list);
         
+        // Opened from outside: begin on an empty conversation instead of the last
+        // one. Decided here because this is the only point where the thread list
+        // is guaranteed to be loaded — the carried-question effect below fires as
+        // soon as the uid lands, which can be before this returns.
+        if (startFresh && !activeThreadIdRef.current) {
+          if (initialQuestion?.trim()) {
+            pendingSampleQueryRef.current = initialQuestion.trim();
+          }
+          // last_message_at is null only on a thread nobody has written to. Reuse
+          // one rather than leaving a new blank behind every time the dialog is
+          // opened and closed. It sorts to the end under `last_message_at DESC`,
+          // so it is searched for rather than read off the front.
+          const blank = list.find((t) => !t.last_message_at);
+          if (blank) {
+            setActiveThreadId(blank.id);
+            activeThreadIdRef.current = blank.id;
+            lastLoadedThreadIdRef.current = blank.id;
+            resetList([]);
+          } else {
+            await createThread();
+          }
+          setSuggestionsLoading(false);
+          return;
+        }
+
         if (list.length > 0 && !activeThreadIdRef.current) {
           const firstThreadId = list[0].id;
           setActiveThreadId(firstThreadId);
@@ -1177,7 +1205,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
         }
       }
     })();
-  }, [apiBase, extractLastAssistantUi, fetchThreadSuggestions, headers, malikaUid, mapBackendMessagesToChatUI, resetList, restorePersistedThinking]);
+  }, [apiBase, createThread, extractLastAssistantUi, fetchThreadSuggestions, headers, initialQuestion, malikaUid, mapBackendMessagesToChatUI, resetList, restorePersistedThinking, startFresh]);
 
   // When user manually switches threads, load messages for that thread
   useEffect(() => {
@@ -1201,13 +1229,16 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
   const carriedQuestionSentRef = useRef(false);
   useEffect(() => {
     const question = initialQuestion?.trim();
+    // startFresh routes through the bootstrap above, which knows what threads
+    // exist; letting this fire too would create a second, empty conversation.
+    if (startFresh) return;
     // Wait for the uid: createThread() bails without one, and firing early
     // burned the one-shot guard below, so the question was silently dropped.
     if (!question || !malikaUid || carriedQuestionSentRef.current) return;
     carriedQuestionSentRef.current = true;
     pendingSampleQueryRef.current = question;
     void createThread();
-  }, [initialQuestion, malikaUid, createThread]);
+  }, [initialQuestion, malikaUid, createThread, startFresh]);
 
   // Auto-fire the sample-query queued from the EmptyState category cards.
   // Runs after activeThreadId lands and loadMessages has resolved (small
