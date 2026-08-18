@@ -31,6 +31,7 @@ export type SSEEventType =
   | "text"
   | "chunk"    // V1 legacy format (greeting handler)
   | "status"
+  | "reasoning"  // model's thinking trace (reasoning tiers only)
   | "intent"
   | "malika_ui"
   | "user_saved"
@@ -73,6 +74,8 @@ export interface StreamCallbacks {
   onIntent?: (data: IntentEvent) => void;
   onMalikaUi?: (data: any) => void;
   onStatus?: (data: StatusEvent) => void;
+  /** Model's thinking trace, streamed before the answer on reasoning tiers. */
+  onReasoning?: (data: { content: string }) => void;
   onText?: (data: { content: string }) => void;
   onDone?: (data: { full_text: string }) => void;
   onError?: (data: { message: string }) => void;
@@ -136,7 +139,7 @@ export function streamMessage(
   malikaUid: string,
   callbacks: StreamCallbacks,
   signal?: AbortSignal,
-  options?: { model?: string }
+  options?: { model?: string; token?: string }
 ): AbortController {
   const controller = new AbortController();
   const MAX_RETRIES = 2;
@@ -156,6 +159,7 @@ export function streamMessage(
         headers: {
           "Content-Type": "application/json",
           "x-malika-uid": malikaUid,
+          ...(options?.token ? { "x-malika-token": options.token } : {}),
         },
         body: JSON.stringify({ text, model: options?.model || "claude-sonnet-4-6" }),
         signal: controller.signal,
@@ -204,6 +208,9 @@ export function streamMessage(
               case "status":
                 callbacks.onStatus?.(evt.data);
                 break;
+              case "reasoning":
+                callbacks.onReasoning?.(evt.data);
+                break;
               case "text":
                 callbacks.onText?.(evt.data);
                 break;
@@ -232,6 +239,9 @@ export function streamMessage(
       if (buffer.trim()) {
         for (const evt of parseSSEEvents(buffer + "\n\n")) {
           switch (evt.event) {
+            case "reasoning":
+              callbacks.onReasoning?.(evt.data);
+              break;
             case "text":
               callbacks.onText?.(evt.data);
               break;

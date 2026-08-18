@@ -147,4 +147,21 @@ describe('chat()', () => {
   test('non-array messages throws', async () => {
     await expect(chat({ model: 'm', messages: 'hi' })).rejects.toThrow(/messages.*array/i);
   });
+
+  // reasoning_effort unlocks DeepSeek's thinking trace on the NeuralWatt tier.
+  // The proxy spreads the whole body through to the upstream, so passing it
+  // here is the entire wiring on our side.
+  test('reasoning_effort is sent when provided', async () => {
+    mockFetchOnce(buildResponse({ status: 200, body: '{"ok":true}' }));
+    await chat({ model: 'm', messages: [], reasoning_effort: 'high' });
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body.reasoning_effort).toBe('high');
+  });
+
+  test('reasoning_effort is omitted when not provided', async () => {
+    mockFetchOnce(buildResponse({ status: 200, body: '{"ok":true}' }));
+    await chat({ model: 'm', messages: [] });
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty('reasoning_effort');
+  });
 });

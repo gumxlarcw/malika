@@ -41,7 +41,13 @@ const TIERS = {
 /**
  * Model configs per tier.
  *
- * `reasoning_effort` only applies to o-series models (o3, o4-mini).
+ * `reasoning_effort` unlocks the upstream thinking trace (streamed back as
+ *   `delta.reasoning`). Null on the cheap tiers — a greeting has nothing to
+ *   reason about, and reasoning is paid for in output tokens.
+ *   'high' is deliberate: measured on the live NeuralWatt tier it produced the
+ *   SHORTEST and CHEAPEST trace (4272 chars / 1614 output tokens / $0.000460),
+ *   while 'low' rambled to 12626 chars and blew a 4000-token budget without
+ *   finishing the answer. The labels are inverted from what they suggest.
  * `thinking_budget` applies to Claude models — tokens allocated for Extended Thinking.
  *   - null = no thinking (GREETING/SIMPLE)
  *   - number = explicit budget via type:'enabled'
@@ -62,7 +68,7 @@ const TIER_CONFIG = {
     max_tokens: 8000,
     temperature: 0.3,
     reasoning: false,
-    reasoning_effort: null,
+    reasoning_effort: 'high',
     thinking_budget: CLAUDE_THINKING?.BUDGET_SIMPLE, // 4000 — now safe: budgetTokens (4000) < maxTokens (8000)
     description: 'Pencarian data sederhana',
   },
@@ -71,16 +77,20 @@ const TIER_CONFIG = {
     max_tokens: 8000,
     temperature: 0.2,
     reasoning: false,
-    reasoning_effort: null,
+    reasoning_effort: 'high',
     thinking_budget: CLAUDE_THINKING?.BUDGET_COMPLEX,
     description: 'Analisis mendalam',
   },
   [TIERS.DEEP]: {
     model: 'claude-sonnet-4-6',
-    max_tokens: 16000,
+    // 6000, not 16000: with reasoning_effort on, the model spends thousands of
+    // tokens thinking before it answers, and a 16000 ceiling let a single deep
+    // query run past 137s without finishing. Measured need is ~2000-4000 for the
+    // trace plus ~1000 for the answer.
+    max_tokens: 6000,
     temperature: 0.2,
     reasoning: false,
-    reasoning_effort: null,
+    reasoning_effort: 'high',
     thinking_budget: CLAUDE_THINKING?.BUDGET_DEEP,
     description: 'Analisis komprehensif',
   },

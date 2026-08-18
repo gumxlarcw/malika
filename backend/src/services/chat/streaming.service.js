@@ -118,37 +118,94 @@ const { routeModel } = require('./streaming/modelRouter.service');
  * ('anthropic/claude-sonnet-4-6'). It is null when the response never named one.
  * This is NOT the model we requested: the proxy ignores `body.model` entirely
  * and answers from its tier chain.
+ *
+ * `onReasoning(text)`, when supplied, is called for every piece of the model's
+ * thinking trace (`delta.reasoning`, present only when the request carried a
+ * `reasoning_effort`). The accumulated trace comes back as `.reasoning`.
  */
-async function readLlmChatResponse(response, onChunk) {
-  const bodyText = await response.text();
+async function readLlmChatResponse(response, onChunk, onReasoning) {
   let fullText = '';
   let servedModel = null;
+  let reasoningText = '';
+  let sawSse = false;
 
-  const looksLikeSse = /(^|\n)\s*data:\s/.test(bodyText);
-  if (looksLikeSse) {
-    for (const line of bodyText.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.startsWith('data:')) continue;
-      const jsonStr = trimmed.replace(/^data:\s*/, '');
-      if (jsonStr === '[DONE]') break;
-      try {
-        const json = JSON.parse(jsonStr);
-        // Every OpenAI-style chunk repeats `model`; the first one that carries it wins.
-        if (!servedModel && json.model) servedModel = String(json.model);
-        const delta = json.choices?.[0]?.delta?.content
-                   || json.choices?.[0]?.message?.content;
-        if (delta) {
-          fullText += delta;
-          onChunk(delta);
-        }
-      } catch {
-        // Ignore malformed chunks
+  // One SSE `data:` payload. Returns false when the stream is finished.
+  const consumeSseData = (jsonStr) => {
+    if (jsonStr === '[DONE]') return false;
+    try {
+      const json = JSON.parse(jsonStr);
+      if (!servedModel && json.model) servedModel = String(json.model);
+      // Reasoning arrives on its own delta field, typically entirely BEFORE the
+      // first content chunk — the model thinks, then answers.
+      const reasoningDelta = json.choices?.[0]?.delta?.reasoning
+                          || json.choices?.[0]?.message?.reasoning;
+      if (typeof reasoningDelta === 'string' && reasoningDelta) {
+        reasoningText += reasoningDelta;
+        if (onReasoning) onReasoning(reasoningDelta);
+      }
+      const delta = json.choices?.[0]?.delta?.content
+                 || json.choices?.[0]?.message?.content;
+      if (delta) {
+        fullText += delta;
+        onChunk(delta);
+      }
+    } catch {
+      // Ignore malformed chunks
+    }
+    return true;
+  };
+
+  // Anything that isn't an SSE `data:` line is kept so a plain-JSON body (the
+  // claude-cli tier) can still be parsed once the response ends.
+  let rawBody = '';
+  const consumeLine = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return true;
+    if (trimmed.startsWith('data:')) {
+      sawSse = true;
+      return consumeSseData(trimmed.replace(/^data:\s*/, ''));
+    }
+    if (trimmed.startsWith(':')) return true; // SSE comment (the proxy's cost line)
+    rawBody += line + '\n';
+    return true;
+  };
+
+  const reader = typeof response.body?.getReader === 'function' ? response.body.getReader() : null;
+  if (reader) {
+    const decoder = new TextDecoder();
+    let buf = '';
+    let running = true;
+    while (running) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) !== -1) {
+        const line = buf.slice(0, nl);
+        buf = buf.slice(nl + 1);
+        if (!consumeLine(line)) { running = false; break; }
       }
     }
+    buf += decoder.decode();
+    if (running && buf) consumeLine(buf);
+    if (!running) { try { await reader.cancel(); } catch { /* already closed */ } }
   } else {
+    // No readable stream (mocked responses in tests, or a non-stream transport).
+    for (const line of String(await response.text()).split('\n')) {
+      if (!consumeLine(line)) break;
+    }
+  }
+
+  if (!sawSse && rawBody.trim()) {
     try {
-      const json = JSON.parse(bodyText);
+      const json = JSON.parse(rawBody);
       if (json.model) servedModel = String(json.model);
+      const wholeReasoning = json.choices?.[0]?.message?.reasoning
+                          || json.choices?.[0]?.delta?.reasoning;
+      if (typeof wholeReasoning === 'string' && wholeReasoning) {
+        reasoningText = wholeReasoning;
+        if (onReasoning) onReasoning(wholeReasoning);
+      }
       const content = json.choices?.[0]?.message?.content
                    || json.choices?.[0]?.delta?.content
                    || '';
@@ -157,11 +214,15 @@ async function readLlmChatResponse(response, onChunk) {
         onChunk(content);
       }
     } catch (e) {
-      console.warn('[StreamChat] Could not parse LLM response:', e.message, 'body sample:', bodyText.slice(0, 200));
+      console.warn('[StreamChat] Could not parse LLM response:', e.message, 'body sample:', rawBody.slice(0, 200));
     }
   }
 
-  return { text: fullText, model: servedModel ? servedModel.slice(0, 80) : null };
+  return {
+    text: fullText,
+    model: servedModel ? servedModel.slice(0, 80) : null,
+    reasoning: reasoningText || null,
+  };
 }
 
 // ============================================================================
@@ -4890,6 +4951,7 @@ async function streamChatResponse({
       stream: true,
       max_tokens: answerConfig.max_tokens,
       temperature: answerConfig.temperature,
+      reasoning_effort: answerConfig.reasoning_effort,
       signal: abortSignal,
       apiKey,
       retries: 2,
@@ -4905,8 +4967,13 @@ async function streamChatResponse({
         sendEvent('status', { message: 'Menyusun jawaban…', stage: 'generating' });
       }
       sendEvent('text', { content });
+    }, (reasoningChunk) => {
+      // Reasoning lands before the first answer token, so this is also what
+      // fills the otherwise silent gap while the model thinks.
+      sendEvent('reasoning', { content: reasoningChunk });
     });
     const fullText = llmResult.text;
+    const reasoningText = llmResult.reasoning;
     // The tier that actually answered — falls back to the requested name only
     // when the proxy named none.
     const servedModel = llmResult.model || effectiveModel;
@@ -4919,7 +4986,7 @@ async function streamChatResponse({
     } : null;
 
     // Build UI metadata for frontend (pass knowledge mode and topic)
-    const uiMeta = buildUIMetadata(intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic);
+    const uiMeta = buildUIMetadata(intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, reasoningText);
     
     // Emit malika_ui event for frontend (before done)
     sendEvent('malika_ui', uiMeta);
@@ -4928,7 +4995,7 @@ async function streamChatResponse({
     sendEvent('done', { full_text: fullText });
 
     // Save assistant message with UI metadata (pass userMessage for WhatsApp context)
-    await saveAssistantMessage(threadId, fullText, servedModel, intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, userMessage);
+    await saveAssistantMessage(threadId, fullText, servedModel, intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, userMessage, reasoningText);
 
     // Update thread timestamp
     await thread.update({
@@ -4958,7 +5025,7 @@ async function streamChatResponse({
  * @param {boolean} isKnowledgeMode - Whether this is a knowledge/service query (not data)
  * @param {string|null} conversationTopic - Current conversation topic for contextual suggestions
  */
-function buildUIMetadata(intentResult, candidates, dataPreview, periodFallback = null, contextualSuggestions = null, eximParams = null, isKnowledgeMode = false, conversationTopic = null) {
+function buildUIMetadata(intentResult, candidates, dataPreview, periodFallback = null, contextualSuggestions = null, eximParams = null, isKnowledgeMode = false, conversationTopic = null, reasoningText = null) {
   // Extract period parameters from intent
   const qb = intentResult?.query_builder;
   // Use fallback period if available (for correct href generation)
@@ -5022,12 +5089,16 @@ function buildUIMetadata(intentResult, candidates, dataPreview, periodFallback =
     } : null,
     // Contextual suggestion chips
     suggestions: suggestions.slice(0, 5),
+    // The model's thinking trace, in the shape the chat UI's ThinkingFeed already
+    // replays from history (`step: 'reasoning'`). Omitted entirely when the tier
+    // did not reason, so cheap turns don't carry an empty array.
+    ...(reasoningText ? { thinkingItems: [{ step: 'reasoning', content: reasoningText }] } : {}),
   };
 }
 
-async function saveAssistantMessage(threadId, text, model, intentResult, candidates, dataPreview, periodFallback = null, contextualSuggestions = null, eximParams = null, isKnowledgeMode = false, conversationTopic = null, userMessage = null) {
+async function saveAssistantMessage(threadId, text, model, intentResult, candidates, dataPreview, periodFallback = null, contextualSuggestions = null, eximParams = null, isKnowledgeMode = false, conversationTopic = null, userMessage = null, reasoningText = null) {
   // Build UI metadata using helper
-  const uiMeta = buildUIMetadata(intentResult, candidates, dataPreview, periodFallback, contextualSuggestions, eximParams, isKnowledgeMode, conversationTopic);
+  const uiMeta = buildUIMetadata(intentResult, candidates, dataPreview, periodFallback, contextualSuggestions, eximParams, isKnowledgeMode, conversationTopic, reasoningText);
 
   const uiBlock = `\n\n\`\`\`malika_ui\n${JSON.stringify(uiMeta)}\n\`\`\`\n`;
   

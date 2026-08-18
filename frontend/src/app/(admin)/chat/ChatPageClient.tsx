@@ -68,6 +68,7 @@ import {
   backendBaseUrl,
   safeRandomId,
   getOrCreateMalikaUid,
+  getOrCreateMalikaToken,
   getSearchHistory,
   addToSearchHistory,
 } from "./chatHelpers";
@@ -108,6 +109,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
     toolCalls, pushToolCall, pushToolResult, clearToolCalls,
   } = useChatProcess();
   const [malikaUid, setMalikaUid] = useState<string>("");
+  const [malikaToken, setMalikaToken] = useState<string>("");
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
   const [loadingThreads, setLoadingThreads] = useState(false);
@@ -287,8 +289,9 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
       "Content-Type": "application/json",
     };
     if (malikaUid) h["x-malika-uid"] = malikaUid;
+    if (malikaToken) h["x-malika-token"] = malikaToken;
     return h;
-  }, [malikaUid]);
+  }, [malikaUid, malikaToken]);
 
   // Quick replies — fully LLM-driven, no hardcoded suggestions
   const quickReplies = useMemo(() => {
@@ -436,6 +439,33 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
     }
 
     return list;
+  }, []);
+
+  /**
+   * Rehydrate the thinking panel (pipeline recap + the model's reasoning trace)
+   * from a saved uiMeta. Called by every path that loads a thread's messages —
+   * deliberately NOT by the silent background refresh, which would re-open a
+   * panel the reader had just collapsed.
+   */
+  const restorePersistedThinking = useCallback((ui: any) => {
+    if (!ui?.thinkingItems?.length) return;
+    setThinkingItems(ui.thinkingItems);
+    const reasoningItem = ui.thinkingItems.find(
+      (t: ThinkingItem) => t.step === "reasoning" && t.content
+    );
+    if (reasoningItem?.content) {
+      setReasoningText(reasoningItem.content);
+      reasoningBufferRef.current = reasoningItem.content;
+    }
+    const rebuilt = ui.thinkingItems
+      .map(buildPipelineLine)
+      .filter((l: string) => l.trim())
+      .join("\n");
+    if (rebuilt) {
+      setPipelineText(rebuilt);
+      pipelineTextRef.current = rebuilt;
+    }
+    setShowThinking(true);
   }, []);
 
   const extractLastAssistantUi = useCallback((rows: BackendMessage[], uiMessages?: ChatUiMessage[]) => {
@@ -668,22 +698,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
         setLastAssistantUi(ui);
 
         // Restore persisted thinking items from saved uiMeta
-        if (ui?.thinkingItems?.length) {
-          setThinkingItems(ui.thinkingItems);
-          // Restore reasoning content from persisted thinking items (historical)
-          const reasoningItem = ui.thinkingItems.find((t: ThinkingItem) => t.step === "reasoning" && t.content);
-          if (reasoningItem?.content) {
-            setReasoningText(reasoningItem.content);
-            reasoningBufferRef.current = reasoningItem.content;
-          }
-          // Rebuild pipelineText from persisted thinkingItems
-          const rebuilt = ui.thinkingItems.map(buildPipelineLine).filter((l: string) => l.trim()).join("\n");
-          if (rebuilt) {
-            setPipelineText(rebuilt);
-            pipelineTextRef.current = rebuilt;
-          }
-          setShowThinking(true);
-        }
+        restorePersistedThinking(ui);
 
         // Fire-and-forget: chat surfaces immediately. The chip area shows
         // its own skeleton (driven by suggestionsLoading) while the LLM
@@ -703,7 +718,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apiBase, extractLastAssistantUi, fetchThreadSuggestions, headers, malikaUid, mapBackendMessagesToChatUI, resetList]
+    [apiBase, extractLastAssistantUi, fetchThreadSuggestions, headers, malikaUid, mapBackendMessagesToChatUI, resetList, restorePersistedThinking]
   );
 
   // (fetchThreadSuggestions defined above loadMessages)
@@ -860,8 +875,19 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
           }
         },
 
-        // Note: status_detail, tool_call, tool_result, thinking,
-        // suggestions_update remain unwired (V2 ghost). See chat-pipeline.md.
+        // The model's real thinking trace (deepseek-v4-flash with
+        // reasoning_effort). It streams entirely before the first answer token,
+        // so this is what fills the gap while the model works.
+        onReasoning: (data) => {
+          const chunk = String(data?.content || "");
+          if (!chunk) return;
+          reasoningBufferRef.current += chunk;
+          setReasoningText(reasoningBufferRef.current);
+          setIsThinkingActive(true);
+        },
+
+        // Note: status_detail, tool_call, tool_result, suggestions_update
+        // remain unwired (V2 ghost). See chat-pipeline.md.
 
         onDone: (data) => {
           const finalText = String(data?.full_text || "");
@@ -1012,6 +1038,13 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
               streamingUiMeta = { ...streamingUiMeta, suggestions: llmSuggestionsRef.current };
             }
             setLastAssistantUi(streamingUiMeta);
+            // Seed the persisted thinking panel from the live stream too. Without
+            // this the reasoning trace vanishes the moment streaming ends and only
+            // reappears after a thread reload, which reads the same field.
+            if (streamingUiMeta.thinkingItems?.length) {
+              setThinkingItems(streamingUiMeta.thinkingItems);
+              setShowThinking(true);
+            }
           }
         },
 
@@ -1021,11 +1054,11 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
 
       // Start streaming via chatTransport — replaces manual fetch + ReadableStream + SSE parsing.
       // Single-lane (2026-05-16): omit `model` so chatTransport applies its Sonnet default.
-      const controller = streamMessage(threadId, trimmed, malikaUid, callbacks, undefined);
+      const controller = streamMessage(threadId, trimmed, malikaUid, callbacks, undefined, { token: malikaToken });
       pendingSendRef.current = controller;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startProcessing, finishProcessing, clearSteps, clearToolCalls, markAllStepsDone, pushStep, pushStepDetail, pushToolCall, pushToolResult, setProcessSteps, getModelLabel are stable (useCallback with [] deps). openRating and hasExistingFeedback are used only in rare thank-you path and captured via ref.
-    [appendMsg, isThankYouMessage, loadThreads, malikaUid, refreshMessagesSilently, removeMsg, updateMsg]
+    [appendMsg, isThankYouMessage, loadThreads, malikaUid, malikaToken, refreshMessagesSilently, removeMsg, updateMsg]
   );
 
   // Retry failed message
@@ -1075,6 +1108,11 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
   useEffect(() => {
     const uid = getOrCreateMalikaUid();
     setMalikaUid(uid);
+    // Mint/renew the signed identity token in the background. On failure the
+    // bare uid still works (backend dual-mode), so chat never blocks on this.
+    getOrCreateMalikaToken(uid)
+      .then((token) => { if (token) setMalikaToken(token); })
+      .catch(() => { /* fall back to bare uid */ });
   }, []);
 
   // Initial mount: load threads AND first thread's messages together for faster perceived load
@@ -1119,6 +1157,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
               resetList(uiMsgs);
               const ui = extractLastAssistantUi(rows, uiMsgs);
               setLastAssistantUi(ui);
+              restorePersistedThinking(ui);
 
               // Fire-and-forget: chat appears immediately, chip skeleton
               // (driven by suggestionsLoading) covers the LLM round-trip.
@@ -1142,7 +1181,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
         }
       }
     })();
-  }, [apiBase, extractLastAssistantUi, fetchThreadSuggestions, headers, malikaUid, mapBackendMessagesToChatUI, resetList]);
+  }, [apiBase, extractLastAssistantUi, fetchThreadSuggestions, headers, malikaUid, mapBackendMessagesToChatUI, resetList, restorePersistedThinking]);
 
   // When user manually switches threads, load messages for that thread
   useEffect(() => {
@@ -1440,6 +1479,7 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
             steps={processSteps}
             isStreaming={isTyping}
             onStop={onStopHandler}
+            reasoningText={reasoningText}
           />
         );
       }
@@ -1569,7 +1609,9 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
       return <BubbleText content={String(msg.content?.text ?? "")} />;
     }
     return <BubbleText content={String(msg.content || "")} />;
-  }, [activeThreadId, dismissError, errorType, isRetrying, isTyping, lastFailedMessage, processSteps, removeMsg, retryLastMessage, sendToBackend, thinkingItems, typingStatus, wasStopped]);
+  // reasoningText belongs here: the card renders it, so omitting it froze the
+  // panel at its initial empty value for the whole stream.
+  }, [activeThreadId, dismissError, errorType, isRetrying, isTyping, lastFailedMessage, processSteps, reasoningText, removeMsg, retryLastMessage, sendToBackend, thinkingItems, typingStatus, wasStopped]);
 
   return (
     <div className={`chat-page-root ${isIOSSafari ? 'chat-ios' : 'chat-non-ios'} h-full w-full overflow-hidden bg-white dark:bg-gray-900`}>
@@ -2125,9 +2167,13 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
                           ? messages.slice(messages.length - msgPageSize)
                           : messages;
 
-                        // Find last assistant text message ID to attach persisted thinking section
+                        // Find the last assistant message to attach the persisted
+                        // thinking section to. result_table counts: any answer that
+                        // surfaced datasource candidates renders as one, which is
+                        // most of them — matching only "text" left the panel with
+                        // no host on exactly the queries that reason the most.
                         const lastAssistantTextId = !isTyping && thinkingItems.length > 0
-                          ? [...messages].reverse().find(m => m.position === "left" && m.type === "text")?._id
+                          ? [...messages].reverse().find(m => m.position === "left" && (m.type === "text" || m.type === "result_table"))?._id
                           : null;
 
                         return (

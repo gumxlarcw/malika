@@ -197,6 +197,7 @@ async function chat({
   temperature,
   max_tokens,
   tools,
+  reasoning_effort,
   signal,
   apiKey,
   timeoutMs,
@@ -214,6 +215,12 @@ async function chat({
   if (temperature !== undefined) body.temperature = temperature;
   if (max_tokens !== undefined)  body.max_tokens = max_tokens;
   if (tools !== undefined)       body.tools = tools;
+  // Unlocks the upstream thinking trace. malika-llm-proxy forwards the body
+  // verbatim, so this reaches the provider untouched; providers that do not
+  // recognise it ignore it.
+  if (reasoning_effort !== undefined && reasoning_effort !== null) {
+    body.reasoning_effort = reasoning_effort;
+  }
 
   const key = apiKey || OPENAI.API_KEY;
   // extraHeaders is spread first so Authorization/Content-Type cannot be

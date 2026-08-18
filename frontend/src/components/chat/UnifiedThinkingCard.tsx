@@ -38,6 +38,11 @@ interface UnifiedThinkingCardProps {
   isStreaming: boolean;
   /** Optional: stop button — if provided, shows a Hentikan affordance */
   onStop?: () => void;
+  /**
+   * The model's own thinking trace, streamed on reasoning tiers. Empty on the
+   * cheap tiers, where the section is not rendered at all.
+   */
+  reasoningText?: string;
 }
 
 const ChevronDown = ({ className = "" }: { className?: string }) => (
@@ -52,8 +57,10 @@ const Check = ({ size = 12, stroke = 3 }: { size?: number; stroke?: number }) =>
   </svg>
 );
 
-export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({ steps, isStreaming, onStop }) => {
+export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({ steps, isStreaming, onStop, reasoningText = "" }) => {
   const [expanded, setExpanded] = useState(true);
+  const [reasoningOpen, setReasoningOpen] = useState(false);
+  const hasReasoning = reasoningText.trim().length > 0;
 
   const isDone = !isStreaming;
   const totalDoneMs = steps.reduce((sum, s) =>
@@ -94,6 +101,9 @@ export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({ steps,
           <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">
             {steps.length} langkah selesai
           </span>
+          {hasReasoning && (
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">· 🧠 penalaran</span>
+          )}
           {totalDoneMs > 0 && (
             <span className="text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
               · {(totalDoneMs / 1000).toFixed(1)}s
@@ -258,6 +268,39 @@ export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({ steps,
                   );
                 })}
               </ol>
+
+              {/* The model's own reasoning. Collapsed by default: it is long and
+                  the answer is the point — this is here to be auditable, not read
+                  every time. */}
+              {hasReasoning && (
+                <div className="mt-2 border-t border-gray-200 pt-2 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setReasoningOpen((v) => !v)}
+                    aria-expanded={reasoningOpen}
+                    className="group flex w-full items-center gap-1.5 text-left"
+                  >
+                    <span aria-hidden="true" className="text-[12px]">🧠</span>
+                    <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">
+                      Proses berpikir model
+                    </span>
+                    <span className="font-mono tabular-nums text-[10px] text-gray-400 dark:text-gray-500">
+                      {reasoningText.length.toLocaleString("id-ID")} karakter
+                    </span>
+                    <ChevronDown
+                      className={
+                        "ml-auto text-gray-400 transition-transform group-hover:text-gray-600 dark:group-hover:text-gray-300 " +
+                        (reasoningOpen ? "rotate-180" : "")
+                      }
+                    />
+                  </button>
+                  {reasoningOpen && (
+                    <pre className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-3 font-mono text-[11.5px] leading-relaxed text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                      {reasoningText}
+                    </pre>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
