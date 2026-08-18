@@ -1,4 +1,4 @@
-import React, { type ReactNode } from "react";
+import React, { type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 
 /**
@@ -29,6 +29,17 @@ export type PageHeroProps = {
   actions?: ReactNode;
   /** Optional right-hand panel — a summary figure, a legend, a chart. */
   aside?: ReactNode;
+  /**
+   * Colour of the left accent rail and the badge tint.
+   *
+   * The /data hero takes this from the indicator's category, so the rail is
+   * information rather than decoration. Callers here follow the same rule:
+   * the map uses its active palette, the archive its per-catalogue hue. Falls
+   * back to brand-500, which is what the design uses for a neutral page.
+   */
+  accent?: string;
+  /** Dark-mode rail colour; several palettes are too dark to read on #101828. */
+  accentDark?: string;
 };
 
 export default function PageHero({
@@ -40,12 +51,38 @@ export default function PageHero({
   meta,
   actions,
   aside,
+  accent,
+  accentDark,
 }: PageHeroProps) {
   const items = (meta ?? []).filter(Boolean);
 
+  const railVars: CSSProperties = {
+    ["--hero-accent" as string]: accent ?? "#465fff",
+    ["--hero-accent-dark" as string]: accentDark ?? accent ?? "#7591ff",
+  } as CSSProperties;
+
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900">
-      <div className="p-4 md:p-5">
+    <div
+      style={railVars}
+      className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"
+    >
+      {/* Accent rail, as on the /data hero. */}
+      <div
+        aria-hidden
+        className="absolute bottom-0 left-0 top-0 w-1 bg-[color:var(--hero-accent)] dark:bg-[color:var(--hero-accent-dark)]"
+      />
+      {/* A wash of the same hue, so the colour reads as the page's rather than
+          as a stripe someone stuck on the edge. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 w-1/2 opacity-[0.05] dark:opacity-[0.09]"
+        style={{
+          background:
+            "linear-gradient(90deg, var(--hero-accent) 0%, transparent 100%)",
+        }}
+      />
+
+      <div className="relative p-4 pl-5 md:p-5 md:pl-7">
         {crumbs && crumbs.length > 0 && (
           <nav
             aria-label="Breadcrumb"
@@ -77,7 +114,14 @@ export default function PageHero({
           <div className="min-w-0 flex-1">
             {badge && (
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold leading-[18px] text-brand-500 dark:border-brand-500/30 dark:bg-brand-500/[0.12] dark:text-brand-400">
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold leading-[18px]"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--hero-accent) 32%, transparent)",
+                    background: "color-mix(in srgb, var(--hero-accent) 10%, transparent)",
+                    color: "var(--hero-accent)",
+                  }}
+                >
                   {badge}
                 </span>
               </div>
@@ -88,7 +132,9 @@ export default function PageHero({
               {titleAccent && (
                 <>
                   {" "}
-                  <span className="text-brand-500 dark:text-brand-400">{titleAccent}</span>
+                  <span className="text-[color:var(--hero-accent)] dark:text-[color:var(--hero-accent-dark)]">
+                    {titleAccent}
+                  </span>
                 </>
               )}
             </h1>

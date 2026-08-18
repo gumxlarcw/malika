@@ -319,6 +319,7 @@ export default function PetaTematikClient() {
         activeYear={filters.year}
         yearCount={yearsResp?.years?.length ?? 0}
         regionCount={data?.data?.length ?? 0}
+        paletteAccent={palette.accent}
         actions={toolbar}
       />
 
