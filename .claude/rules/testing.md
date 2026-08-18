@@ -18,12 +18,28 @@ Each sub-project has its own runner. Run tests from inside that sub-project's di
   465 passed, 19 skipped, 0 failed. Full local command:
 
   ```bash
-  cd backend && DB_NAME=testdb DB_USER=testuser DB_PASS=testpass DB_HOST=localhost \
-    JWT_SECRET=test-secret SKIP_DB_TESTS=1 npm test -- --ci --passWithNoTests
+  cd backend && sudo -n env DB_NAME=testdb DB_USER=testuser DB_PASS=testpass \
+    DB_HOST=localhost JWT_SECRET=test-secret SKIP_DB_TESTS=1 \
+    npx jest --ci --passWithNoTests
   ```
 
   To exercise those seven for real, point the normal `.env` at a database that has
   the live schema and data, and leave `SKIP_DB_TESTS` unset.
+
+- **Why `sudo`:** `jest.setup.env.js` loads `backend/.env` so the chat/AI modules
+  find `OPENAI_API_URL` at import time. The repo is root-owned, so as a normal user
+  `dotenv` fails with `EACCES`, injects nothing — **and does not throw**. The result
+  is ~22 suites failing with `OPENAI_API_URL env var must be set`, a message that
+  points at the variable instead of at the unreadable file. Verify the load itself
+  when that appears:
+
+  ```bash
+  cd backend && node -e "const r=require('dotenv').config(); console.log(r.error ? r.error.code : 'ok')"
+  ```
+
+  `EACCES` means the user cannot read the env file; `ok` means the vars are loading
+  and the failure is something else. CI is unaffected — it has no `.env` and passes
+  every variable in the workflow, so `dotenv` returns `ENOENT` there and is ignored.
 
 ## Admin — `backend/admin/` (Vitest + Testing Library)
 
