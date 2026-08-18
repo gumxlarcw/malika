@@ -221,6 +221,17 @@ function parseFirstSubject(raw?: string | string[] | null): string | undefined {
   return clean || undefined;
 }
 
+/**
+ * Routes a BPS image through our own origin. webapi.bps.go.id serves these
+ * fine to a localhost origin but refuses production, so a direct src leaves
+ * every cover broken. See src/app/api/bps-image/route.ts.
+ */
+function proxiedImage(url?: string | null): string | undefined {
+  const raw = (url || "").trim();
+  if (!raw || !raw.startsWith("https://webapi.bps.go.id")) return raw || undefined;
+  return `/api/bps-image?u=${encodeURIComponent(raw)}`;
+}
+
 function brsToItem(b: BrsRaw): ArchiveItem {
   const id = `BRS-${b.brs_id}`;
   return {
@@ -230,7 +241,7 @@ function brsToItem(b: BrsRaw): ArchiveItem {
     title: sanitizeText(b.title),
     abstract: b.abstract,
     rl_date: b.rl_date,
-    cover: b.thumbnail || undefined,
+    cover: proxiedImage(b.thumbnail),
     pdf: b.pdf || undefined,
     hue: hueForKind("report"),
     label: labelFromTitle(b.title),
@@ -251,7 +262,7 @@ function pubToItem(p: PubRaw): ArchiveItem {
     title: sanitizeText(p.title),
     abstract: p.abstract,
     rl_date: p.rl_date,
-    cover: p.cover || undefined,
+    cover: proxiedImage(p.cover),
     pdf: p.pdf || undefined,
     hue: hueForKind("publication"),
     label: labelFromTitle(p.title),
