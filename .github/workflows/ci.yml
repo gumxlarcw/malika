@@ -1,0 +1,25 @@
+# Resurrection stub for the phantom workflow (id 272866782).
+#
+# This path held the original `ci.yml` whose unquoted `on:` key failed to parse
+# at first registration (YAML 1.1 coerces `on` to boolean true). Commit b340328
+# renamed the file to checks.yml, which left GitHub holding a workflow entry for
+# a path that no longer existed: state `deleted`, path `BuildFailed`. Since then
+# every push produces one nameless startup_failure run and no real workflow ever
+# executes. The API refuses to clear it — `disable` returns 403 "not active" and
+# `DELETE` returns 404 — precisely because the entry is not active.
+#
+# Restoring a VALID file at the original path should flip that entry back to
+# active, which is the state the disable endpoint requires. See
+# .github/TROUBLESHOOTING.md.
+#
+# workflow_dispatch only: this must never run on push.
+name: CI (deprecated — superseded by Checks)
+
+"on":
+  workflow_dispatch:
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deprecated. Real CI lives in checks.yml."
