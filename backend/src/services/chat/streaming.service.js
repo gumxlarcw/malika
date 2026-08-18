@@ -2927,6 +2927,22 @@ async function getEximPreviewFromApi({ sourceId, year, month, group, codeHs, pod
 /**
  * Get processed data preview - try data_bps first, then ProcessedCache as fallback
  */
+/**
+ * Does any row mention this region?
+ *
+ * `geoMatched: false` has to mean "looked for it and it is not here", never
+ * "did not look" — the prompt turns a false into a plain statement that the
+ * table cannot break the region out, and that statement must be true.
+ */
+function rowsMentionGeo(rows, geo) {
+  if (!geo || !Array.isArray(rows) || rows.length === 0) return false;
+  const geoNorm = String(geo).toLowerCase().replace(/[^a-z]/g, '');
+  const geoExpanded = expandGeoShorthand(geoNorm);
+  return rows.some((row) => Object.values(row)
+    .map((v) => String(v || '').toLowerCase())
+    .some((v) => v.includes(geoNorm) || (geoExpanded && v.includes(geoExpanded))));
+}
+
 async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
   if (!Number.isFinite(sourceId) || sourceId <= 0) return null;
   
@@ -2947,6 +2963,7 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
 
     if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && bpsData.data.length > 0) {
       let filteredData = bpsData.data;
+      let geoMatched = null;
 
       // Apply geo filter if provided
       if (geo) {
@@ -2961,7 +2978,9 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
           );
         });
         
-        // If no match, return all data
+        // No match: show the whole table rather than nothing — but record it,
+        // or the caller labels a province with the city that was asked for.
+        geoMatched = filteredData.length > 0;
         if (filteredData.length === 0) filteredData = bpsData.data;
       }
       
@@ -2971,6 +2990,8 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
         data: filteredData,
         last_update: bpsData.last_update || null,
         from: 'data_bps',
+        // null = no geo asked for; false = asked for, absent from this table.
+        geoMatched,
       };
     }
     
@@ -3000,6 +3021,12 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
         data: Array.isArray(parsed.data) ? parsed.data : [],
         last_update: parsed.last_update || null,
         from: 'processed_cache',
+        // This branch returns the cached table whole — no filtering. Reporting
+        // `false` here would claim the region is absent when it usually is not
+        // (the poverty table carries all 11 kabupaten/kota, Ternate among them),
+        // and the prompt would then tell the model to disown a row it can see.
+        // So probe instead of guessing: does any row actually mention it?
+        geoMatched: geo ? rowsMentionGeo(Array.isArray(parsed.data) ? parsed.data : [], geo) : null,
       };
     }
     
@@ -3026,6 +3053,7 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
           
           if (processed && Array.isArray(processed.data) && processed.data.length > 0) {
             let filteredData = processed.data;
+            let liveGeoMatched = null;
             
             // Apply geo filter if provided
             if (geo) {
@@ -3040,7 +3068,7 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
                 );
               });
               
-              // If no match, return all data
+              liveGeoMatched = filteredData.length > 0;
               if (filteredData.length === 0) filteredData = processed.data;
             }
             
@@ -3050,6 +3078,7 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
               data: filteredData,
               last_update: processed.last_update || null,
               from: 'live_api',
+              geoMatched: liveGeoMatched,
             };
           }
         }
@@ -3576,7 +3605,9 @@ Contoh respons yang BENAR:
 Judul: ${dataPreview.title}
 Kolom: ${dataPreview.columns.join(' | ')}
 Total baris: ${dataPreview.total_rows}
-${dataPreview.geo ? `Filter wilayah: ${dataPreview.geo}` : ''}
+${dataPreview.geoUnavailable
+      ? `PENTING — CAKUPAN WILAYAH: tabel ini TIDAK memuat rincian untuk ${dataPreview.geoUnavailable}. Angka di bawah adalah cakupan tabel apa adanya (lihat Judul), BUKAN angka ${dataPreview.geoUnavailable}. Katakan itu terus terang, dan JANGAN menjumlahkan baris untuk mengarang angka wilayah tersebut.`
+      : dataPreview.geo ? `Filter wilayah: ${dataPreview.geo}` : ''}
 
 DATA INI VALID DAN TERMUAT. Jangan katakan "saya tidak memiliki data" atau "data tidak tersedia" — baris-baris di bawah ini ADALAH data yang user minta.`;
 
@@ -4389,11 +4420,14 @@ async function streamChatResponse({
 
         if (processed && processed.data.length > 0) {
           dataPreview = {
-            title: `${processed.source} • ${requestedYear}${requestedGeo ? ` • ${requestedGeo}` : ''}`,
+            title: `${processed.source} • ${requestedYear}${requestedGeo && processed.geoMatched !== false ? ` • ${requestedGeo}` : ''}`,
             columns: processed.columns.slice(0, 12),
             rows: processed.data.slice(0, 20),
             total_rows: processed.data.length,
             geo: requestedGeo,
+            // Set when a region was asked for and this table cannot break it out —
+            // the prompt then says so instead of implying a filter ran.
+            geoUnavailable: requestedGeo && processed.geoMatched === false ? requestedGeo : null,
             from: processed.from,
           };
         }
@@ -4417,11 +4451,14 @@ async function streamChatResponse({
               direction: nearest.direction,
             };
             dataPreview = {
-              title: `${fallbackProcessed.source} • ${nearest.period}${requestedGeo ? ` • ${requestedGeo}` : ''}`,
+              title: `${fallbackProcessed.source} • ${nearest.period}${requestedGeo && fallbackProcessed.geoMatched !== false ? ` • ${requestedGeo}` : ''}`,
               columns: fallbackProcessed.columns.slice(0, 12),
               rows: fallbackProcessed.data.slice(0, 20),
               total_rows: fallbackProcessed.data.length,
               geo: requestedGeo,
+              // Set when a region was asked for and this table cannot break it out —
+              // the prompt then says so instead of implying a filter ran.
+              geoUnavailable: requestedGeo && fallbackProcessed.geoMatched === false ? requestedGeo : null,
               from: fallbackProcessed.from,
               periodFallback,
             };
@@ -4444,11 +4481,14 @@ async function streamChatResponse({
         if (latestProcessed && latestProcessed.data.length > 0) {
           requestedYear = latest.period;
           dataPreview = {
-            title: `${latestProcessed.source} • ${latest.period}${requestedGeo ? ` • ${requestedGeo}` : ''}`,
+            title: `${latestProcessed.source} • ${latest.period}${requestedGeo && latestProcessed.geoMatched !== false ? ` • ${requestedGeo}` : ''}`,
             columns: latestProcessed.columns.slice(0, 12),
             rows: latestProcessed.data.slice(0, 20),
             total_rows: latestProcessed.data.length,
             geo: requestedGeo,
+            // Set when a region was asked for and this table cannot break it out —
+            // the prompt then says so instead of implying a filter ran.
+            geoUnavailable: requestedGeo && latestProcessed.geoMatched === false ? requestedGeo : null,
             from: latestProcessed.from,
           };
         }
