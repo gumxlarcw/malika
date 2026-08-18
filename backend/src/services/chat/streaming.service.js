@@ -3479,34 +3479,51 @@ Contoh respons yang BENAR:
   }
 
   // Add knowledge base context if available (RAG).
-  // SKIP entirely when dataPreview rows are present — the KB doc is almost
-  // always less relevant than the authoritative table, and including it
-  // (even with "reference only" framing) drowns the table in 8000+ chars of
-  // tangential text. The model then hedges/refuses. (B5c finding 2026-05-12.)
-  const skipKbForDataPath = !!(dataPreview && dataPreview.rows && dataPreview.rows.length > 0);
-  if (!skipKbForDataPath && knowledgeContext && knowledgeContext.length > 0) {
-    const topSimilarity = knowledgeContext[0]?.similarity || 0;
-    const knowledgeText = knowledgeContext.map((doc, i) => {
+  //
+  // When a data table is present the KB used to be dropped wholesale (B5c,
+  // 2026-05-12) because 8000+ chars of tangential prose drowned the table and
+  // made the model hedge. That cure was too broad: narrative facts that exist
+  // only in BRS text — commodity contributions to the poverty line, methodology
+  // notes, causes behind a movement — appear in no table, so those questions
+  // became unanswerable whenever the query also matched a datasource.
+  //
+  // The table path now admits documents that are clearly on topic and trims
+  // them. Observed similarities for a genuinely matching document sit around
+  // 0.88, well clear of this bar; tangential matches fall far below it.
+  const hasPreviewRows = !!(dataPreview && dataPreview.rows && dataPreview.rows.length > 0);
+  const KB_WITH_TABLE_MIN_SIMILARITY = 0.55; // same bar as the "SANGAT RELEVAN" note below
+  const KB_WITH_TABLE_MAX_DOCS = 2;
+  const KB_WITH_TABLE_MAX_CHARS = 1500;      // per document — the drowning guard
+
+  const kbDocs = hasPreviewRows
+    ? (knowledgeContext || [])
+        .filter((doc) => (doc.similarity || 0) >= KB_WITH_TABLE_MIN_SIMILARITY)
+        .slice(0, KB_WITH_TABLE_MAX_DOCS)
+    : (knowledgeContext || []);
+
+  if (kbDocs.length > 0) {
+    const topSimilarity = kbDocs[0]?.similarity || 0;
+    const knowledgeText = kbDocs.map((doc, i) => {
       // Strip markdown formatting from knowledge content
       const cleanContent = stripMarkdownFormatting(doc.content);
-      return `[Dokumen ${i + 1}] (relevansi: ${Math.round((doc.similarity || 0) * 100)}%)\n${cleanContent}`;
+      const clipped = hasPreviewRows && cleanContent.length > KB_WITH_TABLE_MAX_CHARS
+        ? `${cleanContent.slice(0, KB_WITH_TABLE_MAX_CHARS)}…`
+        : cleanContent;
+      return `[Dokumen ${i + 1}] (relevansi: ${Math.round((doc.similarity || 0) * 100)}%)\n${clipped}`;
     }).join('\n\n');
 
     const confidenceNote = topSimilarity >= 0.55
       ? 'Dokumen di atas SANGAT RELEVAN dengan pertanyaan user.'
       : 'Dokumen di atas MUNGKIN terkait, tapi BELUM TENTU menjawab pertanyaan spesifik user.';
 
-    // When dataPreview rows are present, KB documents are reference-only —
-    // they MUST NOT trigger a refusal even if they don't answer the user's
-    // specific question. The data rows are the authoritative source.
-    // Without this gate the "refuse if doc doesn't answer" rule overrode the
-    // data-preview WAJIB-cite-angka rule (B5 root cause, 2026-05-12).
-    const hasPreviewRows = !!(dataPreview && dataPreview.rows && dataPreview.rows.length > 0);
-
+    // With dataPreview rows present the documents are reference-only: they must
+    // not trigger a refusal even when they don't answer the specific question,
+    // because the rows are the authoritative source (B5 root cause, 2026-05-12).
+    // This branch was unreachable until the blanket skip above was lifted.
     const instructionBlock = hasPreviewRows
       ? `INSTRUKSI PENTING:
 1. Dokumen di atas adalah REFERENSI TAMBAHAN untuk konteks. Prioritaskan ANGKA dari dataPreview rows (system message berikutnya).
-2. Jika dokumen menambah nuansa pada angka (misal: methodology, definisi), boleh dipakai. Jika tidak, abaikan dokumen ini.
+2. Jika dokumen memuat fakta yang TIDAK ada di tabel (misal: komoditas penyusun garis kemiskinan, metodologi, definisi, penyebab suatu perubahan), GUNAKAN fakta itu dan sebutkan sumbernya. Tabel dan dokumen saling melengkapi, bukan bersaing.
 3. JANGAN katakan "data tidak tersedia" hanya karena dokumen KB tidak punya angka spesifik — rows ADA di dataPreview.
 4. DILARANG menggunakan markdown formatting (**, *, #, dll) dalam respons`
       : `INSTRUKSI PENTING:
