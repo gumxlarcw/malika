@@ -122,9 +122,10 @@ export default function PageHero({
               {titleAccent && (
                 <>
                   {" "}
-                  <span className="text-[color:var(--hero-accent)] dark:text-[color:var(--hero-accent-dark)]">
-                    {titleAccent}
-                  </span>
+                  {/* Ink, not accent: the /data h1 is a single dark colour
+                      end to end, and a tinted tail was the loudest thing
+                      setting these heroes apart from it. */}
+                  <span>{titleAccent}</span>
                 </>
               )}
             </h1>

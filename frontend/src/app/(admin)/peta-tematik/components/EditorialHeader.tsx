@@ -9,8 +9,6 @@ import PageHero, {
 
 interface Props {
   totalIndikator: number;
-  /** Accent of the palette the map is currently drawn in. */
-  paletteAccent?: string;
   /** Name of the indicator currently drawn, or "" before one is picked. */
   indikatorName?: string;
   activeYear?: number | null;
@@ -29,7 +27,6 @@ interface Props {
  */
 export default function EditorialHeader({
   totalIndikator,
-  paletteAccent,
   indikatorName,
   activeYear,
   yearCount,
@@ -77,9 +74,6 @@ export default function EditorialHeader({
         }
         meta={meta}
         actions={actions}
-        // The rail carries the map's own scale colour, so switching palette
-        // re-tints the page header with it.
-        accent={paletteAccent}
       />
     </div>
   );

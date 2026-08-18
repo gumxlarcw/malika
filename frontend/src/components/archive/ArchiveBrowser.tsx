@@ -721,14 +721,6 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
             title="Berita Resmi Statistik &amp; Publikasi"
             titleAccent="Maluku Utara"
             description="Rilis dan publikasi Badan Pusat Statistik Provinsi Maluku Utara, lengkap dengan poin utama, sitasi siap tempel, dan berkas PDF-nya."
-            /* Warm for releases, cool for publications, brand for the mixed
-               tab — the same coding the cards and badges already use. */
-            accent={
-              kind === "report" ? "#b54708" : kind === "publication" ? "#026aa2" : "#465fff"
-            }
-            accentDark={
-              kind === "report" ? "#f79009" : kind === "publication" ? "#38bdf8" : "#7591ff"
-            }
             meta={[
               ...(meta?.total
                 ? [
