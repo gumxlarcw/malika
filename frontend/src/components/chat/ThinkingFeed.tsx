@@ -7,15 +7,12 @@
  * After completion: structured recap (pipeline stats + collapsible reasoning).
  */
 
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import type { ThinkingItem } from "@/types/chat";
+import React, { useEffect, useRef, useState } from "react";
 
 /* ================================================================== */
 /*  Props                                                              */
 /* ================================================================== */
 export interface ThinkingFeedProps {
-  thinkingItems?: ThinkingItem[];
-  pipelineText?: string;
   reasoningText: string;
   isStreaming: boolean;
   isThinkingActive: boolean;
@@ -92,11 +89,6 @@ function useElapsed(active: boolean) {
   return elapsed;
 }
 
-function fmtMs(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
 function fmtSec(s: number): string {
   if (s < 60) return `${s}s`;
   return `${Math.floor(s / 60)}m ${s % 60}s`;
@@ -105,33 +97,6 @@ function fmtSec(s: number): string {
 /* ================================================================== */
 /*  Build pipeline recap from thinkingItems                            */
 /* ================================================================== */
-interface RecapItem { icon: string; label: string; elapsedMs?: number }
-
-function buildRecap(items: ThinkingItem[]): RecapItem[] {
-  const recap: RecapItem[] = [];
-  for (const t of items) {
-    if (!t.step || t.step === "thinking-delta" || t.step === "parse-error") continue;
-    let label = "";
-    let icon = "•";
-    if (t.step === "query") { icon = "📝"; label = t.detail || t.label || "Pertanyaan dianalisis"; }
-    else if (t.step === "sources") { icon = "📊"; label = `${t.count || ""} sumber data ditemukan`; }
-    else if (t.step === "knowledge") {
-      icon = "📚";
-      const p: string[] = [];
-      if (t.brsCount) p.push(`${t.brsCount} BRS`);
-      if (t.pubCount) p.push(`${t.pubCount} Publikasi`);
-      label = p.length ? `${p.join(" + ")} referensi dimuat` : (t.label || "");
-    }
-    else if (t.step === "data") { icon = "📋"; label = `${t.count || ""} baris data tabel dimuat`; }
-    else if (t.step === "reasoning") { icon = "🧠"; label = t.detail || t.label || ""; }
-    else if (t.step === "strategy") { icon = "📐"; label = t.label || ""; }
-    else if (t.step === "orchestrator-sub") { icon = "🔍"; label = t.label || ""; }
-    else { icon = t.icon || "•"; label = t.label || t.step; }
-    if (label) recap.push({ icon, label, elapsedMs: t.elapsedMs });
-  }
-  return recap;
-}
-
 /* ================================================================== */
 /*  Icons                                                              */
 /* ================================================================== */
@@ -142,18 +107,11 @@ const Spinner = () => (
   </svg>
 );
 
-const CheckIcon = () => (
-  <svg className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-  </svg>
-);
 
 /* ================================================================== */
 /*  ThinkingFeed                                                       */
 /* ================================================================== */
 export const ThinkingFeed: React.FC<ThinkingFeedProps> = ({
-  thinkingItems = [],
-  pipelineText = "",
   reasoningText,
   isStreaming,
   isThinkingActive,
@@ -161,16 +119,9 @@ export const ThinkingFeed: React.FC<ThinkingFeedProps> = ({
   onToggle,
   onStop,
 }) => {
-  const [reasoningVisible, setReasoningVisible] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
-  const elapsed = useElapsed(isThinkingActive || (isStreaming && !reasoningText && !pipelineText));
-  // Combine pipeline + reasoning for streaming display (pipeline first, then reasoning)
-  const combinedStreamText = pipelineText && reasoningText
-    ? `${pipelineText}\n\n---\n\n${reasoningText}`
-    : pipelineText || reasoningText;
-  const smoothText = useSmoothText(combinedStreamText, isThinkingActive);
-
-  const recap = useMemo(() => buildRecap(thinkingItems), [thinkingItems]);
+  const elapsed = useElapsed(isThinkingActive || (isStreaming && !reasoningText));
+  const smoothText = useSmoothText(reasoningText, isThinkingActive);
 
   // Auto-scroll during streaming
   useEffect(() => {
@@ -179,13 +130,13 @@ export const ThinkingFeed: React.FC<ThinkingFeedProps> = ({
     }
   }, [smoothText, isThinkingActive, isStreaming]);
 
-  const hasContent = Boolean(reasoningText || pipelineText);
+  const hasContent = Boolean(reasoningText);
   const isDone = !isStreaming && !isThinkingActive;
 
   // Historical collapsed
   const isHistorical = controlledExpanded !== undefined;
   if (isHistorical && !controlledExpanded) {
-    if (!hasContent && recap.length === 0) return null;
+    if (!hasContent) return null;
     return (
       <button
         type="button"
@@ -249,48 +200,20 @@ export const ThinkingFeed: React.FC<ThinkingFeedProps> = ({
   // ═══════════════════════════════════════════════════════════════════
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 overflow-hidden">
-      {/* Header */}
+      {/* Header. No timer: a restored panel never ran the clock, so it only ever
+          read "0s" — a wrong number is worse than no number. */}
       <div className="flex items-center gap-2 px-3 py-2">
-        <CheckIcon />
-        <span className="flex-1 text-xs text-gray-600 dark:text-gray-400">
-          Berpikir selama {fmtSec(elapsed)}
+        <span aria-hidden="true" className="text-[13px]">🧠</span>
+        <span className="flex-1 text-[12.5px] font-medium text-gray-700 dark:text-gray-300">
+          Proses berpikir
         </span>
       </div>
 
-      {/* Pipeline recap */}
-      {recap.length > 0 && (
-        <div className="px-3 pb-2 border-t border-gray-200/60 dark:border-gray-700/60 pt-2 space-y-0.5">
-          {recap.map((r, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-              <span className="shrink-0 w-4 text-center">{r.icon}</span>
-              <span className="flex-1">{r.label}</span>
-              {r.elapsedMs != null && r.elapsedMs > 0 && (
-                <span className="text-[9px] font-mono text-gray-400 dark:text-gray-500 shrink-0">{fmtMs(r.elapsedMs)}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Reasoning text — collapsible */}
+      {/* The trace itself — no toggle, no pipeline recap. */}
       {reasoningText && (
-        <>
-          <div className="flex items-center gap-2 px-3 py-1.5 border-t border-gray-200/60 dark:border-gray-700/60">
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 flex-1">Penalaran</span>
-            <button
-              type="button"
-              onClick={() => setReasoningVisible(v => !v)}
-              className="text-[10px] text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-            >
-              {reasoningVisible ? "Sembunyikan" : "Tampilkan"}
-            </button>
-          </div>
-          {reasoningVisible && (
-            <div className="px-3 pb-3 overflow-y-auto max-h-[40vh] text-[12px] leading-[1.7] whitespace-pre-wrap break-words font-mono text-gray-600 dark:text-gray-300">
-              {reasoningText}
-            </div>
-          )}
-        </>
+        <div className="px-3 pb-3 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 overflow-y-auto max-h-[40vh] text-[12px] leading-[1.7] whitespace-pre-wrap break-words font-mono text-gray-600 dark:text-gray-300">
+          {reasoningText}
+        </div>
       )}
     </div>
   );

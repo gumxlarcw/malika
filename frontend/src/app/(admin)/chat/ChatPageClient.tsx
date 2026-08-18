@@ -184,13 +184,9 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
     };
   }, []);
 
-  // Auto-collapse thinking section after streaming ends (3s reading buffer)
-  useEffect(() => {
-    if (!isTyping && showThinking && thinkingItems.length > 0) {
-      const t = setTimeout(() => setShowThinking(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [isTyping, showThinking, thinkingItems.length]);
+  // The trace stays open once shown. It used to auto-collapse 3s after streaming
+  // ended, which meant the one thing worth reading hid itself just as the reader
+  // reached it.
 
   // Mounted guard — SSE callbacks can outlive the component
   const mountedRef = useRef(true);
@@ -1487,8 +1483,6 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
       // Bootstrapping state — no status events received yet
       return (
         <ThinkingFeed
-          thinkingItems={thinkingItems}
-          pipelineText={pipelineText}
           reasoningText={reasoningText}
           isStreaming={isTyping}
           isThinkingActive={isThinkingActive}
@@ -2291,8 +2285,6 @@ export default function ChatPageClient({ initialQuestion }: { initialQuestion?: 
                             {showPersistedThinking && (thinkingItems.length > 0 || reasoningText || pipelineText) && (
                               <div className="mb-2">
                                 <ThinkingFeed
-                                  thinkingItems={thinkingItems}
-                                  pipelineText={pipelineText}
                                   reasoningText={reasoningText}
                                   isStreaming={false}
                                   isThinkingActive={false}
