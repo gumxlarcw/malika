@@ -13,12 +13,49 @@ Every `git push` triggers a workflow run that:
 The actual `Checks` (`checks.yml`) and `CD` (`cd.yml`) workflows DO run alongside it
 — but the phantom run pollutes the PR/commit status checks.
 
-### Root cause
+### Root cause (superseded — see "Update 2026-08-18" below)
 
 When the repo was first created and pushed, GitHub Actions encountered an unparseable
 workflow file at registration time. It allocated a workflow ID (`272866782`) for the
 broken file but never properly cleared the stale association even after the file was
 fixed. The phantom workflow now intercepts triggers but always reports startup_failure.
+
+### Update 2026-08-18 — the workflow files were never the problem
+
+Three experiments, all against the live repo:
+
+1. **A branch carrying ONE minimal workflow, with `cd.yml` and `checks.yml`
+   deleted**, still produced a nameless `BuildFailed` / `startup_failure`. If a
+   malformed file were to blame there was nothing left to malform.
+
+2. **`ci.yml` restored at its original path** (the file `b340328` renamed away)
+   registered as a *new* workflow, id `272866773` — **not** the phantom's
+   `272866782`. So "make the phantom active again by restoring its path, then
+   disable it" is not available: `272866782` never belonged to `ci.yml`, and its
+   real path remains unidentified. `disable` still returns 403, `DELETE` still 404.
+
+3. **`workflow_dispatch` against that brand-new, valid registration** produced
+   run `32119304764`: `path: .github/workflows/ci.yml` — attributed correctly,
+   *not* `BuildFailed` — and still `startup_failure` with zero jobs.
+
+Experiment 3 is the one that matters: a correctly-registered workflow with valid
+content failed to start on its own entry. Nothing intercepted it. So the phantom
+is a **symptom** of the repo being unable to start any workflow, not the cause of
+it — which is the opposite of what this document assumed.
+
+Consistent with all of it: something blocks workflow startup repo- or
+account-wide. `GET /repos/:owner/:repo/actions/permissions` reports
+`enabled: true, allowed_actions: all`, so it is not the repo Actions toggle. The
+timeline fits a billing block: 16 runs genuinely executed (conclusion `failure`,
+i.e. jobs ran) up to 2026-05-08T01:22Z, then every run since has been
+`startup_failure`. Monthly minute quotas reset; this never recovered in three
+months, which points at a **failed payment or a spending limit**, not exhausted
+included minutes. Option 4 below ("wait") can now be marked as tried and failed.
+
+**Next step:** check <https://github.com/settings/billing> for a payment failure
+or an Actions spending limit of $0. This could not be verified from the CLI — the
+billing API needs the `user` token scope, and the token in use has only
+`gist, read:org, repo, workflow`.
 
 ### What does NOT work
 
@@ -43,7 +80,7 @@ This means GitHub Actions on this repo is functionally non-operational until the
 1. **Contact GitHub support** with phantom workflow_id 272866782
 2. **Delete + recreate the repo** (heavy-handed, loses all run history)
 3. **Push from a different account** (forces re-evaluation of trigger associations)
-4. **Wait** — sometimes GitHub clears phantom associations after weeks
+4. ~~**Wait** — sometimes GitHub clears phantom associations after weeks~~ — tried, failed: still broken after three months (2026-05-08 → 2026-08-18).
 
 ### Why we're not blocking on this
 
