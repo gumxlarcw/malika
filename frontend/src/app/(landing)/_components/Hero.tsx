@@ -7,6 +7,7 @@ import { ArrowRightIcon, ChatIcon } from "@/icons";
 import { cn } from "@/lib/utils";
 import { getQuestions, type Copy, type Lang } from "../_lib/copy";
 import { NAVY_PANEL } from "../_lib/ui";
+import { useChatModal } from "@/context/ChatModalContext";
 
 type Props = { t: Copy; lang: Lang };
 
@@ -61,6 +62,20 @@ function AskBox({ t, lang }: Props) {
   // Under reduce-motion the field shows one settled question instead of typing.
   const placeholder = reduceMotion ? getQuestions(lang)[0] : typed + (caret ? "▌" : " ");
 
+  /*
+   * The question typed here used to be thrown away: the button beside it was a
+   * plain link to /chat, so the reader arrived at an empty composer and had to
+   * type it again. It is carried into the dialog now.
+   */
+  const [draft, setDraft] = useState("");
+  const chatModal = useChatModal();
+
+  const ask = (e: React.MouseEvent) => {
+    if (!chatModal) return; // no provider: let the link navigate to /chat
+    e.preventDefault();
+    chatModal.openChat(draft);
+  };
+
   return (
     <div
       className={cn(
@@ -74,10 +89,18 @@ function AskBox({ t, lang }: Props) {
         type="text"
         aria-label={t.tHeroCta}
         placeholder={placeholder}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || !chatModal) return;
+          e.preventDefault();
+          chatModal.openChat(draft);
+        }}
         className="min-w-0 flex-auto border-0 bg-transparent text-base leading-6 text-gray-700 outline-none placeholder:text-gray-700"
       />
       <Link
         href="/chat"
+        onClick={ask}
         className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand-500 px-[22px] text-[15px] font-semibold text-white transition-[background,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-brand-600 hover:shadow-[0px_8px_16px_-4px_rgba(70,95,255,0.5)]"
       >
         {t.tHeroCta}

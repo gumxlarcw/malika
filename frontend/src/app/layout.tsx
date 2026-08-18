@@ -4,6 +4,9 @@ import './globals.css';
 import "flatpickr/dist/flatpickr.css";
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { ChatModalProvider } from '@/context/ChatModalContext';
+import ChatModal from '@/components/chat/ChatModal';
+import ChatLinkInterceptor from '@/components/chat/ChatLinkInterceptor';
 import PwaServiceWorkerRegister from "@/components/PwaServiceWorkerRegister";
 import PwaInstallNudge from "@/components/PwaInstallNudge";
 import PwaPushOnboardingModal from "@/components/PwaPushOnboardingModal";
@@ -85,6 +88,7 @@ export default function RootLayout({
       </head>
       <body className={`${outfit.className} ${instrumentSerif.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} dark:bg-gray-900`}>
         <ThemeProvider>
+          <ChatModalProvider>
           <SidebarProvider>
             <PwaServiceWorkerRegister />
             <ChunkLoadRecovery />
@@ -95,6 +99,9 @@ export default function RootLayout({
             <PwaOfflineIndicator />
             {children}
           </SidebarProvider>
+          <ChatLinkInterceptor />
+          <ChatModal />
+          </ChatModalProvider>
         </ThemeProvider>
       </body>
     </html>

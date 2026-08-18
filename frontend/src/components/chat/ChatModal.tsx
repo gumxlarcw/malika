@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { ChatProcessProvider } from "@/context/ChatProcessContext";
@@ -27,11 +27,19 @@ export default function ChatModal() {
   const ctx = useChatModal();
   const open = ctx?.open ?? false;
   const closeChat = ctx?.closeChat;
+  const carriedDraft = ctx?.carriedDraft ?? "";
+  const consumeCarriedDraft = ctx?.consumeCarriedDraft;
+  const [carriedNote, setCarriedNote] = useState("");
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
 
-  const onClose = useCallback(() => closeChat?.(), [closeChat]);
+  /* The note is cleared here rather than in an effect on `open`: every way out
+     of the dialog — Escape, the scrim, the close button — comes through this. */
+  const onClose = useCallback(() => {
+    setCarriedNote("");
+    closeChat?.();
+  }, [closeChat]);
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +82,51 @@ export default function ChatModal() {
       restoreRef.current?.focus?.();
     };
   }, [open, onClose]);
+
+  /*
+   * Carry-over from a page's ask box.
+   *
+   * The question is written straight into the composer rather than passed as a
+   * prop: that textarea is uncontrolled and lives inside ChatPageClient, a file
+   * another session is editing, so this keeps the change out of it entirely.
+   * The native value setter is used because React tracks the previous value on
+   * the node — assigning `.value` alone leaves its own state stale and the
+   * first keystroke would wipe the text.
+   *
+   * It waits for the field to be *enabled*, not merely present: the composer is
+   * disabled until a thread exists, and seeding a disabled field would put the
+   * question somewhere the reader cannot send it from.
+   */
+  useEffect(() => {
+    if (!open || !carriedDraft) return;
+    let cancelled = false;
+    const started = Date.now();
+
+    const trySeed = () => {
+      if (cancelled) return;
+      const field = document.querySelector<HTMLTextAreaElement>("#chat-composer textarea");
+      if (field && !field.disabled) {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype,
+          "value",
+        )?.set;
+        setter?.call(field, carriedDraft);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+        field.focus();
+        setCarriedNote(carriedDraft);
+        consumeCarriedDraft?.();
+        return;
+      }
+      // Give up quietly rather than poll forever if no thread is ever opened.
+      if (Date.now() - started < 20000) window.setTimeout(trySeed, 250);
+    };
+
+    const id = window.setTimeout(trySeed, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [open, carriedDraft, consumeCarriedDraft]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -120,6 +173,12 @@ export default function ChatModal() {
          * composer to the bottom of its container; in an auto-height box it
          * would collapse to the height of the transcript.
          */}
+        {carriedNote && (
+          <div className="shrink-0 border-b border-brand-100 bg-brand-50 px-4 py-2 text-[12px] text-brand-700 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300 md:px-5">
+            Lanjutan dari kotak tanya di halaman — kirim untuk mulai menjawab.
+          </div>
+        )}
+
         <div className="relative min-h-0 flex-1">
           <ChatProcessProvider>
             <ChatPageClient />

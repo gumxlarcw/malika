@@ -6,8 +6,6 @@ import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { appNav } from "@/components/site/siteNav";
 import SimpleTour from "@/components/SimpleTour";
-import { ChatModalProvider, useChatModal } from "@/context/ChatModalContext";
-import ChatModal from "@/components/chat/ChatModal";
 import PullToRefresh from "@/components/common/PullToRefresh";
 import { cn } from "@/lib/utils";
 import { PAGE_BG } from "@/lib/surfaceTokens";
@@ -35,14 +33,6 @@ import "@/components/simple-tour.css";
 const FIXED = new Set(["/chat"]);
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ChatModalProvider>
-      <AppShell>{children}</AppShell>
-    </ChatModalProvider>
-  );
-}
-
-function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -54,33 +44,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Lang>("id");
   const t = useMemo(() => getCopy(lang), [lang]);
   const nav = useMemo(() => appNav(), []);
-
-  const chatModal = useChatModal();
-
-  /*
-   * Chat is a dialog now, so a click on its nav entry opens the dialog instead
-   * of navigating. The links keep their real `/chat` href — deep links, shared
-   * links, middle-click and no-JS all still land on the route — and this only
-   * intercepts a plain left click.
-   *
-   * Handled here rather than by giving SiteHeader an onClick per link: the nav
-   * is shared with the landing page and another session is editing chat files,
-   * so this keeps the change inside the shell that owns the dialog.
-   */
-  const interceptChatLink = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!chatModal) return;
-      if (e.defaultPrevented || e.button !== 0) return;
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const anchor = (e.target as HTMLElement | null)?.closest?.("a");
-      if (!anchor) return;
-      const href = anchor.getAttribute("href");
-      if (href !== "/chat") return;
-      e.preventDefault();
-      chatModal.openChat();
-    },
-    [chatModal],
-  );
 
   const isFixed = FIXED.has(pathname);
 
@@ -105,7 +68,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
      * to the height of its own content.
      */
     <div
-      onClickCapture={interceptChatLink}
       className={cn(
         "flex flex-col font-outfit",
         PAGE_BG,
@@ -140,8 +102,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       {isFixed ? null : <SiteFooter t={t} />}
-
-      <ChatModal />
     </div>
   );
 }
