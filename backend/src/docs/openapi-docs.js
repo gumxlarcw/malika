@@ -25,7 +25,6 @@
  *   - name: GeoJSON
  *   - name: Automation
  *   - name: Logs
- *   - name: Metabase
  *   - name: Monitoring
  *
  * /health:
@@ -1998,18 +1997,5 @@
  *     responses:
  *       200:
  *         description: Log stats
- *
- * /metabase/embed/dashboard/{id}:
- *   get:
- *     tags: [Metabase]
- *     summary: Metabase dashboard embed
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: Embed token
  *
  */

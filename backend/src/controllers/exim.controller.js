@@ -72,7 +72,7 @@ exports.getExim = async (req, res) => {
       return res.status(400).json({ message: "Source bukan EXIM" });
     }
 
-    // Enforce read-only data_bps (metabase-safe) to avoid showing nationwide upstream data.
+    // Enforce read-only data_bps (replica-safe) to avoid showing nationwide upstream data.
     const sequelizeBps = getSequelizeBps();
     if (!sequelizeBps) {
       return res.status(503).json({

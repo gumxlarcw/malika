@@ -176,7 +176,7 @@ export default function MergePage() {
 
         {merged && selectedId && (
           <div className="text-sm text-muted-foreground">
-            Save akan menulis cache dan menyiapkan tabel produksi Metabase: <b>data_bps.{productionTableName}</b>
+            Save akan menulis cache dan menyiapkan tabel produksi data_bps: <b>data_bps.{productionTableName}</b>
             {expectedProductionRows > 0 ? ` (perkiraan upsert: ${expectedProductionRows} baris)` : ""}
           </div>
         )}

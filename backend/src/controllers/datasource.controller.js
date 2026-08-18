@@ -216,7 +216,7 @@ exports.hardRemove = async (req, res) => {
       await row.destroy({ transaction: t });
     });
 
-    // Best-effort cleanup in data_bps (Metabase DB): remove merged cache and indikator_178 if present.
+    // Best-effort cleanup in data_bps (replica DB): remove merged cache and indikator_178 if present.
     try {
       const sequelizeBps = getSequelizeBps();
       if (sequelizeBps) {

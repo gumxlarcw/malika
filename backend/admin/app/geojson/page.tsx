@@ -489,7 +489,7 @@ export default function GeojsonUploadPage() {
         <h1 className="text-2xl font-bold">Upload GeoJSON (Public URL)</h1>
 
         <div className="text-sm text-muted-foreground">
-          File yang diupload akan tersedia publik (tanpa login) dan bisa dipakai Metabase.
+          File yang diupload akan tersedia publik (tanpa login) dan bisa dipakai peta tematik.
         </div>
 
         {error && <Alert variant="error">{error}</Alert>}
@@ -565,7 +565,7 @@ export default function GeojsonUploadPage() {
                 <input type="checkbox" checked={overwrite} disabled={loading} onChange={(e) => setOverwrite(e.target.checked)} />
                 Overwrite jika sudah ada
               </label>
-              <div className="mt-1 text-xs text-muted-foreground">Disarankan ON untuk Metabase.</div>
+              <div className="mt-1 text-xs text-muted-foreground">Disarankan ON untuk peta tematik.</div>
             </div>
           </div>
 
@@ -592,7 +592,7 @@ export default function GeojsonUploadPage() {
 
           {fullUrl ? (
             <div className="rounded border border-border bg-muted p-3">
-              <div className="text-xs text-muted-foreground mb-1">Public URL (pakai di Metabase):</div>
+              <div className="text-xs text-muted-foreground mb-1">Public URL (pakai di peta tematik):</div>
               <div className="text-sm break-all">{fullUrl}</div>
               <div className="mt-2">
                 <a className="text-sm underline" href={resultUrl} target="_blank" rel="noreferrer">

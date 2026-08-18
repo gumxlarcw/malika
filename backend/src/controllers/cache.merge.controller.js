@@ -245,7 +245,7 @@ async function mergeProcessedByTh(req, res) {
           });
           meta.replicated_bps_cache = true;
 
-          // Also replicate into a per-indicator table for Metabase
+          // Also replicate into a per-indicator table for dashboard consumers
           const { replicateMergedToIndicatorTableBps } = require('../services/replication/indicatorTableBps.service');
           await replicateMergedToIndicatorTableBps({
             sequelizeBps,

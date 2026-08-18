@@ -782,7 +782,7 @@ export default function AutomationPage() {
       <div className="space-y-4">
 
                   <div className="rounded-xl border border-border bg-card text-card-foreground p-3 text-sm space-y-2">
-                    <div className="font-medium">Jadwal Scheduler Automation (Metabase)</div>
+                    <div className="font-medium">Jadwal Scheduler Automation</div>
                     <div className="text-muted-foreground leading-relaxed">
                       Pengaturan ini menentukan kapan <b>automation scheduler</b> berjalan (interval menit atau jam harian). Ini hanya berlaku jika <b>AUTOMATION_ENABLED=true</b> di backend.
                     </div>
@@ -851,7 +851,7 @@ export default function AutomationPage() {
                     </div>
                   </div>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold">Automasi Update (Metabase)</h1>
+          <h1 className="text-2xl font-bold">Automasi Update</h1>
           {data && (
             <>
               <span
@@ -1277,7 +1277,7 @@ export default function AutomationPage() {
         )}
 
         <div className="text-xs text-muted-foreground">
-          Catatan: Untuk Metabase produksi, gunakan tabel <b>data_bps.indikator_&lt;source_id&gt;</b> (dibuat saat run pertama). Endpoint on-demand seperti <b>/cache/merge</b> hanya untuk preview/debug; untuk konsumsi stabil gunakan hasil tersimpan (<b>/cache/merged</b>) atau langsung tabel data_bps.
+          Catatan: Untuk konsumsi produksi, gunakan tabel <b>data_bps.indikator_&lt;source_id&gt;</b> (dibuat saat run pertama). Endpoint on-demand seperti <b>/cache/merge</b> hanya untuk preview/debug; untuk konsumsi stabil gunakan hasil tersimpan (<b>/cache/merged</b>) atau langsung tabel data_bps.
         </div>
       </div>
     </RequireAuth>

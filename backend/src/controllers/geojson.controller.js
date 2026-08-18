@@ -278,7 +278,7 @@ async function uploadGeojson(req, res) {
     }
   }
 
-  // Write minified JSON to reduce file size; Metabase can still consume it.
+  // Write minified JSON to reduce file size; map consumers can still parse it.
   const finalPath = target(filename);
   try {
     await fs.promises.writeFile(finalPath, JSON.stringify(parsed), 'utf8');
@@ -415,7 +415,7 @@ async function serveGeojsonPublic(req, res) {
     throw err;
   }
 
-  // Content type hint (helps browsers & consumers like Metabase)
+  // Content type hint (helps browsers & map consumers)
   const contentType = lower.endsWith('.geojson') ? 'application/geo+json; charset=utf-8' : 'application/json; charset=utf-8';
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=300');

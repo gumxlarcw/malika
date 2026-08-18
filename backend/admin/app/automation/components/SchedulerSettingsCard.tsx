@@ -58,7 +58,7 @@ export default function SchedulerSettingsCard({
 
   return (
     <div className="rounded-xl border border-border bg-card text-card-foreground p-3 text-sm space-y-2">
-      <div className="font-medium">Jadwal Scheduler Automation (Metabase)</div>
+      <div className="font-medium">Jadwal Scheduler Automation</div>
       <div className="text-muted-foreground leading-relaxed">
         Pengaturan ini menentukan kapan <b>automation scheduler</b> berjalan (interval menit atau jam harian). Ini hanya berlaku jika <b>AUTOMATION_ENABLED=true</b> di backend.
       </div>

@@ -82,10 +82,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="dns-prefetch" href="https://metabase.bpsmalut.com" />
-        <link rel="preconnect" href="https://metabase.bpsmalut.com" crossOrigin="" />
-      </head>
       <body className={`${outfit.className} ${instrumentSerif.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} dark:bg-gray-900`}>
         <ThemeProvider>
           <ChatModalProvider>

@@ -145,7 +145,7 @@ async function ensureExtraColumns(sequelizeBps, tableName, extraColumnNames) {
 
   for (const col of extraColumnNames) {
     if (existing.has(col)) continue;
-    // LONGTEXT: allows arbitrary JSON-ish payloads, metabase-friendly.
+    // LONGTEXT: allows arbitrary JSON-ish payloads, dashboard-friendly.
     // Best-effort: if ALTER fails (permissions), skip.
     try {
       await sequelizeBps.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${col}\` LONGTEXT NULL`);

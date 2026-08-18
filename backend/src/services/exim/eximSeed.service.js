@@ -562,7 +562,7 @@ async function seedEximDatasources({
             info(`MASTER (${variant.key}): verification done`);
           }
         } catch (e) {
-          // Do not silently ignore: incomplete replication can look like "only 2020" in Metabase.
+          // Do not silently ignore: incomplete replication can look like "only 2020" in the dashboard.
           throw new Error(`Replication failed (data_bps): ${e?.message || String(e)}`);
         }
 

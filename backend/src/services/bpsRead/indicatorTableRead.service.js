@@ -97,7 +97,7 @@ async function getTableLastUpdate(sequelizeBps, tableName) {
 
 /**
  * Read EXIM-formatted rows from data_bps.indikator_<sourceId>.
- * This table is metabase-oriented and stores one row per metric (value/netweight).
+ * This table is dashboard-oriented and stores one row per metric (value/netweight).
  * We pivot metrics into { value, netweight } per dimension row.
  */
 async function readEximFromBps({ sourceId, year, monthNo, hs2, pod, ctr, metricWanted, groupBy = null }) {

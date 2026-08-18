@@ -70,7 +70,7 @@ function normalizeMetricKey(metric) {
   const s = String(raw || '').trim().replace(/\s+/g, ' ');
   if (!s) return '';
 
-  // Keep metric reasonably short for metabase + MySQL indexes.
+  // Keep metric reasonably short for dashboard queries + MySQL indexes.
   // If it exceeds the DB column length, truncate with a stable hash suffix.
   const maxLen = 255;
   if (s.length <= maxLen) return s;
@@ -151,7 +151,7 @@ async function ensureIndicatorMetricColumnWide(sequelizeBps, tableName) {
 }
 
 async function ensureIndicatorTable(sequelizeBps, tableName) {
-  // MySQL/MariaDB DDL: stable schema, metabase-friendly.
+  // MySQL/MariaDB DDL: stable schema, dashboard-friendly.
   // Supports both monthly series (month_no 1-12) and non-monthly dimensional rows (month_no=0 + dim_value).
   const createSql = `
     CREATE TABLE IF NOT EXISTS \`${tableName}\` (
@@ -219,7 +219,7 @@ async function ensureIndicatorTable(sequelizeBps, tableName) {
   const dedupeByBusinessKey = async () => {
     // Keep the newest row (max id) per business key.
     // This is needed for older tables that were created without the unique index,
-    // which can cause Metabase double rows for the same period/dimension/metric.
+    // which can cause double rows for the same period/dimension/metric.
     const sql = `
       DELETE t
       FROM \`${tableName}\` t
@@ -357,7 +357,7 @@ async function replicateMergedToIndicatorTableBps({
   // Optional EXIM POD filter (performance): only applies for EXIM signatures.
   // Keeps schema/columns unchanged; it only reduces rows written to the production table.
   // When enabled, we also delete old rows for pods that are no longer selected (same signature)
-  // so Metabase queries get faster over time.
+  // so dashboard queries get faster over time.
   let rowsForReplication = tableRows;
   try {
     const sig = String(signature || '');
@@ -396,7 +396,7 @@ async function replicateMergedToIndicatorTableBps({
 
   // IMPORTANT: keep the production table idempotent even if upstream "th_id" normalization changes.
   // Example: older runs may have th_id="125" while newer runs use th_id="2025" for the same year.
-  // Metabase queries grouped by (year, month_no, metric) will then show double entries.
+  // Dashboard queries grouped by (year, month_no, metric) will then show double entries.
   // Strategy: for each year where the incoming dataset has exactly 1 distinct th_id,
   // delete existing rows for that (year, signature) whose th_id differs.
   try {

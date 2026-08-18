@@ -22,7 +22,6 @@ import {
   Send,
   ShipWheel,
   CalendarClock,
-  BarChart3,
   Target,
   Activity,
   ListOrdered,
@@ -65,7 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "Automation",
     items: [
-      { href: "/automation", label: "Metabase Sync", icon: <Cog className="h-4 w-4" /> },
+      { href: "/automation", label: "Automasi Update", icon: <Cog className="h-4 w-4" /> },
       { href: "/automation-notifications", label: "Notifikasi", icon: <Bell className="h-4 w-4" /> },
       { href: "/notifications-control", label: "Notif Controls", icon: <BellRing className="h-4 w-4" /> },
       { href: "/push-subscribers", label: "Push Subscribers", icon: <Send className="h-4 w-4" /> },
@@ -81,7 +80,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/fetch-logs", label: "Fetch Logs", icon: <FileText className="h-4 w-4" /> },
       { href: "/exim-hs", label: "EXIM HS Lookup", icon: <ShipWheel className="h-4 w-4" /> },
       { href: "/period-availability", label: "Period Check", icon: <CalendarClock className="h-4 w-4" /> },
-      { href: "/metabase", label: "Metabase Embed", icon: <BarChart3 className="h-4 w-4" /> },
     ],
   },
   {
