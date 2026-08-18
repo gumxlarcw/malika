@@ -995,3 +995,45 @@ html.dark .archive-root,
 .archive-root .ar-hero { margin-bottom: 18px; }
 /* With the title moved into the hero, the toolbar is only controls. */
 .archive-root .ar-bar { justify-content: flex-start; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Cover proportions: width locked, height follows the image
+   ═══════════════════════════════════════════════════════════════════════
+   Covers were pinned to 4/5 (3/4 when featured) with `object-fit: cover`,
+   so every BPS cover and BRS thumbnail was cropped to a shape it was never
+   drawn in — publication covers are portrait, release thumbnails are wide
+   slides, and both lost edges. Now only the column width is fixed and the
+   box takes the image's own ratio.
+
+   The aspect-ratio stays for cards with no image: those are generated
+   gradient tiles with a letter mark and nothing to measure, so without it
+   they would collapse to zero height. */
+.archive-root .ar-cv--has-img {
+  aspect-ratio: auto;
+  height: auto;
+}
+
+.archive-root .ar-cv--has-img .ar-cv-img {
+  position: static;
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: fill;
+}
+
+/* Grid rows no longer stretch their cards to the tallest sibling — with
+   varying cover heights that would reintroduce the empty space the crop
+   was hiding. */
+.archive-root .ar-grid { align-items: start; }
+.archive-root .ar-feat { align-items: start; }
+.archive-root .ar-feat-cover .ar-cv--has-img { flex: 0 0 auto; width: 100%; }
+
+/* With a real cover in place, the tile's own furniture comes off: the dark
+   bottom wash, the noise, the catalogue id and the PUB/BRS chip were drawn
+   for the generated gradient card and here they sit over BPS artwork,
+   obscuring it and reading as a watermark on someone else's design. The
+   letter mark was already hidden for the same reason. The id and kind stay
+   available in the card body and the preview panel. */
+.archive-root .ar-cv--has-img .ar-cv-bleed { background: none; }
+.archive-root .ar-cv--has-img .ar-cv-grain { display: none; }
+.archive-root .ar-cv--has-img .ar-cv-foot { display: none; }
