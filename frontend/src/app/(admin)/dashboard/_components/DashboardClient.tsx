@@ -26,7 +26,8 @@ import {
   type EligibleIndicator,
 } from "../_lib/regions";
 import { barsIndicator, categoriesForTab, inflationSeriesIds, kpisForTab, leadIndicator } from "../_lib/select";
-import type { TabKey } from "../_lib/tabs";
+import { TABS, tabForCategory, type TabKey } from "../_lib/tabs";
+import type { HeroStat } from "@/components/site/PageHero";
 import type { DashboardSummary, IndicatorCardData } from "../_lib/types";
 
 const MAX_REGION_COLUMNS = 4;
@@ -179,6 +180,39 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
     };
   }, [showHeat, inflationKey]);
 
+  /*
+   * Indicators per subject tab, for the hero's composition bar. Ringkasan is
+   * excluded from the split: it shows every category, so counting it would
+   * double every indicator and make the bar sum to twice the total. Categories
+   * that match no subject tab are reported as "Lainnya" rather than folded
+   * into one, which is the same rule tabForCategory itself follows.
+   */
+  const tabCounts = useMemo(() => {
+    const palette: Record<string, string> = {
+      ekonomi: "#60a5fa",
+      sosial: "#a78bfa",
+      wilayah: "#fb923c",
+      lainnya: "#9ca3af",
+    };
+    const tally = new Map<string, number>();
+    for (const c of categories) {
+      const key = tabForCategory(c.name) ?? "lainnya";
+      if (key === "ringkasan") continue;
+      tally.set(key, (tally.get(key) ?? 0) + c.indicators.length);
+    }
+    const rows: HeroStat[] = TABS.filter((t) => t.key !== "ringkasan").map((t) => ({
+      key: t.key,
+      label: t.label.split(" ")[0],
+      count: tally.get(t.key) ?? 0,
+      color: palette[t.key] ?? "#9ca3af",
+    }));
+    const other = tally.get("lainnya");
+    if (other) {
+      rows.push({ key: "lainnya", label: "Lainnya", count: other, color: palette.lainnya });
+    }
+    return rows;
+  }, [categories]);
+
   const openCardDetail = useCallback((card: IndicatorCardData) => {
     const points = card.trend.points;
     setDetail({
@@ -265,6 +299,7 @@ export default function DashboardClient({ summary }: { summary: DashboardSummary
         onTab={setTab}
         generatedAt={summary.generatedAt}
         categoryCount={categories.length}
+        tabCounts={tabCounts}
         indicatorCount={totalIndicators}
         onRefresh={onRefresh}
         onShare={onShare}

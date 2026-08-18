@@ -9,11 +9,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import PageHero, {
-  HeroCalendarIcon,
-  HeroClockIcon,
-  HeroDocIcon,
-} from "@/components/site/PageHero";
+import PageHero, { HeroFigure } from "@/components/site/PageHero";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import "./archive.css";
 
@@ -335,6 +331,16 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
   const [page, setPage] = useState<number>(1);
   // Grows as pages are browsed; see SubjectOption on why it is not fetched.
   const [subjectOptions, setSubjectOptions] = useState<SubjectOption[]>([]);
+  /*
+   * Totals for both catalogues, so the hero's composition bar is a genuine
+   * split rather than one segment filling the width. Only the active kind is
+   * fetched for the list, so each branch records what it learns and the "all"
+   * branch fills in both at once.
+   */
+  const [totals, setTotals] = useState<{ report: number | null; publication: number | null }>({
+    report: null,
+    publication: null,
+  });
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [items, setItems] = useState<ArchiveItem[]>([]);
@@ -499,6 +505,10 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
           if (controller.signal.aborted) return;
           setItems(merged);
           collectSubjects(brsItems);
+          setTotals({
+            report: Number(brsRes?.meta?.total) || null,
+            publication: Number(pubRes?.meta?.total) || null,
+          });
           setMeta(null);
           setStatus("ready");
           return;
@@ -532,6 +542,7 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
           let list = Array.isArray(raw?.items) ? raw.items.map(brsToItem) : [];
           if (sort === "lama") list = list.slice().reverse();
           setMeta(m ? { ...m, page } : m);
+          if (m?.total) setTotals((t) => ({ ...t, report: m.total }));
           setItems(list);
           collectSubjects(list);
           setStatus("ready");
@@ -558,6 +569,7 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
         let pubList = Array.isArray(raw?.items) ? raw.items.map(pubToItem) : [];
         if (sort === "lama") pubList = pubList.slice().reverse();
         setMeta(pubMeta ? { ...pubMeta, page } : pubMeta);
+        if (pubMeta?.total) setTotals((t) => ({ ...t, publication: pubMeta.total }));
         setItems(pubList);
         setStatus("ready");
       } catch (err) {
@@ -716,38 +728,61 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
       <div className="ar-shell">
         <div className="ar-hero">
           <PageHero
-            crumbs={[{ label: "Beranda", href: "/" }, { label: "BRS & Publikasi" }]}
-            badge="Arsip resmi"
-            title="Berita Resmi Statistik &amp; Publikasi"
-            titleAccent="Maluku Utara"
-            description="Rilis dan publikasi Badan Pusat Statistik Provinsi Maluku Utara, lengkap dengan poin utama, sitasi siap tempel, dan berkas PDF-nya."
-            meta={[
-              ...(meta?.total
-                ? [
-                    {
-                      key: "total",
-                      icon: <HeroDocIcon />,
-                      label: `${meta.total.toLocaleString("id-ID")} ${
-                        kind === "publication" ? "publikasi" : "rilis"
-                      }`,
-                    },
-                  ]
-                : []),
-              {
-                key: "sejak",
-                icon: <HeroCalendarIcon />,
-                label: `Arsip sejak ${EARLIEST_YEAR[kind]}`,
-              },
-              ...(newestDate
-                ? [
-                    {
-                      key: "terbaru",
-                      icon: <HeroClockIcon />,
-                      label: `Terbaru ${newestDate}`,
-                    },
-                  ]
-                : []),
-            ]}
+            eyebrow="Arsip Rilis BPS Maluku Utara"
+            title="Berita Resmi Statistik &amp;"
+            titleAccent="Publikasi"
+            description={
+              <>
+                {totals.report ? (
+                  <>
+                    <HeroFigure>{totals.report.toLocaleString("id-ID")} rilis</HeroFigure>
+                    {totals.publication ? " dan " : " "}
+                  </>
+                ) : null}
+                {totals.publication ? (
+                  <>
+                    <HeroFigure>
+                      {totals.publication.toLocaleString("id-ID")} publikasi
+                    </HeroFigure>{" "}
+                  </>
+                ) : null}
+                Badan Pusat Statistik Provinsi Maluku Utara, lengkap dengan poin utama, sitasi
+                siap tempel, dan berkas PDF-nya.
+              </>
+            }
+            loading={status === "loading" && !totals.report && !totals.publication}
+            panel={{
+              title: "Isi Arsip",
+              note: newestDate ? `terbaru ${newestDate}` : undefined,
+              // Only a split once both catalogues have reported; a lone
+              // segment filling the bar would claim a share nobody measured.
+              bar: Boolean(totals.report && totals.publication),
+              stats: [
+                {
+                  key: "brs",
+                  label: "BRS",
+                  count: totals.report ?? 0,
+                  display: totals.report ? totals.report.toLocaleString("id-ID") : "—",
+                  color: "#60a5fa",
+                },
+                {
+                  key: "pub",
+                  label: "Publikasi",
+                  count: totals.publication ?? 0,
+                  display: totals.publication ? totals.publication.toLocaleString("id-ID") : "—",
+                  color: "#a78bfa",
+                },
+                {
+                  key: "sejak",
+                  label: "Sejak",
+                  count: EARLIEST_YEAR[kind],
+                  display: String(EARLIEST_YEAR[kind]),
+                  color: "#9ca3af",
+                  // A year, not a quantity — keep it out of the composition.
+                  share: false,
+                },
+              ],
+            }}
           />
         </div>
 

@@ -1,211 +1,211 @@
-import React, { type CSSProperties, type ReactNode } from "react";
-import Link from "next/link";
+import React, { type ReactNode } from "react";
 
 /**
- * The page hero used across /dashboard, /peta-tematik and the BRS/Publikasi
- * archive.
+ * The Atlas brand hero, taken from /kategori and shared across /dashboard,
+ * /peta-tematik and the BRS/Publikasi archive.
  *
- * Modelled on the /data hero, which was the only page that had one: a bordered
- * card carrying breadcrumb, badge, title, a row of icon meta chips, and an
- * actions slot. The other pages each had their own bare heading instead, so the
- * three read as three different products.
+ * Every page used to open differently — a bare heading, a toolbar strip, or a
+ * white card — so the app read as several products. /kategori is the reference:
+ * a brand-gradient band with a rail glow, dot pattern and spotlight, an eyebrow,
+ * a large two-tone title, a sentence whose figures are emboldened, and a
+ * translucent summary panel carrying a composition bar plus a stat grid.
  *
- * /data keeps its own copy for now — its aside carries sparkline maths tied to
- * the indicator payload — but the classes here are deliberately identical so
- * the two are indistinguishable on screen.
+ * The gradient, overlays and spacing here are copied from that page verbatim so
+ * the two are the same object, not a lookalike.
  */
 
-export type HeroCrumb = { label: string; href?: string };
-export type HeroMeta = { key: string; icon?: ReactNode; label: ReactNode };
-
-export type PageHeroProps = {
-  crumbs?: HeroCrumb[];
-  badge?: string;
-  title: ReactNode;
-  /** Rendered in brand colour after the title, e.g. "Maluku Utara". */
-  titleAccent?: string;
-  description?: ReactNode;
-  meta?: HeroMeta[];
-  actions?: ReactNode;
-  /** Optional right-hand panel — a summary figure, a legend, a chart. */
-  aside?: ReactNode;
+export type HeroStat = {
+  key: string;
+  label: string;
+  /** Drives the composition bar's segment width. */
+  count: number;
+  /** Shown in the grid; defaults to a localised `count`. */
+  display?: string;
+  /** Segment and dot colour. Use the dark-surface palette. */
+  color: string;
   /**
-   * Colour of the left accent rail and the badge tint.
-   *
-   * The /data hero takes this from the indicator's category, so the rail is
-   * information rather than decoration. Callers here follow the same rule:
-   * the map uses its active palette, the archive its per-catalogue hue. Falls
-   * back to brand-500, which is what the design uses for a neutral page.
+   * Whether this figure is part of the composition. False for values that are
+   * not quantities — a year like 2003 counted as a share made "Sejak" the
+   * widest segment on the bar and dwarfed the catalogues it sat beside.
    */
-  accent?: string;
-  /** Dark-mode rail colour; several palettes are too dark to read on #101828. */
-  accentDark?: string;
+  share?: boolean;
 };
 
+export type HeroPanel = {
+  title: string;
+  note?: string;
+  stats: HeroStat[];
+  /**
+   * Draw the composition bar. Only true when the stats really partition a
+   * whole — a bar over unrelated figures would invent a relationship.
+   */
+  bar?: boolean;
+};
+
+export type PageHeroProps = {
+  eyebrow: string;
+  title: ReactNode;
+  /** Rendered in the light gradient wash, as "Kategori" is on /kategori. */
+  titleAccent?: string;
+  description?: ReactNode;
+  panel?: HeroPanel;
+  actions?: ReactNode;
+  loading?: boolean;
+};
+
+const nf = (n: number) => n.toLocaleString("id-ID");
+
+function CompositionBar({ stats, height = 10 }: { stats: HeroStat[]; height?: number }) {
+  const parts = stats.filter((s) => s.share !== false);
+  const total = parts.reduce((a, s) => a + Math.max(0, s.count), 0) || 1;
+  return (
+    <div className="flex w-full overflow-hidden rounded-full" style={{ height, gap: 2 }}>
+      {parts.map((s) =>
+        s.count > 0 ? (
+          <div
+            key={s.key}
+            className="rounded-sm"
+            style={{ flex: (s.count / total) * 100, background: s.color }}
+          />
+        ) : null,
+      )}
+    </div>
+  );
+}
+
 export default function PageHero({
-  crumbs,
-  badge,
+  eyebrow,
   title,
   titleAccent,
   description,
-  meta,
+  panel,
   actions,
-  aside,
-  accent,
-  accentDark,
+  loading,
 }: PageHeroProps) {
-  const items = (meta ?? []).filter(Boolean);
-
-  /*
-   * The /data hero's chips are a solid pastel — indigo-100 fill with
-   * indigo-800 text — not a translucent wash. Mixing the accent toward white
-   * reproduces that fill for any hue, and mixing toward the ink colour (rather
-   * than pure black) darkens the text without draining the hue out of it.
-   */
-  const railVars: CSSProperties = {
-    ["--hero-accent" as string]: accent ?? "#465fff",
-    ["--hero-accent-dark" as string]: accentDark ?? accent ?? "#7591ff",
-    ["--hero-badge-bg" as string]: `color-mix(in srgb, ${accent ?? "#465fff"} 15%, #ffffff)`,
-    ["--hero-badge-text" as string]: `color-mix(in srgb, ${accent ?? "#465fff"} 70%, #101828)`,
-  } as CSSProperties;
-
   return (
-    <div
-      style={railVars}
-      className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"
+    <section
+      className="relative -mx-4 overflow-hidden text-white md:-mx-6"
+      style={{
+        background: "linear-gradient(120deg, #161950 0%, #252dae 60%, #3641f5 100%)",
+      }}
     >
-      {/* Accent rail, as on the /data hero. */}
+      {/* brand-rail glow (defined globally in globals.css, respects reduce-motion) */}
       <div
         aria-hidden
-        className="absolute bottom-0 left-0 top-0 w-1 bg-[color:var(--hero-accent)] dark:bg-[color:var(--hero-accent-dark)]"
+        className="malika-rail-glow pointer-events-none absolute left-0 right-0 top-0 h-[2px]"
+        style={{ background: "linear-gradient(90deg, transparent, #7592ff 50%, transparent)" }}
       />
-      <div className="relative px-5 py-5 md:px-7 md:py-6">
-        {crumbs && crumbs.length > 0 && (
-          <nav
-            aria-label="Breadcrumb"
-            className="mb-2 flex flex-wrap items-center gap-1.5 text-[11.5px] text-gray-500 dark:text-gray-400"
-          >
-            {crumbs.map((c, i) => (
-              <React.Fragment key={`${c.label}-${i}`}>
-                {i > 0 && (
-                  <span aria-hidden className="text-gray-300 dark:text-gray-600">
-                    /
-                  </span>
-                )}
-                {c.href ? (
-                  <Link
-                    href={c.href}
-                    className="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
-                  >
-                    {c.label}
-                  </Link>
-                ) : (
-                  <span className="text-gray-700 dark:text-gray-200">{c.label}</span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
-        )}
+      {/* dot pattern + radial spotlight */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={{
+          backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
+          maskImage: "radial-gradient(ellipse at top right, rgba(0,0,0,0.7), transparent 60%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse at top right, rgba(0,0,0,0.7), transparent 60%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 -top-20 h-[260px] w-[260px] rounded-full lg:h-[380px] lg:w-[380px]"
+        style={{ background: "radial-gradient(circle, rgba(149,178,255,0.32), transparent 60%)" }}
+      />
 
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            {badge && (
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="hero-badge inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-[18px]">
-                  {badge}
-                </span>
-              </div>
-            )}
+      <div className="relative px-4 py-7 md:px-6 lg:px-11 lg:py-9">
+        <div className="grid items-end gap-6 lg:grid-cols-[1.4fr_1fr] lg:gap-10">
+          <div>
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.06em] text-brand-300 lg:text-xs">
+              {eyebrow}
+            </div>
 
-            <h1 className="m-0 text-balance text-[18px] font-semibold leading-snug tracking-tight text-gray-900 dark:text-white md:text-[22px]">
+            <h1 className="m-0 max-w-[560px] text-balance text-[26px] font-bold leading-[1.13] tracking-tight lg:text-[40px]">
               {title}
               {titleAccent && (
                 <>
                   {" "}
-                  {/* Ink, not accent: the /data h1 is a single dark colour
-                      end to end, and a tinted tail was the loudest thing
-                      setting these heroes apart from it. */}
-                  <span>{titleAccent}</span>
+                  <span
+                    className="bg-clip-text text-transparent"
+                    style={{ backgroundImage: "linear-gradient(120deg, #fff 0%, #c2d6ff 100%)" }}
+                  >
+                    {titleAccent}
+                  </span>
                 </>
               )}
             </h1>
 
             {description && (
-              <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
-                {description}
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/75 lg:mt-4 lg:text-[15px]">
+                {loading ? (
+                  <span className="inline-flex h-4 w-64 animate-pulse rounded bg-white/10" />
+                ) : (
+                  description
+                )}
               </p>
             )}
 
-            {items.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-gray-500 dark:text-gray-400 md:mt-3 md:gap-x-5 md:text-[12.5px]">
-                {items.map((m) => (
-                  <span key={m.key} className="inline-flex items-center gap-1.5">
-                    {m.icon}
-                    {m.label}
-                  </span>
-                ))}
+            {/* mobile-only compact composition, matching /kategori */}
+            {panel?.bar && !loading && panel.stats.length > 1 && (
+              <div className="mt-5 lg:hidden">
+                <CompositionBar stats={panel.stats} height={8} />
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                  {panel.stats.filter((s) => s.share !== false).map((s) => (
+                    <span key={s.key} className="inline-flex items-center gap-1.5 text-[11px] text-white/70">
+                      <span
+                        aria-hidden
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: s.color }}
+                      />
+                      {s.label} {s.display ?? nf(s.count)}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
             {actions && (
-              <div className="mt-4 flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
+              <div className="mt-5 flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
             )}
           </div>
 
-          {/* Allowed to wrap under the title rather than shrink: the peta
-              toolbar measures ~477px and dragged the document sideways on a
-              phone when it was held on one line. */}
-          {aside && <div className="min-w-0 shrink-0">{aside}</div>}
+          {/* desktop summary panel */}
+          {panel && (
+            <div className="hidden rounded-2xl border border-white/10 bg-white/[0.07] p-5 backdrop-blur-md lg:block">
+              <div className="mb-3 flex items-baseline justify-between">
+                <div className="text-[11px] font-bold uppercase tracking-[0.05em] text-brand-300">
+                  {panel.title}
+                </div>
+                {panel.note && <div className="text-[11px] text-white/60">{panel.note}</div>}
+              </div>
+
+              {panel.bar && panel.stats.length > 1 && <CompositionBar stats={panel.stats} />}
+
+              <div
+                className={`grid gap-2 ${panel.bar && panel.stats.length > 1 ? "mt-4" : ""} ${
+                  panel.stats.length >= 4 ? "grid-cols-4" : "grid-cols-3"
+                }`}
+              >
+                {panel.stats.map((s) => (
+                  <div key={s.key} className="rounded-lg bg-white/[0.06] px-2.5 py-2">
+                    <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-white/60">
+                      {s.label}
+                    </div>
+                    <div className="text-[15px] font-bold tabular-nums text-white">
+                      {s.display ?? nf(s.count)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-// ── Meta icons ─────────────────────────────────────────────────────────────
-// Carried here rather than imported from (admin)/data/_components/atoms, which
-// is route-private by convention.
-
-export function HeroClockIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-      <circle cx="10" cy="10" r="7" />
-      <path d="M10 6v4.2l2.8 1.6" />
-    </svg>
-  );
-}
-
-export function HeroCalendarIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-      <rect x="3" y="4.5" width="14" height="12.5" rx="2.5" />
-      <path d="M3 8.4h14M7 3v3M13 3v3" />
-    </svg>
-  );
-}
-
-export function HeroGlobeIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-      <circle cx="10" cy="10" r="7" />
-      <path d="M3.2 10h13.6M10 3.1c1.9 2 2.9 4.4 2.9 6.9s-1 4.9-2.9 6.9c-1.9-2-2.9-4.4-2.9-6.9s1-4.9 2.9-6.9z" />
-    </svg>
-  );
-}
-
-export function HeroChartIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-      <path d="M4 15.5V9M8 15.5V4.5M12 15.5v-4M16 15.5V7" />
-    </svg>
-  );
-}
-
-export function HeroDocIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M11.5 2.5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7z" />
-      <path d="M11.5 2.5V7H16M7.5 11h5M7.5 14h3" />
-    </svg>
-  );
+/** Emphasised figure inside a hero description, as on /kategori. */
+export function HeroFigure({ children }: { children: ReactNode }) {
+  return <strong className="font-bold text-white">{children}</strong>;
 }

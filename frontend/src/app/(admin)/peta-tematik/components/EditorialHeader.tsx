@@ -1,11 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import PageHero, {
-  HeroCalendarIcon,
-  HeroChartIcon,
-  HeroGlobeIcon,
-  type HeroMeta,
-} from "@/components/site/PageHero";
+import PageHero, { HeroFigure, type HeroStat } from "@/components/site/PageHero";
 
 interface Props {
   totalIndikator: number;
@@ -18,12 +13,12 @@ interface Props {
 }
 
 /**
- * Page intro for /peta-tematik, now the shared PageHero so this page, the
- * dashboard, the archive and /data all open the same way. It used to be a bare
- * H1 plus a paragraph, which read as a different product from /data's hero.
+ * Page intro for /peta-tematik, using the shared Atlas hero so this page opens
+ * the same way as /kategori, /dashboard and the archive.
  *
- * The meta chips describe what is actually on screen: before an indicator is
- * picked the map is deliberately empty, so only the catalogue size is claimed.
+ * The panel deliberately carries no composition bar: its four figures are
+ * different measures, not parts of one whole, and a bar across them would
+ * imply a split that does not exist.
  */
 export default function EditorialHeader({
   totalIndikator,
@@ -33,46 +28,58 @@ export default function EditorialHeader({
   regionCount,
   actions,
 }: Props) {
-  const meta: HeroMeta[] = [
+  const stats: HeroStat[] = [
+    { key: "indikator", label: "Indikator", count: totalIndikator, color: "#60a5fa" },
     {
-      key: "indikator",
-      icon: <HeroChartIcon />,
-      label: `${totalIndikator} indikator`,
+      key: "wilayah",
+      label: "Wilayah",
+      count: regionCount ?? 0,
+      display: regionCount ? String(regionCount) : "—",
+      color: "#a78bfa",
+    },
+    {
+      key: "tahun",
+      label: "Tahun",
+      count: yearCount ?? 0,
+      display: yearCount ? String(yearCount) : "—",
+      color: "#fb923c",
+    },
+    {
+      key: "periode",
+      label: "Periode",
+      count: activeYear ?? 0,
+      display: activeYear != null ? String(activeYear) : "—",
+      color: "#9ca3af",
     },
   ];
-
-  if (indikatorName) {
-    meta.push({
-      key: "periode",
-      icon: <HeroCalendarIcon />,
-      label:
-        activeYear != null
-          ? `${activeYear}${yearCount && yearCount > 1 ? ` · ${yearCount} tahun tersedia` : ""}`
-          : "Periode belum dipilih",
-    });
-  }
-
-  if (regionCount && regionCount > 0) {
-    meta.push({
-      key: "wilayah",
-      icon: <HeroGlobeIcon />,
-      label: `${regionCount} kabupaten/kota`,
-    });
-  }
 
   return (
     <div className="mb-5">
       <PageHero
-        crumbs={[{ label: "Beranda", href: "/" }, { label: "Peta Tematik" }]}
-        badge="Peta resmi"
-        title="Peta Tematik"
-        titleAccent="Maluku Utara"
+        eyebrow="Peta Tematik MALIKA"
+        title="Sebaran Statistik"
+        titleAccent="per Kabupaten/Kota"
         description={
-          indikatorName
-            ? indikatorName
-            : "Pilih indikator untuk menggambar sebarannya per kabupaten/kota, telusuri tren antar tahun, dan bandingkan capaian antar wilayah."
+          indikatorName ? (
+            <>
+              Menampilkan <HeroFigure>{indikatorName}</HeroFigure>
+              {activeYear != null ? (
+                <>
+                  {" "}
+                  tahun <HeroFigure>{activeYear}</HeroFigure>
+                </>
+              ) : null}
+              , dari <HeroFigure>{totalIndikator} indikator</HeroFigure> yang dapat dipetakan.
+            </>
+          ) : (
+            <>
+              <HeroFigure>{totalIndikator} indikator</HeroFigure> siap dipetakan. Pilih topik di
+              bawah untuk menggambar sebarannya, menelusuri tren antar tahun, dan membandingkan
+              capaian antar wilayah.
+            </>
+          )
         }
-        meta={meta}
+        panel={{ title: "Cakupan Peta", note: indikatorName ? "indikator aktif" : "belum dipilih", stats }}
         actions={actions}
       />
     </div>
