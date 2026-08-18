@@ -82,6 +82,102 @@ function parseQuarterFromText(text) {
 }
 
 /** Remove ```malika_ui ... ``` blocks from content */
+/**
+ * Read the reporting period out of a knowledge document's title.
+ *
+ * knowledge_base carries no publication date — `created_at` is the ingest
+ * timestamp, not the period the document reports on. The period survives only in
+ * the title, which 97% of chunks carry (measured over a 4000-title sample:
+ * 2657 month+year, 1227 year-only, 116 undated).
+ *
+ * A title may name a range ("Maret 2012–September 2017"). The document is about
+ * its newest period, so the latest mention wins — taking the first would date a
+ * 2017 release to 2012.
+ *
+ * @returns {{year:number, month:number, key:number, label:string}|null}
+ *   `month` is 0 when only a year was found; `key` is year*100+month so periods
+ *   compare as plain numbers.
+ */
+const ID_MONTHS = ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
+  'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+
+function parseDocPeriod(titleRaw) {
+  const title = String(titleRaw || '');
+  if (!title.trim()) return null;
+
+  let best = null;
+  const consider = (year, month, label) => {
+    const key = year * 100 + month;
+    if (!best || key > best.key) best = { year, month, key, label };
+  };
+
+  const monthRe = new RegExp(`\\b(${ID_MONTHS.join('|')})\\s+(20\\d{2})\\b`, 'gi');
+  for (const m of title.matchAll(monthRe)) {
+    const monthNo = ID_MONTHS.indexOf(m[1].toLowerCase()) + 1;
+    const year = Number(m[2]);
+    consider(year, monthNo, `${m[1].charAt(0).toUpperCase()}${m[1].slice(1).toLowerCase()} ${year}`);
+  }
+  if (best) return best;
+
+  // Year alone. Restricted to 20xx so chunk counters like "(12/30)" and figures
+  // inside a title cannot masquerade as a period.
+  for (const m of title.matchAll(/\b(20\d{2})\b/g)) {
+    const year = Number(m[1]);
+    consider(year, 0, String(year));
+  }
+  return best;
+}
+
+/**
+ * Order knowledge documents so the model reads the right period first.
+ *
+ * Relevance still leads: recency only breaks near-ties, because a clearly better
+ * match should not lose to a newer but weaker one. The live failure this exists
+ * for was 0.884 vs 0.880 — a four-thousandth gap that decided which year's
+ * figures the answer quoted.
+ *
+ * `requestedYear` outranks everything. A question about 2017 must never be
+ * answered with 2025 figures just because they are newer.
+ *
+ * Undated documents keep their relative position — unknown is not evidence of
+ * being old, so they are neither promoted nor demoted.
+ */
+function orderKnowledgeDocsByPeriod(docs, { requestedYear = null, band = 0.05 } = {}) {
+  const list = Array.isArray(docs) ? docs : [];
+  if (list.length < 2) return [...list];
+
+  const periods = list.map((doc) => parseDocPeriod(doc && doc.title));
+  const sims = list.map((doc) => (doc && doc.similarity) || 0);
+
+  if (requestedYear) {
+    const wanted = Number(requestedYear);
+    return list
+      .map((doc, index) => ({ doc, index, hit: periods[index] && periods[index].year === wanted ? 1 : 0 }))
+      .sort((a, b) => (b.hit - a.hit) || (a.index - b.index))
+      .map((x) => x.doc);
+  }
+
+  // Only near-ties are reordered, and only among documents that actually carry a
+  // period. Dated documents swap places with each other; undated ones keep the
+  // slot they were in, because an unknown period is not evidence of being old.
+  // Sorting all four cases with one comparator produced an intransitive order
+  // (older < undated < newer < older) and therefore an unpredictable result.
+  const top = Math.max(...sims);
+  const slots = [];
+  for (let i = 0; i < list.length; i += 1) {
+    if (periods[i] && top - sims[i] <= band) slots.push(i);
+  }
+  if (slots.length < 2) return [...list];
+
+  const ordered = slots
+    .slice()
+    .sort((a, b) => (periods[b].key - periods[a].key) || (a - b));
+
+  const out = [...list];
+  slots.forEach((slot, n) => { out[slot] = list[ordered[n]]; });
+  return out;
+}
+
 function stripMalikaUiBlock(content) {
   return String(content || '').replace(/```\s*malika_ui\s*[\s\S]*?```/gi, '').trim();
 }
@@ -354,6 +450,8 @@ function buildDbFirstHeader({ intentResult, candidates, latestBySource }) {
 }
 
 module.exports = {
+  parseDocPeriod,
+  orderKnowledgeDocsByPeriod,
   isNonStatisticalQuery,
   parseQuarterFromText,
   stripMalikaUiBlock,

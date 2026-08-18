@@ -95,6 +95,7 @@ try {
 // shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
+const { parseDocPeriod, orderKnowledgeDocsByPeriod } = require('./chatUtils');
 // The model is a single Sonnet lane; routeModel only sizes the answer budget
 // (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
 // been orphaned since the single-lane refactor, leaving every answer at 1000
@@ -3495,11 +3496,20 @@ Contoh respons yang BENAR:
   const KB_WITH_TABLE_MAX_DOCS = 2;
   const KB_WITH_TABLE_MAX_CHARS = 1500;      // per document — the drowning guard
 
-  const kbDocs = hasPreviewRows
+  const kbSelected = hasPreviewRows
     ? (knowledgeContext || [])
         .filter((doc) => (doc.similarity || 0) >= KB_WITH_TABLE_MIN_SIMILARITY)
         .slice(0, KB_WITH_TABLE_MAX_DOCS)
     : (knowledgeContext || []);
+
+  // Knowledge retrieval ranks on cosine similarity alone, which has no notion of
+  // time: a September 2017 profile and a Maret 2023 profile of the same indicator
+  // score within 0.004 of each other, and the older one won by accident. Recency
+  // breaks near-ties only — and never overrides a year the user actually asked
+  // for, or "kemiskinan 2017" would come back with 2025 figures.
+  const kbDocs = orderKnowledgeDocsByPeriod(kbSelected, {
+    requestedYear: intentResult?.query_builder?.params?.year || null,
+  });
 
   if (kbDocs.length > 0) {
     const topSimilarity = kbDocs[0]?.similarity || 0;
@@ -3509,7 +3519,11 @@ Contoh respons yang BENAR:
       const clipped = hasPreviewRows && cleanContent.length > KB_WITH_TABLE_MAX_CHARS
         ? `${cleanContent.slice(0, KB_WITH_TABLE_MAX_CHARS)}…`
         : cleanContent;
-      return `[Dokumen ${i + 1}] (relevansi: ${Math.round((doc.similarity || 0) * 100)}%)\n${clipped}`;
+      // The period goes in the header so the model can cite it. Without it the
+      // answer is grounded but undated, which reads as current when it isn't.
+      const period = parseDocPeriod(doc.title);
+      const periodTag = period ? `periode: ${period.label}, ` : '';
+      return `[Dokumen ${i + 1}] (${periodTag}relevansi: ${Math.round((doc.similarity || 0) * 100)}%)\n${clipped}`;
     }).join('\n\n');
 
     const confidenceNote = topSimilarity >= 0.55
@@ -3524,10 +3538,12 @@ Contoh respons yang BENAR:
       ? `INSTRUKSI PENTING:
 1. Dokumen di atas adalah REFERENSI TAMBAHAN untuk konteks. Prioritaskan ANGKA dari dataPreview rows (system message berikutnya).
 2. Jika dokumen memuat fakta yang TIDAK ada di tabel (misal: komoditas penyusun garis kemiskinan, metodologi, definisi, penyebab suatu perubahan), GUNAKAN fakta itu dan sebutkan sumbernya. Tabel dan dokumen saling melengkapi, bukan bersaing.
+3. WAJIB sebutkan periode dokumen saat mengutip angka darinya (lihat "periode:" di header dokumen), misal "menurut Profil Kemiskinan Maret 2023…". Angka tanpa periode terbaca seolah-olah terbaru.
 3. JANGAN katakan "data tidak tersedia" hanya karena dokumen KB tidak punya angka spesifik — rows ADA di dataPreview.
 4. DILARANG menggunakan markdown formatting (**, *, #, dll) dalam respons`
       : `INSTRUKSI PENTING:
 1. HANYA gunakan informasi dari dokumen di atas jika BENAR-BENAR menjawab pertanyaan user
+1b. WAJIB sebutkan periode dokumen saat mengutip angka darinya (lihat "periode:" di header dokumen). Angka tanpa periode terbaca seolah-olah terbaru.
 2. Jika user bertanya tentang "layanan X" tapi dokumen berisi "layanan Y", JANGAN jawab dengan informasi layanan Y
 3. Jika dokumen tidak menjawab pertanyaan SPESIFIK user, katakan: "Mohon maaf, informasi tentang [topik spesifik] belum tersedia di sistem saya. Silakan hubungi BPS Maluku Utara via WhatsApp di [+62 851-7676-4422](https://wa.me/6285176764422)."
 4. JANGAN mengarang tahapan/prosedur yang tidak ada di dokumen
