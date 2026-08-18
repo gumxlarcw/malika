@@ -13,10 +13,7 @@
  * Tahunan is not a quarter-on-quarter change — so callers group by class first.
  */
 
-const MONTHS_ID = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
+const { MONTHS_ID } = require('../../utils/period');
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
 

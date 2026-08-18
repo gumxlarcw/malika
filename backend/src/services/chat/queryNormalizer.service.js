@@ -200,7 +200,6 @@ const COMMON_TYPOS = {
   'ekonommi': 'ekonomi',
   'eknomi': 'ekonomi',
   'pertumbhan': 'pertumbuhan',
-  'pertumbhan': 'pertumbuhan',
   'eksport': 'ekspor',
   'ekspr': 'ekspor',
   'imort': 'impor',
@@ -209,7 +208,6 @@ const COMMON_TYPOS = {
   'statisitk': 'statistik',
   'kabpaten': 'kabupaten',
   'kabupten': 'kabupaten',
-  'kecamtan': 'kecamatan',
   'kecamtan': 'kecamatan',
 };
 

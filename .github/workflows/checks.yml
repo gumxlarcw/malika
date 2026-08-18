@@ -76,12 +76,10 @@ jobs:
         run: npm ci --prefer-offline
 
       - name: Lint
-        run: |
-          if [ -f "./node_modules/.bin/eslint" ]; then
-            npm run lint --if-present || ./node_modules/.bin/eslint src --ext .js
-          else
-            echo "ESLint not configured"
-          fi
+        # backend/eslint.config.js is flat config (ESLint v9): `--ext` no longer
+        # exists, so the old fallback could only ever add a confusing second
+        # error. The npm script is the single entry point.
+        run: npm run lint
 
       - name: Test
         env:
@@ -90,6 +88,15 @@ jobs:
           DB_PASS: testpass
           DB_HOST: localhost
           JWT_SECRET: test-secret
+          # backend/.env is gitignored, so the proxy-only guards in
+          # utils/requireProxyUrl.js have nothing to read here and would throw at
+          # module load, taking whole suites down before a single test runs.
+          OPENAI_API_URL: http://127.0.0.1:3031/v1/chat/completions
+          OPENAI_API_BASE_URL: http://127.0.0.1:3031/v1
+          MALIKA_ANON_SECRET: ci-anon-secret-not-for-production
+          # No MariaDB service on this runner: suites that assert on live rows
+          # skip instead of failing. Run them locally against the real DB.
+          SKIP_DB_TESTS: '1'
         run: |
           if [ -f "./node_modules/.bin/jest" ]; then
             npm test -- --ci --passWithNoTests

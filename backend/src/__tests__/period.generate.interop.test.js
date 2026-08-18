@@ -6,8 +6,11 @@ jest.mock('../models/DataSource.model', () => ({
   findByPk: jest.fn(),
 }));
 
+// generatePeriodMap deliberately uses findOne + create/update rather than
+// upsert: data_periods has no unique key on (source_id, period_value).
 jest.mock('../models/DataPeriod.model', () => ({
-  upsert: jest.fn(),
+  findOne: jest.fn(),
+  create: jest.fn(),
 }));
 
 const { fetchAPI } = require('../services/datasource/fetch.service');
@@ -19,6 +22,7 @@ const { generatePeriodMap } = require('../services/period/generatePeriodMap.serv
 describe('generatePeriodMap (interop auto-discover)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    DataPeriod.findOne.mockResolvedValue(null); // nothing mapped yet -> create path
   });
 
   test('discovers years from interop catalog and upserts period map rows', async () => {
@@ -48,15 +52,15 @@ describe('generatePeriodMap (interop auto-discover)', () => {
     expect(fetchAPI).toHaveBeenCalledTimes(1);
     expect(fetchAPI.mock.calls[0][0]).toContain('/v1/api/interoperabilitas/datasource/simdasi/id/23/wilayah/8200000/key/e5d1be11320576d466bdeb2f7f210387/');
 
-    // upsert rows for each available year
-    expect(DataPeriod.upsert).toHaveBeenCalledTimes(5);
+    // one row created per available year
+    expect(DataPeriod.create).toHaveBeenCalledTimes(5);
 
-    const upsertCalls = DataPeriod.upsert.mock.calls.map((c) => c[0]);
-    const years = upsertCalls.map((r) => r.period_value).sort();
+    const createCalls = DataPeriod.create.mock.calls.map((c) => c[0]);
+    const years = createCalls.map((r) => r.period_value).sort();
     expect(years).toEqual(['2018', '2020', '2021', '2022', '2024']);
 
     // api_url_override should substitute {period} with plain year
-    const one = upsertCalls.find((r) => r.period_value === '2021');
+    const one = createCalls.find((r) => r.period_value === '2021');
     expect(one.api_url_override).toContain('/tahun/2021/');
   });
 
@@ -68,6 +72,6 @@ describe('generatePeriodMap (interop auto-discover)', () => {
     });
 
     await expect(generatePeriodMap(1)).rejects.toMatchObject({ status: 400 });
-    expect(DataPeriod.upsert).not.toHaveBeenCalled();
+    expect(DataPeriod.create).not.toHaveBeenCalled();
   });
 });

@@ -36,7 +36,12 @@ function hasPath(obj, path) {
   return true;
 }
 
-describe('automationStatusJob shape', () => {
+// These exercise the real database (they assert on live rows), so they cannot
+// run where no DB is provisioned — CI included. Mirrors the SKIP_DB_TESTS
+// convention already used by migrations.searchFulltext.test.js.
+const runDb = process.env.SKIP_DB_TESTS !== '1';
+
+(runDb ? describe : describe.skip)('automationStatusJob shape', () => {
   test('items[] retains every required field path', async () => {
     const { job: started } = await startAutomationStatusJob({});
     const jobId = started.jobId;

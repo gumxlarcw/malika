@@ -51,7 +51,12 @@ describe.skip('write paths (skipped — xenova needs ESM)', () => {
 // Standalone helper test that doesn't trigger xenova load - sanity check the
 // db state for source_kind='datasource' to confirm Phase C indexing covered
 // the active source set.
-test('retrieval_chunks for datasource kind is populated', async () => {
+// These exercise the real database (they assert on live rows), so they cannot
+// run where no DB is provisioned — CI included. Mirrors the SKIP_DB_TESTS
+// convention already used by migrations.searchFulltext.test.js.
+const runDb = process.env.SKIP_DB_TESTS !== '1';
+
+(runDb ? test : test.skip)('retrieval_chunks for datasource kind is populated', async () => {
   const [rows] = await sequelize.query(
     `SELECT COUNT(*) AS n FROM retrieval_chunks WHERE source_kind='datasource'`
   );

@@ -13,7 +13,12 @@ const REQUIRED_FIELDS = [
 
 const { getDatasourcesWithEmbeddingStatus } = require('../services/ai/embedding.service');
 
-test('getDatasourcesWithEmbeddingStatus returns per-source rows', async () => {
+// These exercise the real database (they assert on live rows), so they cannot
+// run where no DB is provisioned — CI included. Mirrors the SKIP_DB_TESTS
+// convention already used by migrations.searchFulltext.test.js.
+const runDb = process.env.SKIP_DB_TESTS !== '1';
+
+(runDb ? test : test.skip)('getDatasourcesWithEmbeddingStatus returns per-source rows', async () => {
   const rows = await getDatasourcesWithEmbeddingStatus();
   expect(Array.isArray(rows)).toBe(true);
   expect(rows.length).toBeGreaterThan(0);
@@ -31,7 +36,7 @@ test('getDatasourcesWithEmbeddingStatus returns per-source rows', async () => {
   expect(rows.filter((r) => r.hasEmbedding).length).toBeGreaterThan(0);
 });
 
-test('getEmbeddingStats returns the canonical shape', async () => {
+(runDb ? test : test.skip)('getEmbeddingStats returns the canonical shape', async () => {
   const stats = await getEmbeddingStats();
   for (const f of REQUIRED_FIELDS) {
     expect(stats).toHaveProperty(f);

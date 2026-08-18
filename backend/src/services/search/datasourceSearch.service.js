@@ -199,6 +199,7 @@ function normalizeGeoTypos(input) {
     
     // Sula variants
     'kepsula': 'kepulauan sula',
+    'kepsul': 'kepulauan sula',
     'kep sula': 'kepulauan sula',
     'kep. sula': 'kepulauan sula',
     
@@ -810,7 +811,7 @@ async function searchDatasources({ q, limit = 10, _skipGeoFallback = false }) {
       if (topicOnly.length >= 2 && topicOnly !== normQ) {
         const retry = await searchDatasources({ q: topicOnly, limit: max, _skipGeoFallback: true });
         if (retry.length > 0) {
-          const filtered = retry.filter((item) => {
+          const carriesRequestedGeo = (item) => {
             const nameNorm = normalizeText(item.name);
             if (indicatesKabKotaDimensionFromText(nameNorm)) return true;
             for (const gp of geoHits) {
@@ -819,8 +820,14 @@ async function searchDatasources({ q, limit = 10, _skipGeoFallback = false }) {
               if (toks.length > 0 && toks.every((t) => nameNorm.includes(t))) return true;
             }
             return false;
-          });
-          if (filtered.length > 0) return filtered.slice(0, max);
+          };
+          // Datasources that actually carry the requested geo come first; the
+          // rest follow instead of being discarded. Dropping them meant a topic
+          // published only at province level answered with an empty list.
+          const preferred = retry.filter(carriesRequestedGeo);
+          const rest = retry.filter((item) => !carriesRequestedGeo(item));
+          const ordered = preferred.concat(rest);
+          if (ordered.length > 0) return ordered.slice(0, max);
         }
       }
     }
@@ -1096,12 +1103,15 @@ async function searchDatasources({ q, limit = 10, _skipGeoFallback = false }) {
       if (a.display_order !== b.display_order) return a.display_order - b.display_order;
       return a.id - b.id;
     })
-    // GEO FILTER: When user asks for SPECIFIC kabupaten/kota, DROP datasources without kab/kota dimension
-    .filter((item) => {
-      if (!signals?.hasSpecificKabKotaName) return true; // no geo filter needed
-      const hasKabKotaDimension = indicatesKabKotaDimensionFromText(item.name);
-      return hasKabKotaDimension;
-    })
+    // GEO: when the user names a specific kab/kota, kab/kota-level datasources
+    // must come first — but they must not be the ONLY thing that can come back.
+    // This used to hard-drop everything without a kab/kota dimension, which had
+    // two failure modes: a table dedicated to the requested kab/kota was itself
+    // discarded ("Inflasi Kabupaten Halmahera Tengah" has no "kota" in its name,
+    // so indicatesKabKotaDimensionFromText is false), and a topic that only
+    // exists at province level returned NOTHING at all. Ranking already handles
+    // the preference: scoreDatasource penalises province-only rows by 18 points
+    // when hasKabKotaIntent is set, so they sort below any kab/kota match.
     .slice(0, max);
 }
 

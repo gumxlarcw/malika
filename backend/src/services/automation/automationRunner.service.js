@@ -10,6 +10,12 @@ const processStatic = require('../processor/static.processor');
 const processExim = require('../processor/exim.processor');
 const { buildEximUrl, responseHasData, findLatestAvailableEximYear } = require('../exim/eximYearDiscovery.service');
 const EximPodFilter = require('../../models/EximPodFilter.model');
+
+/** BPS `month_no` arrives as a string or an empty cell; null means "annual". */
+const toMonthNo = (raw) => {
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
 const { pullPressRelease } = require('../pressrelease/pull.service');
 const { generatePeriodMap } = require('../period/generatePeriodMap.service');
 const { syncMetadataIndexForTable } = require('../search/metadataIndex.service');
@@ -624,11 +630,6 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, progress,
         lastUpdate = null;
         periods = [{ th_id: String(latestActiveYear), year: String(latestActiveYear) }];
 
-        const toMonthNo = (raw) => {
-          const n = Number(raw);
-          return Number.isFinite(n) ? n : null;
-        };
-
         const detailedRows = [];
         for (const g of HS2_GROUPS) {
           const url = buildEximUrl(ds, latestActiveYear, g.code);
@@ -720,11 +721,6 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, progress,
         signature = `exim:${variantKey}:all`;
         lastUpdate = null;
         periods = [];
-
-      const toMonthNo = (raw) => {
-        const n = Number(raw);
-        return Number.isFinite(n) ? n : null;
-      };
 
       const detailedRows = [];
       const yearSet = new Set();
@@ -838,11 +834,6 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, progress,
           structuredForCache = structured;
         } else {
           info(`Latest active year detected: ${latestActiveYear}`);
-
-          const toMonthNo = (raw) => {
-            const n = Number(raw);
-            return Number.isFinite(n) ? n : null;
-          };
 
           const url = buildEximUrl(ds, latestActiveYear, codeHs);
           const raw = await fetchAPI(url, id);

@@ -9,6 +9,20 @@ jest.mock('../config/db_bps', () => {
   return jest.fn(() => ({ query: queryMock, _queryMock: queryMock }));
 });
 
+// The watermark service issues its own SELECT through the SAME db_bps mock, so
+// without this every cache-keyed call would silently consume the first queued
+// mockResolvedValueOnce and shift all the others by one.
+jest.mock('../services/indicator/watermark.service', () => ({
+  getWatermark: jest.fn().mockResolvedValue(1700000000000),
+  clearWatermarkMemo: jest.fn(),
+}));
+
+// initIndikatorList enriches the list from indicator_meta — another query that
+// is not part of what these tests exercise.
+jest.mock('../services/petaTematik/metadataLookup.service', () => ({
+  getIndikatorMetaBulk: jest.fn().mockResolvedValue(new Map()),
+}));
+
 const getSequelizeBps = require('../config/db_bps');
 
 describe('petaTematik.service', () => {
@@ -19,8 +33,12 @@ describe('petaTematik.service', () => {
 
   describe('getYears', () => {
     test('returns sorted years and has_monthly flag', async () => {
+      // Ordered ascending: the query carries `ORDER BY year ASC`, so the driver
+      // hands rows back sorted and the service no longer re-sorts in JS.
       getSequelizeBps()._queryMock.mockResolvedValueOnce([[
-        { year: 2024 }, { year: 2023 }, { year: 2022 },
+        { year: 2022, kabko_count: 10 },
+        { year: 2023, kabko_count: 0 },
+        { year: 2024, kabko_count: 10 },
       ]]);
       getSequelizeBps()._queryMock.mockResolvedValueOnce([[
         { has_monthly: 1 },
@@ -39,7 +57,7 @@ describe('petaTematik.service', () => {
 
     test('caches result', async () => {
       const m = getSequelizeBps()._queryMock;
-      m.mockResolvedValueOnce([[{ year: 2024 }]]);
+      m.mockResolvedValueOnce([[{ year: 2024, kabko_count: 10 }]]);
       m.mockResolvedValueOnce([[{ has_monthly: 0 }]]);
 
       await svc.getYears(182);
@@ -171,7 +189,7 @@ describe('petaTematik.service', () => {
         { TABLE_NAME: 'indikator_182' },
       ]]);
       m.mockResolvedValueOnce([[ // per-table aggregate
-        { source_id: 182, source_name: 'Kepadatan Penduduk', region_rows: 50 },
+        { source_id: 182, source_name: 'Kepadatan Penduduk', region_rows_with_values: 50 },
       ]]);
 
       await svc.initIndikatorList();

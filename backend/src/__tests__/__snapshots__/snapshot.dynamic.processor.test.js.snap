@@ -19,6 +19,5 @@ exports[`dynamic.processor snapshot builds processed response 1`] = `
   "last_update": "2025-01-01",
   "period": "2024",
   "source": "Kemiskinan",
-  "unit": "",
 }
 `;

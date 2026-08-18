@@ -33,7 +33,12 @@ const { rankByQuery } = require('../services/search/fulltextRanker');
 const { recordDivergence, snapshot, reset } = require('../services/search/shadowLogger.service');
 const { resolveSearchIntent } = require('../services/search/intent.service');
 
-describe('shadow mode', () => {
+// These exercise the real database (they assert on live rows), so they cannot
+// run where no DB is provisioned — CI included. Mirrors the SKIP_DB_TESTS
+// convention already used by migrations.searchFulltext.test.js.
+const runDb = process.env.SKIP_DB_TESTS !== '1';
+
+(runDb ? describe : describe.skip)('shadow mode', () => {
   beforeEach(() => {
     rankByQuery.mockReset();
     reset();

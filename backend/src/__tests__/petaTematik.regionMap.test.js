@@ -5,9 +5,10 @@ describe('regionMap', () => {
     test('maps plain kab/kota names to kdkab', () => {
       expect(dimValueToKdkab('Halmahera Barat')).toBe('01');
       expect(dimValueToKdkab('Halmahera Tengah')).toBe('02');
-      expect(dimValueToKdkab('Halmahera Utara')).toBe('03');
+      // BPS: 8203 = Kepulauan Sula, 8205 = Halmahera Utara (not the other way round).
+      expect(dimValueToKdkab('Kepulauan Sula')).toBe('03');
       expect(dimValueToKdkab('Halmahera Selatan')).toBe('04');
-      expect(dimValueToKdkab('Kepulauan Sula')).toBe('05');
+      expect(dimValueToKdkab('Halmahera Utara')).toBe('05');
       expect(dimValueToKdkab('Halmahera Timur')).toBe('06');
       expect(dimValueToKdkab('Pulau Morotai')).toBe('07');
       expect(dimValueToKdkab('Pulau Taliabu')).toBe('08');

@@ -2,7 +2,12 @@ const { getAllDocuments } = require('../services/ai/knowledgeDoc.service');
 
 jest.setTimeout(10_000);
 
-test('getAllDocuments returns canonical shape', async () => {
+// These exercise the real database (they assert on live rows), so they cannot
+// run where no DB is provisioned — CI included. Mirrors the SKIP_DB_TESTS
+// convention already used by migrations.searchFulltext.test.js.
+const runDb = process.env.SKIP_DB_TESTS !== '1';
+
+(runDb ? test : test.skip)('getAllDocuments returns canonical shape', async () => {
   const docs = await getAllDocuments();
   expect(Array.isArray(docs)).toBe(true);
   for (const d of docs.slice(0, 3)) {

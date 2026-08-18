@@ -7,6 +7,7 @@ jest.mock('../../controllers/auth.controller', () => ({
   logout: (req, res) => res.json({ ok: true }),
   listUsers: (req, res) => res.json({ ok: true, users: [] }),
   deleteUser: (req, res) => res.json({ ok: true }),
+  changePassword: (req, res) => res.json({ ok: true }),
 }));
 
 jest.mock('../../middleware/auth.middleware', () => ({

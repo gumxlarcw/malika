@@ -11,12 +11,12 @@ describe('eligibilityScanner', () => {
       queryMock.mockResolvedValueOnce([[{
         source_id: 182,
         source_name: 'Kepadatan Penduduk Menurut Kabupten/Kota',
-        region_rows: 50,
+        region_rows_with_values: 50,
       }]]);
       queryMock.mockResolvedValueOnce([[{
         source_id: 1,
         source_name: 'Inflasi Provinsi Maluku Utara',
-        region_rows: 0,
+        region_rows_with_values: 0,
       }]]);
 
       const seq = { query: queryMock };
