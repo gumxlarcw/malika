@@ -505,10 +505,6 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
           if (controller.signal.aborted) return;
           setItems(merged);
           collectSubjects(brsItems);
-          setTotals({
-            report: Number(brsRes?.meta?.total) || null,
-            publication: Number(pubRes?.meta?.total) || null,
-          });
           setMeta(null);
           setStatus("ready");
           return;
@@ -542,7 +538,6 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
           let list = Array.isArray(raw?.items) ? raw.items.map(brsToItem) : [];
           if (sort === "lama") list = list.slice().reverse();
           setMeta(m ? { ...m, page } : m);
-          if (m?.total) setTotals((t) => ({ ...t, report: m.total }));
           setItems(list);
           collectSubjects(list);
           setStatus("ready");
@@ -569,7 +564,6 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
         let pubList = Array.isArray(raw?.items) ? raw.items.map(pubToItem) : [];
         if (sort === "lama") pubList = pubList.slice().reverse();
         setMeta(pubMeta ? { ...pubMeta, page } : pubMeta);
-        if (pubMeta?.total) setTotals((t) => ({ ...t, publication: pubMeta.total }));
         setItems(pubList);
         setStatus("ready");
       } catch (err) {
@@ -584,6 +578,31 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
     load();
     return () => controller.abort();
   }, [kind, query, year, subject, sort, page, collectSubjects]);
+
+  /*
+   * Both catalogue totals, fetched once on mount regardless of which tab is
+   * open. The list only ever loads one kind, so without this the hero showed
+   * an em dash for the other — a placeholder where a real, cheap figure was a
+   * single cached request away.
+   */
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([
+      fetch(buildBrsListUrl({ page: 1 }), { signal: controller.signal })
+        .then((r) => r.json())
+        .catch(() => null),
+      fetch(buildPubListUrl({ page: 1 }), { signal: controller.signal })
+        .then((r) => r.json())
+        .catch(() => null),
+    ]).then(([brs, pub]) => {
+      if (controller.signal.aborted) return;
+      setTotals({
+        report: Number(brs?.meta?.total) || null,
+        publication: Number(pub?.meta?.total) || null,
+      });
+    });
+    return () => controller.abort();
+  }, []);
 
   // ── Deep-link to a single item ──────────────────────────────────────
   const deepLinkId = useMemo<string | null>(() => {
@@ -733,21 +752,14 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
             titleAccent="Publikasi"
             description={
               <>
-                {totals.report ? (
-                  <>
-                    <HeroFigure>{totals.report.toLocaleString("id-ID")} rilis</HeroFigure>
-                    {totals.publication ? " dan " : " "}
-                  </>
-                ) : null}
-                {totals.publication ? (
-                  <>
-                    <HeroFigure>
-                      {totals.publication.toLocaleString("id-ID")} publikasi
-                    </HeroFigure>{" "}
-                  </>
-                ) : null}
-                Badan Pusat Statistik Provinsi Maluku Utara, lengkap dengan poin utama, sitasi
-                siap tempel, dan berkas PDF-nya.
+                <HeroFigure>
+                  {(totals.report ?? 0).toLocaleString("id-ID")} rilis
+                </HeroFigure>{" "}
+                dan{" "}
+                <HeroFigure>
+                  {(totals.publication ?? 0).toLocaleString("id-ID")} publikasi
+                </HeroFigure>{" "}
+                resmi BPS Provinsi Maluku Utara.
               </>
             }
             loading={status === "loading" && !totals.report && !totals.publication}
@@ -762,14 +774,16 @@ export default function ArchiveBrowser({ defaultKind }: ArchiveBrowserProps) {
                   key: "brs",
                   label: "BRS",
                   count: totals.report ?? 0,
-                  display: totals.report ? totals.report.toLocaleString("id-ID") : "—",
+                  display: totals.report ? totals.report.toLocaleString("id-ID") : "…",
                   color: "#60a5fa",
                 },
                 {
                   key: "pub",
                   label: "Publikasi",
                   count: totals.publication ?? 0,
-                  display: totals.publication ? totals.publication.toLocaleString("id-ID") : "—",
+                  display: totals.publication
+                    ? totals.publication.toLocaleString("id-ID")
+                    : "…",
                   color: "#a78bfa",
                 },
                 {

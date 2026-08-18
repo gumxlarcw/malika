@@ -67,57 +67,66 @@ export function DashboardChrome({
                 dari <HeroFigure>{categoryCount} kategori</HeroFigure>
               </>
             ) : null}{" "}
-            Badan Pusat Statistik, dikelompokkan ke empat panel bacaan
-            {stamp ? <> · dimuat {stamp} WIT</> : null}.
+            Badan Pusat Statistik Provinsi Maluku Utara.
           </>
         }
         panel={{
           title: "Sebaran Panel",
-          note: `${indicatorCount} indikator`,
+          note: stamp ? `dimuat ${stamp} WIT` : `${indicatorCount} indikator`,
           bar: tabCounts.some((t) => t.count > 0),
           stats: tabCounts,
         }}
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={refreshing}
-              aria-label="Muat ulang data"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-50"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={refreshing ? "animate-spin" : undefined}
-                aria-hidden
-              >
-                <path d="M16.5 8.4A6.8 6.8 0 004.6 5.7M3.5 11.6a6.8 6.8 0 0011.9 2.7" />
-                <path d="M15.6 3.6v4.6h-4.6M4.4 16.4v-4.6h4.6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={onShare}
-              aria-label="Salin tautan dasbor"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
-            >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <circle cx="15" cy="4.8" r="2.3" />
-                <circle cx="5" cy="10" r="2.3" />
-                <circle cx="15" cy="15.2" r="2.3" />
-                <path d="M7 8.9l6-2.9M7 11.1l6 2.9" />
-              </svg>
-            </button>
-          </>
-        }
       />
+
+      {/* Outside the gradient band so every hero is the same height. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshing}
+          aria-label="Muat ulang data"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800",
+            BORDER,
+            SURFACE,
+            TEXT_4
+          )}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={refreshing ? "animate-spin" : undefined}
+            aria-hidden
+          >
+            <path d="M16.5 8.4A6.8 6.8 0 004.6 5.7M3.5 11.6a6.8 6.8 0 0011.9 2.7" />
+            <path d="M15.6 3.6v4.6h-4.6M4.4 16.4v-4.6h4.6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={onShare}
+          aria-label="Salin tautan dasbor"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors hover:bg-gray-100 dark:hover:bg-gray-800",
+            BORDER,
+            SURFACE,
+            TEXT_4
+          )}
+        >
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="15" cy="4.8" r="2.3" />
+            <circle cx="5" cy="10" r="2.3" />
+            <circle cx="15" cy="15.2" r="2.3" />
+            <path d="M7 8.9l6-2.9M7 11.1l6 2.9" />
+          </svg>
+        </button>
+      </div>
 
       <div
         role="tablist"

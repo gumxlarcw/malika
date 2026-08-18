@@ -49,7 +49,6 @@ export type PageHeroProps = {
   titleAccent?: string;
   description?: ReactNode;
   panel?: HeroPanel;
-  actions?: ReactNode;
   loading?: boolean;
 };
 
@@ -79,7 +78,6 @@ export default function PageHero({
   titleAccent,
   description,
   panel,
-  actions,
   loading,
 }: PageHeroProps) {
   return (
@@ -164,9 +162,6 @@ export default function PageHero({
               </div>
             )}
 
-            {actions && (
-              <div className="mt-5 flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
-            )}
           </div>
 
           {/* desktop summary panel */}
