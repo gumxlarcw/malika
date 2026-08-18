@@ -14,7 +14,13 @@
 const axios = require('axios');
 const { createToolset } = require('./tools');
 
-const PROXY_URL = process.env.AUTO_TUNE_PROXY_URL || 'http://127.0.0.1:3031';
+// Derive the proxy origin from OPENAI_API_URL (the var every other chat module
+// resolves through requireProxyUrl) so there is one address to change, not two.
+// AUTO_TUNE_PROXY_URL still wins when set, for pointing a tuning run elsewhere.
+const PROXY_URL = process.env.AUTO_TUNE_PROXY_URL || (() => {
+  const chatUrl = require('../../utils/requireProxyUrl')('autoTune/agent.service');
+  return new URL(chatUrl).origin;
+})();
 const MAX_STEPS = 8;
 const MAX_PARSE_RETRIES = 2;
 

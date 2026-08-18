@@ -8,7 +8,7 @@ The `backend/src/services/chat/streaming/` directory previously held a stalled V
 
 **What's left in `streaming/` (4 files, all live):**
 - `openaiClient.js` — LLM HTTP client to malika-llm-proxy :3031. Used by `streaming.service.js`, `chat.service.js`, `persistentMemory.service.js`, `sessionCompaction.service.js`, plus 3 `services/ai/*` files.
-- `modelRouter.service.js` — `modelForTier()` + `MODEL_TIERS` constants. Used by `streaming.service.js`.
+- `modelRouter.service.js` — `routeModel()` + `TIER_CONFIG`. Used by `streaming.service.js`. **It was silently orphaned** by the 2026-05-16 single-lane refactor (which removed `modelForTier`/`MODEL_TIERS`) and stayed unreferenced until 2026-08-18, during which every answer ran at a hardcoded `max_tokens: 1000`. Re-wired at all three `llmChat` call sites; it now sizes the answer budget only — the model is a single Sonnet lane.
 - `config.js` — shared constants. Used by `services/chat/sessionCompaction.service.js`.
 - `requestContext.js` — per-request context object. Used by 5 `services/ai/*` services + `sessionCompaction`.
 

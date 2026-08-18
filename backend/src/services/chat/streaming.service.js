@@ -95,7 +95,13 @@ try {
 // shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
-// (modelForTier/MODEL_TIERS removed 2026-05-16 — single Sonnet lane, no tier-based model selection)
+// The model is a single Sonnet lane; routeModel only sizes the answer budget
+// (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
+// been orphaned since the single-lane refactor, leaving every answer at 1000
+// tokens. Extended Thinking from buildModelParams is deliberately not used:
+// llmChat has no `thinking` passthrough and the upstream tiers are
+// OpenAI-compatible endpoints that would reject the field.
+const { routeModel } = require('./streaming/modelRouter.service');
 
 /**
  * Read a chat-completions response from the proxy, tolerant of both SSE
@@ -105,11 +111,18 @@ const { chat: llmChat } = require('./streaming/openaiClient');
  * we can't assume real streaming even when we asked for `stream: true`.
  *
  * `onChunk(text)` is called for every piece of assistant content found.
- * Returns the concatenated text.
+ *
+ * Returns `{ text, model }`. `model` is whatever the proxy reported as the
+ * serving model — the upstream's own name on the passthrough tiers
+ * ('deepseek-v4-flash', 'glm-5') or the full tier spec on the claude-cli tier
+ * ('anthropic/claude-sonnet-4-6'). It is null when the response never named one.
+ * This is NOT the model we requested: the proxy ignores `body.model` entirely
+ * and answers from its tier chain.
  */
 async function readLlmChatResponse(response, onChunk) {
   const bodyText = await response.text();
   let fullText = '';
+  let servedModel = null;
 
   const looksLikeSse = /(^|\n)\s*data:\s/.test(bodyText);
   if (looksLikeSse) {
@@ -120,6 +133,8 @@ async function readLlmChatResponse(response, onChunk) {
       if (jsonStr === '[DONE]') break;
       try {
         const json = JSON.parse(jsonStr);
+        // Every OpenAI-style chunk repeats `model`; the first one that carries it wins.
+        if (!servedModel && json.model) servedModel = String(json.model);
         const delta = json.choices?.[0]?.delta?.content
                    || json.choices?.[0]?.message?.content;
         if (delta) {
@@ -133,6 +148,7 @@ async function readLlmChatResponse(response, onChunk) {
   } else {
     try {
       const json = JSON.parse(bodyText);
+      if (json.model) servedModel = String(json.model);
       const content = json.choices?.[0]?.message?.content
                    || json.choices?.[0]?.delta?.content
                    || '';
@@ -145,7 +161,7 @@ async function readLlmChatResponse(response, onChunk) {
     }
   }
 
-  return fullText;
+  return { text: fullText, model: servedModel ? servedModel.slice(0, 80) : null };
 }
 
 // ============================================================================
@@ -341,8 +357,11 @@ function getOpenAIKey() {
   );
 }
 
+// Legacy label only. The model that answers is chosen by modelRouter and, at
+// the far end, by the proxy's own tier chain — this value never selects
+// anything. Default corrected from 'gpt-4.1-mini' (OpenAI era) 2026-08-18.
 function getOpenAIModel() {
-  return process.env.OPENAI_MODEL_CHAT || 'gpt-4.1-mini';
+  return process.env.OPENAI_MODEL_CHAT || 'claude-sonnet-4-6';
 }
 
 /**
@@ -693,14 +712,20 @@ async function streamGreetingResponse({
 
   // Stream response from proxy (tier: GREETING) with retry
   let fullText = '';
+  // Hoisted out of the try below so the save at the end of this function can
+  // record the model that actually answered. Stays null unless the proxy names
+  // one — the fallback text below is not model output and must not be labelled
+  // as though it were.
+  let greetingModel = null;
   try {
-    const effectiveModel = modelOverride || 'claude-sonnet-4-6';
+    const { config: greetingConfig } = routeModel({ isGreeting: true });
+    const requestedModel = modelOverride || greetingConfig.model;
     const response = await llmChat({
-      model: effectiveModel,
+      model: requestedModel,
       messages,
       stream: true,
-      max_tokens: 150,
-      temperature: 0.7,
+      max_tokens: greetingConfig.max_tokens,
+      temperature: greetingConfig.temperature,
       signal: abortSignal,
       apiKey,
       retries: 2,
@@ -708,9 +733,11 @@ async function streamGreetingResponse({
       extraHeaders: threadId ? { 'X-Chat-Session-Id': String(threadId) } : undefined,
     }); // 2 retries, 15s timeout for greeting
     
-    fullText = await readLlmChatResponse(response, (delta) => {
+    const llmResult = await readLlmChatResponse(response, (delta) => {
       sendEvent('chunk', { text: delta });
     });
+    fullText = llmResult.text;
+    greetingModel = llmResult.model;
   } catch (error) {
     console.error('[StreamGreeting] All retries failed:', error.message);
     fullText = 'Halo! Ada yang bisa saya bantu terkait data statistik BPS Maluku Utara?';
@@ -746,7 +773,7 @@ async function streamGreetingResponse({
     thread_id: threadId,
     role: 'assistant',
     content: assistantContent,
-    model: model || null,
+    model: greetingModel,
     created_at: now(),
   });
   
@@ -4839,15 +4866,30 @@ async function streamChatResponse({
     // ── Pipeline progress status: stage 5 of 6 ──
     sendEvent('status', { message: 'Berpikir…', stage: 'thinking' });
 
-    // Stream from proxy (tier: COMPLEX — main reasoning path). Routing via
-    // llmChat: handles retry, circuit breaker, abort signal propagation.
-    const effectiveModel = modelOverride || 'claude-sonnet-4-6';
+    // Size the answer budget from query complexity. A merge bundle, multi-source
+    // answer, year range or knowledge-only answer needs far more than the 1000
+    // tokens this lane used to be pinned at.
+    const { tier: answerTier, config: answerConfig } = routeModel({
+      query: effectiveUserQuery,
+      isGreeting: false, // greetings already returned via streamGreetingResponse
+      isMergeBundle: Boolean(detectedBundle || detectedMonthlyBundle),
+      isMultiSource: Boolean(multiSourceDisclaimer),
+      hasYearRange: Boolean(isRangeQuery),
+      candidateCount: candidates.length,
+      isEximQuery,
+      isKnowledgeMode: shouldSkipDataPreview,
+    });
+    console.log(`[StreamChat] Answer tier: ${answerTier} (max_tokens=${answerConfig.max_tokens}, temp=${answerConfig.temperature})`);
+
+    // Stream from proxy. Routing via llmChat: handles retry, circuit breaker,
+    // abort signal propagation.
+    const effectiveModel = modelOverride || answerConfig.model;
     const response = await llmChat({
       model: effectiveModel,
       messages: openAiMessages,
       stream: true,
-      max_tokens: 1000,
-      temperature: 0.7,
+      max_tokens: answerConfig.max_tokens,
+      temperature: answerConfig.temperature,
       signal: abortSignal,
       apiKey,
       retries: 2,
@@ -4857,13 +4899,17 @@ async function streamChatResponse({
 
     // ── Pipeline progress status: stage 6 of 6 — fired on first response chunk
     let _generatingStatusEmitted = false;
-    const fullText = await readLlmChatResponse(response, (content) => {
+    const llmResult = await readLlmChatResponse(response, (content) => {
       if (!_generatingStatusEmitted) {
         _generatingStatusEmitted = true;
         sendEvent('status', { message: 'Menyusun jawaban…', stage: 'generating' });
       }
       sendEvent('text', { content });
     });
+    const fullText = llmResult.text;
+    // The tier that actually answered — falls back to the requested name only
+    // when the proxy named none.
+    const servedModel = llmResult.model || effectiveModel;
 
     // Build EXIM params object if this is an EXIM query
     const eximParamsForMeta = isEximQuery ? {
@@ -4882,7 +4928,7 @@ async function streamChatResponse({
     sendEvent('done', { full_text: fullText });
 
     // Save assistant message with UI metadata (pass userMessage for WhatsApp context)
-    await saveAssistantMessage(threadId, fullText, model, intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, userMessage);
+    await saveAssistantMessage(threadId, fullText, servedModel, intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, userMessage);
 
     // Update thread timestamp
     await thread.update({
@@ -5161,6 +5207,9 @@ async function sendMessageNonStreaming({ threadId, userMessage, ownerId }) {
 
   // Generate response
   let assistantText = '';
+  // Hoisted so the save below can record the model that actually answered.
+  // Null until the proxy names one; the failure fallback below is not model output.
+  let answerModel = null;
 
   if (!apiKey) {
     assistantText = 'Saat ini fitur AI belum aktif. Saya tetap bisa bantu mengarahkan ke data yang sesuai.';
@@ -5229,15 +5278,19 @@ async function sendMessageNonStreaming({ threadId, userMessage, ownerId }) {
     ];
 
     try {
-      // Non-streaming follow-up (tier: SIMPLE — cheap model is fine).
-      // No response stream here, so no abort signal is plumbed in.
-      const effectiveModel = 'claude-sonnet-4-6';
+      // Non-streaming follow-up. No response stream here, so no abort signal
+      // is plumbed in.
+      const { config: answerConfig } = routeModel({
+        query: effectiveUserQuery,
+        candidateCount: candidates.length,
+        isKnowledgeMode: Boolean(knowledgeContext.length > 0 && !dataPreview),
+      });
       const response = await llmChat({
-        model: effectiveModel,
+        model: answerConfig.model,
         messages: openAiMessages,
         stream: false,
-        max_tokens: 1000,
-        temperature: 0.7,
+        max_tokens: answerConfig.max_tokens,
+        temperature: answerConfig.temperature,
         apiKey,
         retries: 2,
         timeoutMs: 30000,
@@ -5246,14 +5299,16 @@ async function sendMessageNonStreaming({ threadId, userMessage, ownerId }) {
 
       const data = await response.json();
       assistantText = data.choices?.[0]?.message?.content || '';
+      if (data.model) answerModel = String(data.model).slice(0, 80);
     } catch (error) {
       console.error('[NonStreaming] All retries failed:', error.message);
       assistantText = 'Maaf, terjadi gangguan saat menyusun jawaban. Coba lagi sebentar.';
+      answerModel = null;
     }
   }
 
   // Save assistant message (pass userMessage for WhatsApp context)
-  await saveAssistantMessage(threadId, assistantText, model, intentResult, candidates, dataPreview, null, null, null, false, null, userMessage);
+  await saveAssistantMessage(threadId, assistantText, answerModel, intentResult, candidates, dataPreview, null, null, null, false, null, userMessage);
 
   // Update thread
   await thread.update({

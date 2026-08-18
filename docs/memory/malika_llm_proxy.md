@@ -13,7 +13,7 @@ There are two files that look like proxy config. Only one is actually used by th
 |---|---|---|
 | `/opt/malika-llm-proxy/src/index.js` | **Live script** PM2 id 16 runs | ✅ Yes |
 | `/opt/malika-llm-proxy/.env` | **Live env** loaded via `dotenv` | ✅ Yes |
-| `/opt/openclaw/malika-llm-proxy.config.js` | Stale ecosystem file pointing to a different script (`backend/src/services/chat/malika-llm-proxy.js`) | ❌ Not the running config |
+| `/opt/openclaw/malika-llm-proxy.{config,ecosystem}.js` | Dead PM2 ecosystem files pointing at a script that does not exist (`backend/src/services/chat/malika-llm-proxy.js`). Both carry 10 Google API keys in plaintext — **pending rotation + deletion as of 2026-08-18** | ❌ Not the running config |
 
 `pm2 describe malika-llm-proxy` confirms: `script path = /opt/malika-llm-proxy/src/index.js`, `cwd = /opt/malika-llm-proxy`.
 
@@ -25,22 +25,55 @@ pm2 reload malika-llm-proxy --update-env
 The `--update-env` flag is required — without it, the new env values aren't injected. `fork_mode` makes "reload" effectively a fast restart (uptime resets).
 
 ## Key loader behavior (`src/index.js` `loadGoogleKeys`)
-1. Reads `GOOGLE_API_KEYS` (plural, comma-separated) from env. Wins if present.
-2. Falls back to parsing `~/.openclaw/agents/main/agent/auth-profiles.json` for entries with `provider: google`.
-3. If both empty → `google_keys: 0` in `/health`, fallback tier dies silently.
+`GOOGLE_API_KEYS` (plural, comma-separated) from env is the only source. Empty or
+unset → no Google pool at all, `google_keys: 0` in `/health`. That is the current
+state and it is deliberate: the Google lane is not in the tier chain.
+
+The openclaw `auth-profiles.json` fallback that used to sit here was removed
+2026-08-18 — it could resurrect a pool the env had deliberately emptied.
 
 The singular `GOOGLE_API_KEY` is *not* read by the loader — leave it alone if present, but it's not load-bearing for the pool.
 
 ## Tier chain source
-`~/.openclaw/openclaw.json` → `agents.defaults.model.{primary, fallbacks}`. Hot-reloaded via `fs.watch`. Hardcoded fallback in `index.js:26-31` if the JSON is unreadable.
+`PROXY_PRIMARY_TIER` in `/opt/malika-llm-proxy/.env` — a comma-separated list of
+`provider/model` specs. That is the whole chain; `PROXY_ALLOWED_PROVIDERS` then
+filters it (fail-open: a filter that would empty a non-empty chain is ignored).
+`HARDCODED_FALLBACK_TIER` in `index.js` applies only when `PROXY_PRIMARY_TIER` is
+unset/empty, and is a single first-party lane.
 
-Current chain (verified 2026-05-09):
-1. `claude-cli/claude-sonnet-4-6` (primary, Anthropic via openclaw CLI)
-2. `google/gemini-3-flash-preview` (uses the 10-key pool)
-3. `google-gemini-cli/gemini-3-flash-preview` (uses gemini CLI OAuth, NOT the API key pool)
-4. `google-gemini-cli/gemini-2.5-pro` (same)
+**Env-only since 2026-08-18.** The chain used to be read from
+`~/.openclaw/openclaw.json` (`agents.defaults.model.{primary, fallbacks}`) and
+hot-reloaded via `fs.watch`, which coupled MALIKA's availability to a config file
+owned by an unrelated agent framework — an edit there silently re-pointed every
+chat request. Changing the chain now means editing `.env` and running
+`pm2 reload malika-llm-proxy --update-env`.
 
-Tiers 3-4 are unaffected by the API key pool — they auth via `~/.gemini/` OAuth tokens.
+Current chain (verified 2026-08-18 via `/health`) — **DeepSeek only**:
+1. `neuralwatt/deepseek-v4-flash` (primary; cost gauge in `/health` as `neuralwatt_allowance_usd`)
+2. `neuralwatt/deepseek-v4-flash-flex` (same-family fallback)
+
+Tier 2 is not decoration. NeuralWatt returns a fast, empty-message network error
+on roughly 9% of requests (43/477 on the live key), and the pattern is random —
+not a `max_tokens` or prompt-shape threshold. A single-entry chain turns every one
+of those into a user-visible 503, so the `-flex` variant absorbs them while
+keeping the answer within DeepSeek. Both variants report their own distinct name
+in the response, so `chat_messages.model` shows which one actually served.
+
+Dropped from the chain 2026-08-18 on request ("semua pakai deepseek saja"):
+`openagentic/glm-5` (9-key pool, still wired) and `anthropic/claude-sonnet-4-6`
+(served by `handleClaudeCLI`, the `claude` CLI under OAuth subscription billing —
+*not* the Anthropic HTTP API). Both handlers remain in `index.js`; restoring them
+is an env edit, not a code change.
+
+Measured cost on this chain: **$0.001024 per chat turn** (3 real turns via the
+full pipeline, read off `neuralwatt_allowance_usd` before/after). 87% of tokens
+are input, so cost tracks prompt size — context, not answer length. A reasoning-
+capable model (`glm-5.2` on NeuralWatt, the only one in the roster that emits a
+`reasoning` field) costs ~16× more; `deepseek-v4-flash` emits none.
+
+Providers removed 2026-08-18 with the openclaw cut: `google-gemini-cli` and
+`openai-codex` (both authenticated through openclaw's `auth-profiles.json`).
+`google` (HTTP API, env keys) and `claude-cli` remain wired but are not in the chain.
 
 ## Health probe
 ```bash
@@ -90,8 +123,12 @@ The `claude` binary must run in normal (allowlisted-tools) mode to keep oat01 OA
 - Warm turns (subsequent requests, same session): **median 2.6s**
 - ~4× speedup once warm.
 
-### Backend integration TODO
-The chat backend at `/var/www/html/project-data-strategis/backend/` must propagate a stable session id (per chat session, not per request) as `X-Chat-Session-Id` on outbound requests to the proxy. **Until that's wired, every call still takes the legacy 10s path** — the worker pool exists but is never touched.
+### Backend integration — DONE
+The chat backend propagates the thread id as `X-Chat-Session-Id` on every
+outbound chat request, so the worker pool is live. See
+`streaming.service.js` (all three `llmChat` call sites), `chat.service.js`
+`callOpenAIChat`, and `autoTune/agent.service.js` (`auto-tune-<jobId>`).
+The header is forwarded through `streaming/openaiClient.js` `chat({ extraHeaders })`.
 
 ## 2026-05-09 fix
 Wired 10 keys into `/opt/malika-llm-proxy/.env` as `GOOGLE_API_KEYS=…` (comma-separated). Before: `google_keys: 0` (Anthropic was single point of failure). After: `google_keys: 10`. Backup at `/opt/malika-llm-proxy/.env.backup`.

@@ -19,8 +19,11 @@ const OPENAI = {
   GREETING_TIMEOUT_MS: 30000,  // Shorter timeout for simple greetings
   REASONING_TIMEOUT_MS: 120000, // Longer timeout for reasoning models
   RETRIES: 2,                  // Number of retry attempts
-  MODEL: process.env.OPENAI_MODEL_CHAT || 'gpt-4.1',
-  MODEL_REASONING: process.env.OPENAI_MODEL_REASONING || 'gpt-4.1',
+  // Defaults name the single Sonnet lane the proxy actually serves. The old
+  // 'gpt-4.1' defaults predate the proxy-only rule and pointed at a model no
+  // tier in the chain can answer as.
+  MODEL: process.env.OPENAI_MODEL_CHAT || 'claude-sonnet-4-6',
+  MODEL_REASONING: process.env.OPENAI_MODEL_REASONING || 'claude-sonnet-4-6',
   TEMPERATURE: {
     DEFAULT: 0.3,
     GREETING: 0.7,
@@ -68,7 +71,7 @@ const COMPACTION = {
   ENABLED: process.env.CHAT_COMPACTION_ENABLED !== 'false',  // Default: enabled
   TRIGGER_AFTER: 40,           // Trigger compaction when message count exceeds this
   SUMMARIZE_COUNT: 25,         // How many oldest messages to summarize
-  MODEL: process.env.OPENAI_MODEL_COMPACTION || 'gpt-4.1',
+  MODEL: process.env.OPENAI_MODEL_COMPACTION || 'claude-sonnet-4-6',
   TEMPERATURE: 0.2,            // Low temperature for factual summary
   MAX_TOKENS: 3000,             // Max tokens for summary response (maximized for less lossy compaction)
   TIMEOUT_MS: 45000,           // Timeout for compaction LLM call (increased for gpt-5-mini)
