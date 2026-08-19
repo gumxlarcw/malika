@@ -60,7 +60,24 @@ export default function SiteFooter({ t, onLanding = false }: { t: Copy; onLandin
             Jl. Stadion No. 220, Ternate, Maluku Utara
           </p>
           <p className="mt-3 text-[13px] leading-[21px] text-gray-400">
-            bps8200@bps.go.id · (0921) 3121190
+            {/*
+              Cloudflare's Email Address Obfuscation rewrites any address it
+              finds in the HTML on its way out, swapping this text for an
+              <a class="__cf_email__"> placeholder and injecting a decoder
+              script. React then hydrates against markup the server never sent
+              and throws #418 — on every page, because this footer is on every
+              page. `email_off` is Cloudflare's own opt-out for a region of the
+              document, so the address is delivered exactly as rendered.
+
+              dangerouslySetInnerHTML is the only way to emit an HTML comment
+              from JSX; the string is a constant with no interpolation.
+            */}
+            <span
+              dangerouslySetInnerHTML={{
+                __html: "<!--email_off-->bps8200@bps.go.id<!--/email_off-->",
+              }}
+            />
+            {" · (0921) 3121190"}
             <br />
             malika.bpsmalut.com
           </p>
