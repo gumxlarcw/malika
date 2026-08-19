@@ -25,7 +25,14 @@
 const MODEL_ID = 'Xenova/multilingual-e5-base';
 const FALLBACK_MODEL_ID = 'Xenova/multilingual-e5-small';
 const DIMENSIONS = 768;
-const MAX_INPUT_CHARS = 1500; // ~370 tokens, well under the 512-token model limit; speeds inference vs 8000-char inputs that get truncated anyway
+// Guard-rail only. It used to be the de-facto chunk size at 1500 chars, which the
+// note below it justified as "~370 tokens, well under the 512-token limit" — that
+// was measured against short documents. Real chunks average 3,508 chars and
+// tokenize to ~1,052, so the cap was silently discarding more than half the text
+// of 98.1% of chunks. Windows are now built to a token budget before they get
+// here; this only has to be wide enough not to cut one, and the widest observed
+// ratio is 5.54 chars/token (480 tokens ≈ 2,660 chars).
+const MAX_INPUT_CHARS = 3000;
 
 let _pipelinePromise = null;
 let _loadedModelId = null;
@@ -110,7 +117,26 @@ function cosineSimilarity(a, b) {
   return dot;
 }
 
+/**
+ * Token count for the embedding model, used to size windows before embedding.
+ * Deliberately the model's own tokenizer rather than a character heuristic: this
+ * corpus runs 1.51-5.54 chars per token, so no single ratio is safe.
+ */
+let _tokenizerPromise = null;
+async function countTokens(text) {
+  if (!_tokenizerPromise) {
+    _tokenizerPromise = (async () => {
+      const { AutoTokenizer } = await import('@xenova/transformers');
+      return AutoTokenizer.from_pretrained(_loadedModelId || MODEL_ID);
+    })();
+  }
+  const tokenizer = await _tokenizerPromise;
+  const encoded = tokenizer(String(text || ''));
+  return encoded.input_ids.dims[encoded.input_ids.dims.length - 1];
+}
+
 module.exports = {
+  countTokens,
   generateEmbedding,
   embedQuery,
   embedPassage,

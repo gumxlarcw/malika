@@ -948,6 +948,28 @@ async function searchForQueryBuilder(query, topN = 5) {
  * NOTE: LLM Synonym Expansion is ALWAYS called before embedding
  * @returns {Promise<{results: object[], duration_ms: number}>}
  */
+/**
+ * Collapse several windows of one document down to its best-matching window.
+ *
+ * Re-chunking embeds a knowledge_base row as several token-sized windows, so one
+ * document can return several rows sharing a source_ref_id. Downstream treats that
+ * id as the document's identity — documentJudge maps the LLM's ranked_ids through
+ * `new Map(input.map(c => [c.id, c]))` — so duplicates would collapse to whichever
+ * copy came last and the judge's ordering would land on a window it never read.
+ *
+ * The window is the unit of matching; the document remains the unit of retrieval.
+ */
+function dedupeBySourceRef(results) {
+  const list = Array.isArray(results) ? results : [];
+  const best = new Map();
+  for (const r of list) {
+    if (!r) continue;
+    const prev = best.get(r.id);
+    if (!prev || (r.similarity || 0) > (prev.similarity || 0)) best.set(r.id, r);
+  }
+  return [...best.values()].sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+}
+
 async function searchKnowledge(query, topN = 5, options = {}) {
   if (USE_UNIFIED_RETRIEVAL) {
     const startTime = Date.now();
@@ -972,26 +994,29 @@ async function searchKnowledge(query, topN = 5, options = {}) {
         parentId: r.parentChunkId || r.sourceRefId,
         isChunk: r.sourceKind === 'knowledge_chunk',
       }));
+      // One document may arrive as several windows; keep its best match only.
+      const deduped = dedupeBySourceRef(adapted);
+
       // Reuse existing reranker pipeline
-      if (!options.skipRerank && adapted.length >= 3) {
+      if (!options.skipRerank && deduped.length >= 3) {
         const { judgeDocuments } = require('./documentJudge.service');
-        const judgeResult = await judgeDocuments(query, adapted, { topN });
+        const judgeResult = await judgeDocuments(query, deduped, { topN });
         return {
           results: judgeResult.results,
           reranked: judgeResult.reranked || false,
           judged: judgeResult.judged || false,
           rerankReason: judgeResult.reasoning || null,
           duration_ms: Date.now() - startTime,
-          totalKnowledge: adapted.length,
+          totalKnowledge: deduped.length,
           unified: true,
         };
       }
       return {
-        results: adapted.slice(0, topN),
+        results: deduped.slice(0, topN),
         reranked: false,
         judged: false,
         duration_ms: Date.now() - startTime,
-        totalKnowledge: adapted.length,
+        totalKnowledge: deduped.length,
         unified: true,
       };
     } catch (err) {
@@ -1418,6 +1443,7 @@ function getCacheStats() {
 }
 
 module.exports = {
+  dedupeBySourceRef,
   cosineSimilarity,
   loadEmbeddings,
   loadKnowledgeEmbeddings,
