@@ -23,6 +23,7 @@
 const { openAiChatJson } = require('./openaiChat.service');
 const { expandAbbreviationsInline, buildAbbreviationReference, ANTI_HALLUCINATION_RULE } = require('../../shared/bpsAbbreviations');
 const requestContext = require('../chat/streaming/requestContext');
+const { parseDocPeriod, selectDocsByPeriod } = require('../chat/chatUtils');
 const logger = require('../../utils/logger').child({ service: 'DocumentJudge' });
 const crypto = require('crypto');
 
@@ -174,12 +175,41 @@ function buildRichContext(result, queryWords) {
  * Combines the old Judge's dedup/recency criteria with the Reranker's
  * period matching, geo matching, and rich context.
  */
+/**
+ * What period, if any, the question actually names.
+ *
+ * The judge already spotted a bare year, but not a month — so "garis kemiskinan
+ * Maret 2025" reached it as "tahun 2025" and the Maret 2026 release satisfied
+ * that just as well. Month parsing is delegated to parseDocPeriod, the same
+ * reader used on document titles, so a question and a title are interpreted by
+ * one set of rules.
+ *
+ * "terbaru" is deliberately not a period: it is a request for recency, which the
+ * default rules already handle.
+ */
+function detectQueryPeriod(query) {
+  const q = String(query || '');
+  const parsed = parseDocPeriod(q) || {};
+  const year = Number.isFinite(parsed.year) && parsed.year >= 2000 && parsed.year <= 2099
+    ? parsed.year
+    : null;
+  const month = Number.isFinite(parsed.month) && parsed.month >= 1 && parsed.month <= 12
+    ? parsed.month
+    : null;
+  const qm = q.match(/\b(?:triwulan|kuartal)\s+(i{1,3}v?|iv|[1-4])\b/i);
+  const quarter = qm ? qm[1].toUpperCase() : null;
+  const label = month && year ? parsed.label : null;
+  return { year, month, quarter, label, hasExplicit: Boolean(year || quarter) };
+}
+
 function buildUnifiedPrompt(query, candidates, seriesGroups) {
   const expandedQuery = expandAbbreviationsInline(query);
   const queryLower = String(query || '').toLowerCase();
   const queryWords = queryLower.split(/\s+/).filter(w =>
     (w.length >= 3) && !['yang', 'dan', 'atau', 'untuk', 'dari', 'bps', 'data'].includes(w)
   );
+
+  const askedPeriodForSeries = detectQueryPeriod(query);
 
   // Build candidate list with rich context
   const candidateList = candidates
@@ -198,17 +228,26 @@ function buildUnifiedPrompt(query, candidates, seriesGroups) {
       const years = docs.map(d => d.year || '?').sort().join(', ');
       seriesLines.push(`  "${key.slice(0, 60)}..." → ${docs.length} edisi (tahun: ${years})`);
     }
+    // When the question names a period, "keep the newest edition" is the rule that
+    // throws the answer away: the Maret 2025 release was dropped in favour of Maret
+    // 2026 for a question that said Maret 2025.
+    const seriesRule = askedPeriodForSeries.hasExplicit
+      ? `→ Untuk setiap seri, pilih edisi yang PERIODENYA COCOK dengan permintaan user, bukan yang paling baru.`
+      : `→ Untuk setiap seri, pilih HANYA 1-2 edisi terbaru.`;
     seriesInfo = `\nSERI PUBLIKASI TERDETEKSI:
 ${seriesLines.join('\n')}
-→ Untuk setiap seri, pilih HANYA 1-2 edisi terbaru.`;
+${seriesRule}`;
   }
 
   // ── Period detection ──
   const wantsLatest = /\b(terbaru|terakhir|terkini|latest|newest|recent)\b/.test(queryLower);
-  const explicitYearMatch = queryLower.match(/\b(20[12]\d)\b/);
-  const explicitYear = explicitYearMatch ? explicitYearMatch[1] : null;
-  const explicitQuarterMatch = queryLower.match(/triwulan\s+(i{1,3}v?|iv)/i);
-  const explicitQuarter = explicitQuarterMatch ? explicitQuarterMatch[1].toUpperCase() : null;
+  const askedPeriod = detectQueryPeriod(query);
+  const explicitYear = askedPeriod.year ? String(askedPeriod.year) : null;
+  const explicitQuarter = askedPeriod.quarter;
+  // A named month is the case the judge used to be blind to.
+  const explicitPeriodLabel = askedPeriod.label
+    || (explicitQuarter && explicitYear ? `Triwulan ${explicitQuarter} ${explicitYear}` : null)
+    || explicitYear;
 
   const statisticalTopics = [
     'kemiskinan', 'miskin', 'inflasi', 'ihk', 'pengangguran', 'tpt',
@@ -222,9 +261,15 @@ ${seriesLines.join('\n')}
     periodInstruction = `\nPERIODE SPESIFIK: User mencari "Triwulan ${explicitQuarter} ${explicitYear}".
 - WAJIB prioritaskan hasil Triwulan ${explicitQuarter} ${explicitYear}
 - Jangan pilih tahun/triwulan lain kecuali tidak ada yang cocok`;
+  } else if (askedPeriod.month && explicitYear) {
+    periodInstruction = `\nPERIODE SPESIFIK: User mencari "${explicitPeriodLabel}".
+- WAJIB prioritaskan rilis periode "${explicitPeriodLabel}"
+- JANGAN menggantinya dengan rilis yang lebih baru dari seri yang sama
+- Untuk yearbook "Dalam Angka YYYY", data sebenarnya adalah tahun YYYY-1`;
   } else if (explicitYear) {
     periodInstruction = `\nTAHUN SPESIFIK: User mencari tahun "${explicitYear}".
 - WAJIB prioritaskan hasil yang mengandung "${explicitYear}"
+- JANGAN menggantinya dengan rilis yang lebih baru dari seri yang sama
 - Untuk yearbook "Dalam Angka YYYY", data sebenarnya adalah tahun YYYY-1`;
   } else if (wantsLatest || isStatisticalTopic) {
     periodInstruction = `\nDATA TERBARU: User mencari data terbaru${isStatisticalTopic ? ' (topik statistik → otomatis terbaru)' : ''}.
@@ -253,6 +298,21 @@ ${seriesLines.join('\n')}
     }
   }
 
+  // Recency is the right default, but only until the user names a period. Ranking
+  // "always newest" above "match the requested period" is what made a question
+  // about Maret 2025 return the Maret 2026 release.
+  const recencyRule = askedPeriod.hasExplicit
+    ? `2. KESESUAIAN PERIODE — user menyebut periode tertentu. Pilih dokumen yang PERIODENYA SESUAI permintaan, meskipun ada edisi yang lebih baru.
+   - Query "Maret 2025" → pilih rilis Maret 2025, BUKAN Maret 2026
+   - Edisi lebih baru hanya dipakai jika periode yang diminta benar-benar tidak ada`
+    : `2. KEKINIAN — untuk topik yang sama, SELALU pilih yang terbaru.
+   - BRS Kemiskinan Sep 2025 > BRS Kemiskinan 2020
+   - Tahun lebih besar = lebih baru. Jika tahun sama, bulan lebih akhir = lebih baru.`;
+
+  const seriesDedupRule = askedPeriod.hasExplicit
+    ? `3. DEDUPLIKASI SERI — jika ada beberapa edisi publikasi yang sama, pilih edisi yang PERIODENYA COCOK dengan permintaan user.`
+    : `3. DEDUPLIKASI SERI — jika ada beberapa edisi publikasi yang sama (misal "Dalam Angka 2025", "Dalam Angka 2024", dst), pilih HANYA 1-2 edisi terbaru.`;
+
   return `Anda adalah Document Judge + Reranker untuk sistem RAG statistik BPS Maluku Utara.
 
 SINGKATAN RESMI BPS:
@@ -264,10 +324,8 @@ TUGAS: Dari ${candidates.length} dokumen kandidat, PILIH dan URUTKAN ${MAX_SELEC
 ATURAN SELEKSI & RANKING (urutan prioritas):
 1. RELEVANSI TOPIK — dokumen HARUS sesuai topik query. Buang yang tidak relevan meski similarity tinggi.
    Contoh: "restoran" → cari yang di Topik/Ringkasan ada "restoran/rumah makan"
-2. KEKINIAN — untuk topik yang sama, SELALU pilih yang terbaru.
-   - BRS Kemiskinan Sep 2025 > BRS Kemiskinan 2020
-   - Tahun lebih besar = lebih baru. Jika tahun sama, bulan lebih akhir = lebih baru.
-3. DEDUPLIKASI SERI — jika ada beberapa edisi publikasi yang sama (misal "Dalam Angka 2025", "Dalam Angka 2024", dst), pilih HANYA 1-2 edisi terbaru.
+${recencyRule}
+${seriesDedupRule}
 4. PERIODE — prioritaskan dokumen yang sesuai periode yang diminta user.
 5. WILAYAH — prioritaskan dokumen yang sesuai wilayah yang diminta user.
 6. SPESIFISITAS — untuk query spesifik, prefer publikasi spesifik > buku umum.
@@ -294,6 +352,71 @@ Jawab dalam format JSON:
   "reasoning": "<alasan 1-2 kalimat>",
   "dropped_series": ["<nama seri yang di-dedup jika ada>"]
 }`;
+}
+
+/**
+ * Whether a document's own period can answer a question about `asked`.
+ *
+ * Mirrors selectDocsByPeriod: an exact year (with the month too when the question
+ * names one) or the year after, since BPS titles annual compendia by publication
+ * year while they report the year before.
+ */
+function docMatchesQueryPeriod(title, asked) {
+  if (!asked || !asked.year) return false;
+  const p = parseDocPeriod(title);
+  if (!p || !p.year) return false;
+  if (p.year === asked.year) return !(asked.month && p.month) || p.month === asked.month;
+  // The year+1 tolerance is about annual compendia titled by publication year.
+  // A title naming a month has already said exactly which period it covers, so
+  // "Maret 2026" is not a source for Maret 2025 — and treating it as one let those
+  // releases consume the slots reserved for the period actually requested.
+  return p.year === asked.year + 1 && !p.month;
+}
+
+/**
+ * Choose which candidates the judge is allowed to see.
+ *
+ * Only MAX_CANDIDATES_INPUT of them fit, and the cut is by similarity. That cut
+ * already reserved slots for Publikasi, because otherwise a top-20 by score came
+ * out all BRS and the judge never saw a publication at all. A named period has
+ * exactly the same problem and now gets the same remedy: the chunk holding the
+ * Maret 2025 commodity table sat at rank 22 by cosine and was discarded before
+ * the judge could weigh it — no ranking rule can rescue an answer that was never
+ * shown. With no period named the behaviour is unchanged.
+ */
+function selectJudgeInput(query, candidates) {
+  const MIN_PUB_SLOTS = 4;   // reserve slots for Publikasi
+  const MIN_PERIOD_SLOTS = 4; // reserve slots for the period actually asked for
+
+  const asked = detectQueryPeriod(query);
+  const pubDocs = candidates.filter(c => c.category === 'Publikasi');
+  const topPub = pubDocs.slice(0, MIN_PUB_SLOTS);
+  const reserved = new Map(topPub.map(d => [d.id, d]));
+
+  if (asked.hasExplicit) {
+    // Exact period first, compendia only with slots left over: otherwise a run of
+    // near-miss editions fills the reservation before the requested one is reached.
+    const exact = (d) => {
+      const p = parseDocPeriod(d.title || d.name);
+      return p && p.year === asked.year && (!(asked.month && p.month) || p.month === asked.month);
+    };
+    const cap = MIN_PUB_SLOTS + MIN_PERIOD_SLOTS;
+    for (const pass of [exact, (d) => docMatchesQueryPeriod(d.title || d.name, asked)]) {
+      for (const doc of candidates) {
+        if (reserved.size >= cap) break;
+        if (reserved.has(doc.id)) continue;
+        if (pass(doc)) reserved.set(doc.id, doc);
+      }
+    }
+  }
+
+  const fill = candidates
+    .filter(d => !reserved.has(d.id))
+    .slice(0, Math.max(0, MAX_CANDIDATES_INPUT - reserved.size));
+
+  return [...fill, ...reserved.values()]
+    .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+    .slice(0, MAX_CANDIDATES_INPUT);
 }
 
 /**
@@ -330,14 +453,20 @@ async function judgeDocuments(query, candidates, options = {}) {
     const yearRe = /\b(19|20)\d{2}\b/g;
     const seenSeries = new Map();
     const dedupedResults = [];
-    for (const doc of candidates) {
+    // "Newest wins" is right only until the user names a period; otherwise this
+    // silently drops the very edition that was asked for.
+    const askedBypass = detectQueryPeriod(query);
+    const orderedForBypass = askedBypass.hasExplicit
+      ? selectDocsByPeriod(candidates, { year: askedBypass.year, month: askedBypass.month, limit: candidates.length })
+      : candidates;
+    for (const doc of orderedForBypass) {
       const title = (doc.title || doc.name || '').trim();
       const years = title.match(yearRe);
       const latestYear = years?.length ? Math.max(...years.map(Number)) : 0;
       const seriesKey = title.replace(yearRe, '').replace(/\s+/g, ' ').trim().toLowerCase();
       if (seenSeries.has(seriesKey)) {
         const prev = seenSeries.get(seriesKey);
-        if (latestYear > prev.year) {
+        if (!askedBypass.hasExplicit && latestYear > prev.year) {
           // Replace older edition
           const idx = dedupedResults.indexOf(prev.doc);
           if (idx !== -1) dedupedResults[idx] = doc;
@@ -367,19 +496,7 @@ async function judgeDocuments(query, candidates, options = {}) {
     };
   }
 
-  // Truncate input to MAX_CANDIDATES_INPUT with category diversity guarantee.
-  // Without this, top 20 by combined score can be all BRS — Publikasi never seen by Judge.
-  const MIN_PUB_SLOTS = 4; // Reserve slots for Publikasi so Judge can evaluate them
-  const brsDocs = candidates.filter(c => c.category === 'BRS' || !c.category);
-  const pubDocs = candidates.filter(c => c.category === 'Publikasi');
-  const otherDocs = candidates.filter(c => c.category && c.category !== 'BRS' && c.category !== 'Publikasi');
-  const topPub = pubDocs.slice(0, MIN_PUB_SLOTS);
-  const pubIds = new Set(topPub.map(d => d.id));
-  // Fill remaining slots with all candidates (minus reserved pubs) in score order
-  const remaining = candidates.filter(d => !pubIds.has(d.id)).slice(0, MAX_CANDIDATES_INPUT - topPub.length);
-  const input = [...remaining, ...topPub]
-    .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
-    .slice(0, MAX_CANDIDATES_INPUT);
+  const input = selectJudgeInput(query, candidates);
 
   // ── Cache check ──
   const cacheKey = _buildCacheKey(query, input);
@@ -587,6 +704,10 @@ function parseJudgeResponse(responseText) {
 
 module.exports = {
   judgeDocuments,
+  detectQueryPeriod,
+  buildUnifiedPrompt,
+  selectJudgeInput,
+  docMatchesQueryPeriod,
   extractSeriesKey,
   detectSeriesGroups,
   buildRichContext,

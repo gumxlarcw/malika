@@ -737,7 +737,9 @@ function selectDocsByPeriod(docs, { year = null, month = null, limit = 3, band =
       if (wantedMonth && p.month) return p.month === wantedMonth ? 3 : 1;
       return 2;
     }
-    if (p.year === wantedYear + 1) return 2;                   // compendium reporting the asked year
+    // Annual compendia only: a title naming a month has already stated exactly
+    // which period it covers, so "Maret 2026" is not a source for Maret 2025.
+    if (p.year === wantedYear + 1 && !p.month) return 2;
     return 1;                                                  // different period: not promoted, not punished
   };
 

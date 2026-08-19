@@ -163,3 +163,17 @@ describe('the compendium tolerance is limited to undated-month publications', ()
     expect(out[0].title).toMatch(/Dalam Angka 2017/);
   });
 });
+
+describe('the compendium tolerance does not apply to dated releases', () => {
+  test('a next-year dated release is not promoted over an undated relevant one', () => {
+    // The earlier test passed only because an exact match outscored it. On its own
+    // "Maret 2026" must not be treated as a source for Maret 2025 at all — the
+    // year+1 rule is about annual compendia titled by publication year.
+    const docs = [
+      { title: 'Pedoman Penghitungan Garis Kemiskinan', similarity: 0.880 },
+      { title: 'Persentase penduduk miskin pada Maret 2026 sebesar 5,79 persen', similarity: 0.878 },
+    ];
+    const out = selectDocsByPeriod(docs, { year: 2025, month: 3, limit: 2 });
+    expect(out[0].title).toMatch(/Pedoman/);
+  });
+});

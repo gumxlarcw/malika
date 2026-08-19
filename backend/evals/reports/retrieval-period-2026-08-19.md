@@ -60,7 +60,50 @@ for its period — only pulled up.
 `berapa persentase penduduk miskin Maluku Utara Maret 2025` → **5,81 persen**.
 Before this change the same question was answered from the **Maret 2021** release.
 
-## What this does not fix, and the new binding constraint
+## Follow-up: the judge was made period-aware (same day)
+
+The gap below is now closed. `komoditas … garis kemiskinan perkotaan Maret 2025`
+answers **beras 25,10 persen**, rokok kretek filter 12,81, tongkol/tuna/cakalang
+7,63 — the Maret 2025 figures — citing *Profil Kemiskinan Maret 2025*. It
+previously answered 19,85 from the Maret 2026 release. In the judge's own output
+the chunk holding "Beras 25,10" moved from **absent** to **rank 1**.
+
+Four separate places had to agree that a named period outranks recency:
+
+1. **Ranking rules.** Rule 2 read *"KEKINIAN — SELALU pilih yang terbaru"* and rule
+   3 deduped series to the newest edition, both above rule 4 *"prioritaskan …
+   sesuai periode"*. When the question names a period those two rules are now
+   replaced rather than merely outranked; with no period named the recency wording
+   is kept verbatim, because newest is the right default then.
+2. **Month blindness.** The judge detected a bare year and a quarter but never a
+   month, so "Maret 2025" reached it as "tahun 2025" — which the Maret 2026 release
+   satisfies. Month parsing is delegated to `parseDocPeriod`, the same reader used
+   on titles.
+3. **Admission.** Only the top 20 by cosine are shown to the judge, and the target
+   sat at rank 22 — no ranking rule can rescue an answer that is never displayed.
+   Slots are now reserved for the requested period, exactly as slots were already
+   reserved for Publikasi to stop a top-20 coming out all BRS. The truncation moved
+   into `selectJudgeInput`, which is a pure function and therefore testable; two
+   dead locals (`brsDocs`, `otherDocs`) went with it.
+4. **The ≥0.92 bypass.** It skips the judge entirely and inline-dedupes each series
+   to the newest edition — a third silent "newest wins".
+
+**A correction found by live testing, not by the eval.** The `year + 1` compendium
+tolerance was applied to any next-year document, so the *Maret 2026* chunks matched
+"2026 = 2025 + 1" and consumed the slots reserved for Maret 2025 before rank 22 was
+reached. The tolerance now requires the title to carry **no month**: *Dalam Angka
+2026* may report 2025, but *Maret 2026* has already said exactly which period it
+covers. The same ungated rule was present in `selectDocsByPeriod` and is fixed
+there too — a unit test had passed only because an exact match happened to outscore
+it. Reserved slots are also filled exact-period-first, compendia second.
+
+Verified unchanged: `penduduk miskin Maret 2025` → 5,81 persen; and with **no**
+period named, `komoditas … garis kemiskinan` still answers from the latest release
+(Maret 2026), so the recency default survives. Retrieval eval unchanged at
+recall@10 66.7% / MRR 0.398 — it does not exercise the judge, which is the point of
+the caveat below.
+
+## What this did not fix, and the constraint that remained (now addressed above)
 
 `komoditas … garis kemiskinan perkotaan Maret 2025` still answers from *Profil
 Kemiskinan Maret 2026*. The cause is downstream of retrieval and downstream of this
