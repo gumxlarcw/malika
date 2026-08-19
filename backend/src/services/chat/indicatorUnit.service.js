@@ -24,11 +24,66 @@
 /** Metadata is static; a process-lifetime cache avoids a query per chat turn. */
 const cache = new Map();
 
-/** Default loader — reads indicator_meta. Replaceable in tests. */
+/**
+ * Strip markup and tidy a raw unit label. BPS stores some units as HTML
+ * ("km<sup>2</sup>"), which would reach the model verbatim.
+ *
+ * @param {string|null} raw
+ * @returns {string|null}
+ */
+function cleanUnitLabel(raw) {
+  if (!raw) return null;
+  const text = String(raw)
+    .replace(/<sup>\s*2\s*<\/sup>/gi, '\u00b2')
+    .replace(/<sup>\s*3\s*<\/sup>/gi, '\u00b3')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text || null;
+}
+
+/**
+ * Derive a table-level unit from its per-column units — but only when every
+ * column carries one and they all agree.
+ *
+ * Anything looser is unsafe. Source 187 lists five measures and only
+ * "Kepadatan Penduduk per km persegi" records a unit; adopting it would tell
+ * the model that population counts are in square kilometres.
+ *
+ * @param {Array<{unit_id: string|null}>} rows
+ * @returns {string|null}
+ */
+function pickStrictMetricUnit(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const units = rows.map((r) => cleanUnitLabel(r && r.unit_id));
+  if (units.some((u) => !u)) return null;
+  return units.every((u) => u === units[0]) ? units[0] : null;
+}
+
+/**
+ * Default loader: indicator-level unit first, then the strict per-column
+ * fallback.
+ *
+ * The fallback exists because interop sources — 149 of them, none with an
+ * indicator-level unit — deliberately record units per column instead. Reading
+ * them here rather than writing them into indicator_meta is not a stylistic
+ * choice: persist.js upserts `unit_id = VALUES(unit_id)` and the extractor
+ * hardcodes null for interop, so anything written there is erased by the next
+ * daily sync.
+ */
 async function defaultLoader(sourceId) {
   const IndicatorMeta = require('../../models/IndicatorMeta.model');
   const row = await IndicatorMeta.findByPk(sourceId, { attributes: ['unit_id'] });
-  return row ? row.unit_id : null;
+  const direct = cleanUnitLabel(row ? row.unit_id : null);
+  if (direct) return direct;
+
+  const sequelize = require('../../config/db');
+  const { QueryTypes } = require('sequelize');
+  const metrics = await sequelize.query(
+    'SELECT unit_id FROM indicator_metric_meta WHERE source_id = :id',
+    { replacements: { id: sourceId }, type: QueryTypes.SELECT },
+  );
+  return pickStrictMetricUnit(metrics);
 }
 
 /**
@@ -85,6 +140,8 @@ function _clearCache() {
 
 module.exports = {
   resolveIndicatorUnit,
+  pickStrictMetricUnit,
+  cleanUnitLabel,
   formatUnitContext,
   _clearCache,
 };

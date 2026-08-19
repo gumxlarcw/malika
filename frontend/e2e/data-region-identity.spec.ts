@@ -18,10 +18,17 @@ async function openDataPage(page: Page) {
   if (await skip.isVisible().catch(() => false)) await skip.click();
 }
 
-/** Column index of the first header matching `re`, or -1. */
+/**
+ * Column index of the first header matching `re`, or -1.
+ *
+ * Headers carry decoration a reader is meant to see but a matcher is not — the
+ * sort control appends a glyph, so the period column reads "Tahun\u25BC". An
+ * anchored pattern stops matching and any `test.skip` guarding on it turns the
+ * test into a silent pass, so the glyphs come off before matching.
+ */
 async function headerIndex(page: Page, re: RegExp) {
   const heads = await page.locator("table thead th").allTextContents();
-  return heads.findIndex((h) => re.test(h.trim()));
+  return heads.findIndex((h) => re.test(h.replace(/[^\p{L}\p{N}\s/]/gu, "").trim()));
 }
 
 test.describe("/data row identity", () => {

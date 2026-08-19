@@ -10,6 +10,8 @@
 const {
   resolveIndicatorUnit,
   formatUnitContext,
+  pickStrictMetricUnit,
+  cleanUnitLabel,
   _clearCache,
 } = require('../services/chat/indicatorUnit.service');
 
@@ -64,5 +66,51 @@ describe('formatUnitContext', () => {
     const out = formatUnitContext(null);
     expect(out).toMatch(/JANGAN mengarang satuan/i);
     expect(out).not.toMatch(/Satuan nilai: /);
+  });
+});
+
+describe('pickStrictMetricUnit — per-column fallback for interop tables', () => {
+  it('adopts the unit when every column carries it and they agree', () => {
+    expect(pickStrictMetricUnit([{ unit_id: 'Rp' }, { unit_id: 'Rp' }])).toBe('Rp');
+  });
+
+  it('refuses when any column has no unit', () => {
+    // Source 187: only "Kepadatan Penduduk per km persegi" records a unit.
+    // Adopting it would say population counts are in square kilometres.
+    const rows = [
+      { unit_id: null },                      // Jumlah Penduduk
+      { unit_id: 'km<sup>2</sup>' },          // Kepadatan Penduduk
+      { unit_id: null },                      // Laju Pertumbuhan
+      { unit_id: null },                      // Persentase Penduduk
+      { unit_id: null },                      // Rasio Jenis Kelamin
+    ];
+    expect(pickStrictMetricUnit(rows)).toBeNull();
+  });
+
+  it('refuses when columns disagree', () => {
+    // Ekspor/impor carry both KG and USD; collapsing them would invent a fact.
+    expect(pickStrictMetricUnit([{ unit_id: 'KG' }, { unit_id: 'USD' }])).toBeNull();
+  });
+
+  it.each([[[]], [null], [undefined]])('returns null for %p', (rows) => {
+    expect(pickStrictMetricUnit(rows)).toBeNull();
+  });
+
+  it('treats blank units as missing', () => {
+    expect(pickStrictMetricUnit([{ unit_id: 'Rp' }, { unit_id: '  ' }])).toBeNull();
+  });
+});
+
+describe('cleanUnitLabel', () => {
+  it('renders HTML superscripts as characters', () => {
+    expect(cleanUnitLabel('km<sup>2</sup>')).toBe('km\u00b2');
+  });
+
+  it('strips other markup and collapses whitespace', () => {
+    expect(cleanUnitLabel('<b>Ribu  Jiwa</b>')).toBe('Ribu Jiwa');
+  });
+
+  it.each([[null], [''], ['   '], ['<b></b>']])('returns null for %p', (raw) => {
+    expect(cleanUnitLabel(raw)).toBeNull();
   });
 });
