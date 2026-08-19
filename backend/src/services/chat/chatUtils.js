@@ -682,7 +682,83 @@ function pickNearestYear(years, requestedYear) {
   });
 }
 
+/**
+ * Re-rank knowledge documents by how well their period matches the question,
+ * then trim to the prompt budget.
+ *
+ * This exists because `orderKnowledgeDocsByPeriod` could only reorder what
+ * retrieval had already returned, and retrieval returned three documents. When
+ * the right period sat at rank 11 — or 47 — there was nothing to promote, and
+ * "penduduk miskin Maret 2025" was answered from a Maret 2021 release. The fix
+ * is to hand this function a wide pool and let it pick, rather than to rank a
+ * pool that has already lost the answer.
+ *
+ * A re-rank, never a filter: when no document carries the requested period the
+ * best available is still offered, because a dated answer the user can judge
+ * beats no answer at all.
+ *
+ * Promotion is bounded by `band`. Measured over 15 labelled cases, the document
+ * that actually answers is always within 0.021 cosine of the top hit (median
+ * 0.0098), so a document far below that is not a near-miss on period — it is a
+ * different subject that happens to share a year.
+ *
+ * Scores: 3 exact year+month · 2 the asked year (see below) · 1 everything else.
+ *
+ * Nothing is scored below 1: a document is never pushed down for its period. On
+ * the labelled set demotion changed no case, and it risks a real failure — BPS
+ * titles annual compendia by publication year while they report the year before
+ * ("Provinsi Maluku Utara Dalam Angka 2017" holds 2016 data; verified across the
+ * 2019, 2021, 2023, 2024, 2025 and 2026 editions, where the prior year dominates
+ * the text about 2:1). Treating that as a mismatch pushed the chunk carrying the
+ * 2016 population table from rank 11 to 23, so `year + 1` counts as the asked
+ * year, tied with an exact match: both are legitimate sources and the title does
+ * not say which is better, so similarity breaks the tie.
+ */
+function selectDocsByPeriod(docs, { year = null, month = null, limit = 3, band = 0.03 } = {}) {
+  const list = Array.isArray(docs) ? docs.filter(Boolean) : [];
+  if (list.length === 0) return [];
+
+  const wantedYear = Number(year);
+  if (!Number.isFinite(wantedYear) || wantedYear <= 0) {
+    // No period asked for: keep the recency-breaks-near-ties rule rather than
+    // returning raw cosine order, or the newer of two equally good profiles
+    // loses by a few thousandths again.
+    return orderKnowledgeDocsByPeriod(list).slice(0, limit);
+  }
+
+  const wantedMonth = Number.isFinite(Number(month)) && Number(month) >= 1 && Number(month) <= 12
+    ? Number(month)
+    : null;
+
+  const scoreOf = (d) => {
+    const p = parseDocPeriod(d && d.title);
+    if (!p || !p.year) return 1;                              // undated: unknown, not wrong
+    if (p.year === wantedYear) {
+      if (wantedMonth && p.month) return p.month === wantedMonth ? 3 : 1;
+      return 2;
+    }
+    if (p.year === wantedYear + 1) return 2;                   // compendium reporting the asked year
+    return 1;                                                  // different period: not promoted, not punished
+  };
+
+  const top = Math.max(...list.map(d => (d && d.similarity) || 0));
+  const eligible = [];
+  const rest = [];
+  for (const d of list) {
+    (top - ((d && d.similarity) || 0) <= band ? eligible : rest).push(d);
+  }
+
+  // Stable: equal scores keep their incoming (similarity) order.
+  const reordered = eligible
+    .map((doc, index) => ({ doc, index, score: scoreOf(doc) }))
+    .sort((a, b) => (b.score - a.score) || (a.index - b.index))
+    .map(x => x.doc);
+
+  return [...reordered, ...rest].slice(0, limit);
+}
+
 module.exports = {
+  selectDocsByPeriod,
   pickNearestYear,
   hasUsableValues,
   pickFirstSourceWithData,

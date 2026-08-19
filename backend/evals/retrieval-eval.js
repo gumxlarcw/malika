@@ -28,6 +28,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const fs = require('fs');
 const sequelize = require('../src/config/db');
 const { searchRetrieval } = require('../src/services/ai/retrieval.service');
+const { parseDocPeriod, parseQuarterFromText, selectDocsByPeriod } = require('../src/services/chat/chatUtils');
 
 const FIXTURE = path.join(__dirname, 'fixtures', 'retrieval-deepdoc-cases.json');
 
@@ -38,6 +39,24 @@ const val = (f, d) => { const i = args.indexOf(f); return i === -1 || i + 1 >= a
 const TOP_N = parseInt(val('--topn', '10'), 10);
 const ONLY = val('--case', null);
 const JSON_OUT = val('--json', null);
+// --period: fetch a wide pool, re-rank by period, then trim to TOP_N. This is the
+// lane the chat path will use; without it the run measures raw vector order.
+const PERIOD = has('--period');
+const POOL = parseInt(val('--pool', '50'), 10);
+
+// The chat path takes year/month from query_builder. Here they are read from the
+// query text with the same parser used on document titles, so the eval does not
+// depend on the LLM intent call being available.
+function queryPeriod(q) {
+  const p = parseDocPeriod(q) || {};
+  const year = p.year || null;
+  let month = p.month && p.month >= 1 ? p.month : null;
+  if (!month) {
+    const quarter = parseQuarterFromText ? parseQuarterFromText(q) : null;
+    if (quarter && quarter.monthStart) month = null; // a quarter spans months; year alone is the safe key
+  }
+  return { year, month };
+}
 
 // PDF-extracted text carries erratic spacing; compare on collapsed whitespace.
 const norm = (s) => String(s || '').replace(/\s+/g, ' ').toLowerCase();
@@ -89,9 +108,19 @@ async function validate(cases) {
 async function run(cases) {
   const results = [];
   for (const c of cases) {
-    const { results: hits } = await searchRetrieval(c.query, { topN: TOP_N });
+    const fetchN = PERIOD ? POOL : TOP_N;
+    const { results: raw } = await searchRetrieval(c.query, { topN: fetchN });
+    let hits = raw;
+    if (PERIOD) {
+      const { year, month } = queryPeriod(c.query);
+      hits = selectDocsByPeriod(raw, { year, month, limit: TOP_N });
+    }
     const rank = hits.findIndex(h => satisfies(h.content, c.must_match)) + 1; // 0 = miss
-    const sims = hits.map(h => h.similarity);
+    // Spread is always taken from the RAW vector order, never the re-ranked list:
+    // it measures how well the lane separates candidates, and a re-rank that lifts
+    // a lower-similarity document would otherwise report a negative "spread" and
+    // look like improved discrimination when nothing about the lane changed.
+    const sims = raw.slice(0, TOP_N).map(h => h.similarity);
     results.push({
       id: c.id,
       difficulty: c.difficulty,
@@ -157,6 +186,7 @@ function report(results) {
     process.exit(bad === 0 ? 0 : 1);
   }
 
+  console.log(PERIOD ? `mode: period re-rank (pool ${POOL} → top ${TOP_N})` : `mode: vector only (top ${TOP_N})`);
   const results = await run(cases);
   report(results);
   if (JSON_OUT) {
