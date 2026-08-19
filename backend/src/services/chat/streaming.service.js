@@ -17,6 +17,8 @@ const { QueryTypes, Op } = require('sequelize');
 // prompt injection). Hard require on purpose — a guard that silently fails to
 // load is how this protection went missing before; crash instead of running
 // unguarded.
+const { resolveIndicatorUnit, formatUnitContext } = require('./indicatorUnit.service');
+
 const {
   classifyScopeViolation,
   classifyConfidentialRequest,
@@ -3608,7 +3610,7 @@ function isKnowledgeTypeQuery(query, knowledgeSimilarity = 0) {
 /**
  * Build context messages for OpenAI based on intent and data
  */
-function buildContextMessages({ intentResult, candidates, dataPreview, historyMessages, periodFallback, knowledgeContext, isServiceQueryWithoutKnowledge, availableYearsInfo }) {
+function buildContextMessages({ intentResult, candidates, dataPreview, historyMessages, periodFallback, knowledgeContext, isServiceQueryWithoutKnowledge, availableYearsInfo, previewUnit = null }) {
   const contextMessages = [];
 
   // If this is a service/procedural query but NO knowledge context is available,
@@ -3721,6 +3723,7 @@ Contoh respons yang BENAR:
 Judul: ${dataPreview.title}
 Kolom: ${dataPreview.columns.join(' | ')}
 Total baris: ${dataPreview.total_rows}
+${formatUnitContext(previewUnit)}
 ${dataPreview.geoUnavailable
       ? `PENTING — CAKUPAN WILAYAH: tabel ini TIDAK memuat rincian untuk ${dataPreview.geoUnavailable}. Angka di bawah adalah cakupan tabel apa adanya (lihat Judul), BUKAN angka ${dataPreview.geoUnavailable}. Katakan itu terus terang, dan JANGAN menjumlahkan baris untuk mengarang angka wilayah tersebut.`
       : dataPreview.geo ? `Filter wilayah: ${dataPreview.geo}` : ''}
@@ -5162,6 +5165,14 @@ async function streamChatResponse({
       console.warn('[StreamChat] Failed to get prompt fixes:', e.message);
     }
 
+    // The value column is usually just "Nilai", so without this the model infers
+    // the unit from the number's shape — and reads a count like 10.53 (thousands
+    // of people) as a percentage. Unknown stays unknown: a guessed unit is worse
+    // than none.
+    const previewUnit = dataPreview
+      ? await resolveIndicatorUnit(selectedSourceId || intentResult?.datasource?.source_id)
+      : null;
+
     const openAiMessages = [
       { role: 'system', content: systemPrompt({
         hasDataPreview: Boolean(dataPreview),
@@ -5180,6 +5191,7 @@ async function streamChatResponse({
         knowledgeContext,
         isServiceQueryWithoutKnowledge,
         availableYearsInfo,
+        previewUnit,
       }),
       // The person's own words, not effectiveUserQuery. That one is a retrieval
       // artifact — context-merged into keyword strings like "Sensus Penduduk
