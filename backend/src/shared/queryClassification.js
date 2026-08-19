@@ -253,7 +253,11 @@ const INDIVIDUAL_DATA_REQUEST_PATTERNS = [
 
 const RESPONSE_DISCLOSURE_PATTERNS = [
   /\bnama\s+responden\s*:/i,
-  /\bberikut\s+(?:daftar|nama)\s+(?:individu|orang|responden)/i,
+  // "orang" alone is dropped: "berikut daftar orang yang bekerja menurut
+  // lapangan usaha" is an ordinary aggregate sentence. The optional "nama"
+  // in the middle is what the real leak looks like — "berikut daftar nama
+  // responden" — which the stricter adjacency missed entirely.
+  /\bberikut\s+(?:daftar|nama)(?:\s+nama)?\s+(?:individu|responden)\b/i,
   /\bdata\s+(?:per\s+)?individu\s*:/i,
   /\bidentitas\s+(?:responden|penduduk)\s*:/i,
 ];

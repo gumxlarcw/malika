@@ -105,7 +105,7 @@ try {
 // shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
-const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine } = require('./chatUtils');
+const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine, createDisclosureFilter, DISCLOSURE_NOTICE } = require('./chatUtils');
 // The model is a single Sonnet lane; routeModel only sizes the answer budget
 // (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
 // been orphaned since the single-lane refactor, leaving every answer at 1000
@@ -5234,12 +5234,17 @@ async function streamChatResponse({
 
     // ── Pipeline progress status: stage 6 of 6 — fired on first response chunk
     let _generatingStatusEmitted = false;
+    // Backstop against the model formatting an individual-level disclosure. The
+    // request-side Pasal 21 gate is the primary control; this catches the
+    // paraphrase that slips it, and outright fabrication.
+    const disclosureFilter = createDisclosureFilter();
     const llmResult = await readLlmChatResponse(response, (content) => {
       if (!_generatingStatusEmitted) {
         _generatingStatusEmitted = true;
         sendEvent('status', { message: 'Menyusun jawaban…', stage: 'generating' });
       }
-      sendEvent('text', { content });
+      const forwarded = disclosureFilter.push(content);
+      if (forwarded) sendEvent('text', { content: forwarded });
     }, (reasoningChunk) => {
       // Reasoning lands before the first answer token, so this is also what
       // fills the otherwise silent gap while the model thinks. Held back a line
@@ -5249,7 +5254,14 @@ async function streamChatResponse({
       flushReasoningLines();
     });
     flushReasoningLines(true);
-    const fullText = llmResult.text;
+    // Take the answer from the filter, not the reader: the reader accumulates
+    // every delta including the suppressed ones, so persisting its copy would
+    // put the withheld text back on screen at replay.
+    if (disclosureFilter.tripped()) {
+      console.warn('[StreamChat] Disclosure filter tripped — answer truncated');
+      sendEvent('text', { content: DISCLOSURE_NOTICE });
+    }
+    const fullText = disclosureFilter.text();
     // Persist the same text the reader saw — filtering the stream but storing the
     // raw trace would put the leaked lines straight back on screen at replay.
     const reasoningText = (llmResult.reasoning || '')

@@ -8,6 +8,7 @@
 'use strict';
 
 const { expandGeoShorthand } = require('../../utils/geoAnalysis');
+const { RESPONSE_DISCLOSURE_PATTERNS } = require('../../shared/queryClassification');
 
 /**
  * Detects if a query is clearly NOT about statistical data.
@@ -214,6 +215,70 @@ function sanitizeReasoningLine(lineRaw) {
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/(^|\s)\*(?!\s)([^*]+?)\*(?=\s|$)/g, '$1$2')
     .replace(/^(\s*)[*+-]\s{2,}/, '$1');
+}
+
+/**
+ * Notice appended in place of a suppressed disclosure. Written in MALIKA's
+ * voice because the user sees it mid-answer, with no hint that a filter ran —
+ * naming the machinery would only invite probing at it.
+ */
+const DISCLOSURE_NOTICE =
+  '\n\nMohon maaf, bagian ini tidak dapat saya lanjutkan karena menyangkut data individu ' +
+  'yang dirahasiakan oleh UU 16/1997 Pasal 21. Saya bisa bantu dengan data agregat yang ' +
+  'sudah dipublikasikan, atau memandu pengajuan mikrodata resmi melalui layanan PST BPS.';
+
+/**
+ * Stateful guard against the model formatting an individual-level disclosure
+ * mid-answer ("Nama responden: ...").
+ *
+ * Deltas are checked against the running text as they arrive, so the records
+ * that would follow such a header never stream. What has already gone out
+ * cannot be recalled — the frontend only appends — so the residual exposure is
+ * the header itself, which carries no data. The persisted text is truncated at
+ * the match, otherwise replaying the thread would put the header back on screen.
+ *
+ * This is a backstop, not the primary control: the request-side Pasal 21 gate
+ * refuses these questions before retrieval, and the corpus holds published
+ * aggregates rather than unit records. It exists for the paraphrase that slips
+ * the gate, and for outright fabrication.
+ *
+ * @returns {{push: function(string): string|null, tripped: function(): boolean, text: function(): string}}
+ */
+function createDisclosureFilter() {
+  let text = '';
+  let tripped = false;
+
+  return {
+    /**
+     * Feed one delta. Returns the text to forward, or null to suppress it.
+     * @param {string} delta
+     * @returns {string|null}
+     */
+    push(delta) {
+      if (tripped) return null;
+      const chunk = String(delta || '');
+      if (!chunk) return chunk;
+
+      const candidate = text + chunk;
+      let earliest = -1;
+      for (const pattern of RESPONSE_DISCLOSURE_PATTERNS) {
+        const match = candidate.match(pattern);
+        if (match && (earliest === -1 || match.index < earliest)) earliest = match.index;
+      }
+
+      if (earliest !== -1) {
+        tripped = true;
+        text = candidate.slice(0, earliest).trimEnd();
+        return null;
+      }
+
+      text = candidate;
+      return chunk;
+    },
+    tripped() { return tripped; },
+    /** Sanitized answer: truncated at the match, with the notice appended. */
+    text() { return tripped ? text + DISCLOSURE_NOTICE : text; },
+  };
 }
 
 function stripMalikaUiBlock(content) {
@@ -494,6 +559,8 @@ module.exports = {
   isNonStatisticalQuery,
   parseQuarterFromText,
   stripMalikaUiBlock,
+  createDisclosureFilter,
+  DISCLOSURE_NOTICE,
   stripRawUrlsFromText,
   clampChatRhythm,
   safeParseInt,
