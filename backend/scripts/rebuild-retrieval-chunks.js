@@ -60,6 +60,26 @@ async function tableExists(name) {
 }
 
 async function status() {
+  // Counted from the database, not the log: each restart resets the log's counter
+  // to whatever was left to do at that moment, so "50/26266" after a resume is not
+  // comparable with "1500/27781" before it. Only complete documents are counted —
+  // the same rule the resume logic uses — so this is always the true safe point.
+  if (await tableExists(SHADOW)) {
+    const [t] = await sql(
+      `SELECT COUNT(*) n FROM knowledge_base k
+        WHERE k.parent_id IS NOT NULL
+           OR NOT EXISTS (SELECT 1 FROM knowledge_base c WHERE c.parent_id = k.id)`);
+    const [d] = await sql(
+      `SELECT COUNT(*) done, COALESCE(SUM(w),0) win FROM (
+         SELECT source_ref_id, COUNT(*) w, MAX(JSON_EXTRACT(metadata,'$.windows')) want
+           FROM \`${SHADOW}\` WHERE source_kind IN ('knowledge_chunk','knowledge_doc')
+          GROUP BY source_ref_id HAVING w = want) x`);
+    const total = Number(t[0].n), done = Number(d[0].done), win = Number(d[0].win);
+    const pct = total ? (100 * done / total).toFixed(1) : '0.0';
+    console.log(`progress: ${done}/${total} docs (${pct}%) · ${win} windows embedded`);
+    console.log('');
+  }
+
   for (const t of [LIVE, SHADOW]) {
     if (!(await tableExists(t))) { console.log(`${t}: (absent)`); continue; }
     const [r] = await sql(`SELECT source_kind, COUNT(*) n FROM \`${t}\` GROUP BY source_kind`);
