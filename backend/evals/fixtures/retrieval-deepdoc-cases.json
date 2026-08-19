@@ -1,0 +1,180 @@
+{
+  "_readme": [
+    "Ground truth for knowledge-base retrieval, used by evals/retrieval-eval.js.",
+    "",
+    "Labels are CONTENT PREDICATES, never chunk ids. Re-chunking (the planned fix)",
+    "renumbers every chunk, so id-based labels would break exactly when they are",
+    "needed most. A case is satisfied when a retrieved chunk contains every string",
+    "in must_match, compared with whitespace collapsed and case ignored.",
+    "",
+    "difficulty:",
+    "  headline  - the answer figure is in the chunk title (embedded, easy)",
+    "  body      - in the chunk body, title is topically related",
+    "  deep-body - in the chunk body, title names a DIFFERENT table (the failure",
+    "              mode this whole exercise exists for)",
+    "",
+    "Every predicate is uniqueness-checked by `node evals/retrieval-eval.js --validate`.",
+    "A case matching 0 chunks is a broken label; one matching very many is too loose.",
+    "Predicates pair the answer figure with a topic co-term. Bare figures such as '5,81' matched 1073 chunks (random recall@10 = 31%); pairing brings that under 1%."
+  ],
+  "cases": [
+    {
+      "id": "kepadatan-ternate-2016",
+      "difficulty": "deep-body",
+      "topic": "kependudukan",
+      "query": "berapa kepadatan penduduk Kota Ternate tahun 2016",
+      "must_match": [
+        "1957,34"
+      ],
+      "note": "Tabel 3.1.4 Dalam Angka 2017; host chunk is titled 'Tabel 3.2.11 Jumlah Pencari Kerja'"
+    },
+    {
+      "id": "penduduk-ternate-2016",
+      "difficulty": "deep-body",
+      "topic": "kependudukan",
+      "query": "jumlah penduduk Kota Ternate tahun 2016",
+      "must_match": [
+        "218 028",
+        "1 185 912"
+      ],
+      "note": "proyeksi penduduk kab/kota, Dalam Angka 2017 | figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "penduduk-malut-2016",
+      "difficulty": "deep-body",
+      "topic": "kependudukan",
+      "query": "jumlah penduduk Provinsi Maluku Utara tahun 2016",
+      "must_match": [
+        "1 185 912",
+        "223 460"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "kepadatan-halbar-2016",
+      "difficulty": "deep-body",
+      "topic": "kependudukan",
+      "query": "kepadatan penduduk Halmahera Barat tahun 2016",
+      "must_match": [
+        "66,14",
+        "19,34"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "gk-beras-kota-mar2025",
+      "difficulty": "body",
+      "topic": "kemiskinan",
+      "query": "komoditas apa yang paling berkontribusi terhadap garis kemiskinan perkotaan Maret 2025",
+      "must_match": [
+        "beras 25,10"
+      ]
+    },
+    {
+      "id": "gk-beras-desa-mar2025",
+      "difficulty": "body",
+      "topic": "kemiskinan",
+      "query": "kontribusi beras terhadap garis kemiskinan perdesaan Maret 2025",
+      "must_match": [
+        "beras 29,78"
+      ]
+    },
+    {
+      "id": "gk-rokok-kota-mar2025",
+      "difficulty": "body",
+      "topic": "kemiskinan",
+      "query": "kontribusi rokok kretek filter terhadap garis kemiskinan perkotaan Maret 2025",
+      "must_match": [
+        "rokok kretek filter 12,81"
+      ]
+    },
+    {
+      "id": "tpk-nonbintang-nov2025",
+      "difficulty": "body",
+      "topic": "pariwisata",
+      "query": "tingkat penghunian kamar hotel nonbintang Maluku Utara November 2025",
+      "must_match": [
+        "18,91",
+        "nonbintang"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "tpk-nonbintang-nov2024",
+      "difficulty": "body",
+      "topic": "pariwisata",
+      "query": "TPK hotel nonbintang Maluku Utara November 2024",
+      "must_match": [
+        "21,18",
+        "nonbintang"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "ipm-malut-2025",
+      "difficulty": "headline",
+      "topic": "ipm",
+      "query": "berapa IPM Maluku Utara tahun 2025",
+      "must_match": [
+        "72,52",
+        "0,68"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "ntp-des2025",
+      "difficulty": "headline",
+      "topic": "pertanian",
+      "query": "nilai tukar petani Maluku Utara Desember 2025",
+      "must_match": [
+        "103,77",
+        "nilai tukar petani"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "ntp-okt2025",
+      "difficulty": "headline",
+      "topic": "pertanian",
+      "query": "NTP Maluku Utara Oktober 2025",
+      "must_match": [
+        "105,58",
+        "nilai tukar petani"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "miskin-mar2025",
+      "difficulty": "headline",
+      "topic": "kemiskinan",
+      "query": "persentase penduduk miskin Maluku Utara Maret 2025",
+      "must_match": [
+        "5,81",
+        "maret 2025"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "miskin-sep2024",
+      "difficulty": "headline",
+      "topic": "kemiskinan",
+      "query": "persentase penduduk miskin Maluku Utara September 2024",
+      "must_match": [
+        "6,03",
+        "september 2024"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "ekonomi-tw3-2025",
+      "difficulty": "headline",
+      "topic": "pdrb",
+      "query": "pertumbuhan ekonomi Maluku Utara triwulan III 2025 q-to-q",
+      "must_match": [
+        "2,59",
+        "q-to-q"
+      ],
+      "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    }
+  ]
+}

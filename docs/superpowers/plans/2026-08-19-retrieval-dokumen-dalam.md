@@ -147,6 +147,33 @@ titles are part of the embedded text — they are, so it pairs naturally with B.
 Rationale: B is the principled fix but costs ~10 h of contended CPU and cannot be
 evaluated honestly without a measurement harness — which C and D require anyway.
 
+## Baseline (measured 2026-08-19)
+
+Harness built and run: `backend/evals/retrieval-eval.js` +
+`backend/evals/fixtures/retrieval-deepdoc-cases.json`. Full write-up in
+`backend/evals/reports/retrieval-baseline-2026-08-19.md`.
+
+| metric | vector-only lane |
+|---|---|
+| recall@5 | 26.7% (4/15) |
+| recall@10 | **33.3%** (5/15) |
+| MRR | 0.141 |
+| mean spread@10 | **0.0090** |
+| deep-body recall@10 | **0 / 4** |
+| body recall@10 | 2 / 5 |
+| headline recall@10 | 3 / 6 |
+
+Two things the baseline changed about this plan:
+
+1. **Deep-body is 0/4** — the coverage argument is now measured, not inferred.
+2. **Headline cases fail on *period*, not topic.** `miskin-mar2025` returns a Maret
+   **2021** document; `ekonomi-tw3-2025` returns TW III **2020**; `ntp-okt2025` returns
+   Keadaan Angkatan Kerja. The figure is in the title and embedded, and it still misses.
+   `orderKnowledgeDocsByPeriod` only reorders the candidates retrieval already returned,
+   so when the right period never enters the top-N it has nothing to promote. **A period
+   filter/boost inside the retrieval query is now a candidate fix in its own right** —
+   cheaper than re-chunking and not previously in scope.
+
 ## Verification plan (build before changing anything)
 
 Nothing here can be judged by eyeballing one query; the current similarity band is 0.02
