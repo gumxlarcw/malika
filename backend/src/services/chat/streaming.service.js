@@ -5181,7 +5181,15 @@ async function streamChatResponse({
         isServiceQueryWithoutKnowledge,
         availableYearsInfo,
       }),
-      { role: 'user', content: effectiveUserQuery },
+      // The person's own words, not effectiveUserQuery. That one is a retrieval
+      // artifact — context-merged into keyword strings like "Sensus Penduduk
+      // halmahera barat persentase penduduk miskin" — and handing it over as the
+      // user turn both misrepresents what was asked and tips the model into
+      // English analyst-mode reasoning. Fragments such as "ya" or "tahun 2023"
+      // still resolve: the prior turns are appended just above by
+      // buildContextMessages, and the context blocks name the indicator and
+      // table that were actually found. Search keeps using effectiveUserQuery.
+      { role: 'user', content: clippedUserText },
     ];
 
     // Reasoning is emitted a whole line at a time so it can be filtered; see the
