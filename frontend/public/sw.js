@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+ 
 
 const CACHE_VERSION = "v1";
 const STATIC_CACHE = `malika-static-${CACHE_VERSION}`;

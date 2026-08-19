@@ -470,7 +470,7 @@ export default function BRSCard() {
     const iOSDevice = /iPad|iPhone|iPod/i.test(ua);
     const iPadOS13Plus =
       // iPadOS reports MacIntel but has touch points
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (navigator as any).platform === "MacIntel" && navigator.maxTouchPoints > 1;
     const isIOS = iOSDevice || iPadOS13Plus;
 

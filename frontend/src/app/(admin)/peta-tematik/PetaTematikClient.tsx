@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { Command } from "cmdk";
 import { BarChart3, ChevronDown, Search } from "lucide-react";
 import ChoroplethMap from "./ChoroplethMap";
@@ -702,8 +703,8 @@ export default function PetaTematikClient() {
           <a href="https://malukuutara.bps.go.id" target="_blank" rel="noreferrer" className="hover:text-gray-700 dark:hover:text-gray-200">
             BPS Maluku Utara
           </a>
-          <a href="/data" className="hover:text-gray-700 dark:hover:text-gray-200">Statistik Lengkap</a>
-          <a href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Tentang MALIKA</a>
+          <Link href="/data" className="hover:text-gray-700 dark:hover:text-gray-200">Statistik Lengkap</Link>
+          <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Tentang MALIKA</Link>
         </div>
       </footer>
 

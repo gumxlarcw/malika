@@ -716,7 +716,7 @@ export default function ChatPageClient({
         setLoadingMessages(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [apiBase, extractLastAssistantUi, fetchThreadSuggestions, headers, malikaUid, mapBackendMessagesToChatUI, resetList, restorePersistedThinking]
   );
 

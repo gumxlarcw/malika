@@ -3056,7 +3056,7 @@ export default function SearchInsightsChart({ rows, columns, title, sourceId, so
     setChartBooting(true);
     const t = setTimeout(() => setChartBooting(false), 280);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [renderKey, canRender]);
 
   useEffect(() => {
@@ -3651,12 +3651,12 @@ export default function SearchInsightsChart({ rows, columns, title, sourceId, so
                   </span>
                   {availableYears.length > 1 && selectedYears.length === 0 && (
                     <span className="mt-1 block text-xs">
-                      💡 Tip: Pilih tahun tertentu dari filter "Tahun" di atas, atau coba ubah tipe periode.
+                      💡 Tip: Pilih tahun tertentu dari filter &quot;Tahun&quot; di atas, atau coba ubah tipe periode.
                     </span>
                   )}
                   {selectedXMode === "time" && (
                     <span className="mt-1 block text-xs">
-                      💡 Tip: Coba ganti sumbu X ke "{dimensionMeta.label}" atau pilih metrik lain.
+                      💡 Tip: Coba ganti sumbu X ke &quot;{dimensionMeta.label}&quot; atau pilih metrik lain.
                     </span>
                   )}
                 </>

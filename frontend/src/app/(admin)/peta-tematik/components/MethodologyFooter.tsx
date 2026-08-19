@@ -34,7 +34,7 @@ export default function MethodologyFooter({
             )}
             {indikatorName && (
               <div className="italic text-[var(--pt-ink-faint)] mt-1 leading-snug">
-                "{indikatorName}"
+                &quot;{indikatorName}&quot;
               </div>
             )}
             <div className="pt-mono text-[var(--pt-ink-faint)]">Periode terupdate: {updated}</div>

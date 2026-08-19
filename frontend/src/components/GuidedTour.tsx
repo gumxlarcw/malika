@@ -425,7 +425,7 @@ export default function GuidedTour({
         driverRef.current.destroy();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mounted, shouldShow, tourStarted, onComplete, onDismiss]);
 
   return null;

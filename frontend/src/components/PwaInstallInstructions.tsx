@@ -121,7 +121,7 @@ export default function PwaInstallInstructions() {
                   ⚠️ Buka dengan Safari
                 </p>
                 <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-                  Fitur "Add to Home Screen" hanya tersedia di Safari. Buka link ini di Safari untuk melanjutkan.
+                  Fitur &quot;Add to Home Screen&quot; hanya tersedia di Safari. Buka link ini di Safari untuk melanjutkan.
                 </p>
               </div>
             ) : null}
@@ -151,7 +151,7 @@ export default function PwaInstallInstructions() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Pilih "Add to Home Screen"
+                    Pilih &quot;Add to Home Screen&quot;
                   </p>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Scroll ke bawah di menu share dan ketuk opsi tersebut
@@ -165,7 +165,7 @@ export default function PwaInstallInstructions() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Ketuk "Add" di pojok kanan atas
+                    Ketuk &quot;Add&quot; di pojok kanan atas
                   </p>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Aplikasi MALIKA akan muncul di home screen Anda
@@ -217,7 +217,7 @@ export default function PwaInstallInstructions() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Pilih "Install app" atau "Add to Home screen"
+                        Pilih &quot;Install app&quot; atau &quot;Add to Home screen&quot;
                       </p>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Teks mungkin berbeda tergantung versi browser
@@ -231,7 +231,7 @@ export default function PwaInstallInstructions() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Ketuk "Install" untuk konfirmasi
+                        Ketuk &quot;Install&quot; untuk konfirmasi
                       </p>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Aplikasi MALIKA akan terinstall dan muncul di home screen
@@ -261,10 +261,10 @@ export default function PwaInstallInstructions() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Pilih "Add page to" → "Home screen"
+                        Pilih &quot;Add page to&quot; → &quot;Home screen&quot;
                       </p>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        Atau pilih "Install" jika tersedia
+                        Atau pilih &quot;Install&quot; jika tersedia
                       </p>
                     </div>
                   </div>
@@ -272,7 +272,7 @@ export default function PwaInstallInstructions() {
               ) : (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
                   <p className="text-sm text-blue-700 dark:text-blue-300">
-                    💡 Untuk pengalaman terbaik, buka halaman ini menggunakan Chrome atau Samsung Browser, lalu pilih "Install app" dari menu browser.
+                    💡 Untuk pengalaman terbaik, buka halaman ini menggunakan Chrome atau Samsung Browser, lalu pilih &quot;Install app&quot; dari menu browser.
                   </p>
                 </div>
               )}
@@ -280,7 +280,7 @@ export default function PwaInstallInstructions() {
             
             <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                💡 <strong>Tip:</strong> Jika muncul banner "Install MALIKA" di bawah layar, ketuk langsung untuk install lebih cepat!
+                💡 <strong>Tip:</strong> Jika muncul banner &quot;Install MALIKA&quot; di bawah layar, ketuk langsung untuk install lebih cepat!
               </p>
             </div>
           </div>
@@ -326,7 +326,7 @@ export default function PwaInstallInstructions() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Atau klik menu ⋮ → "Install MALIKA"
+                      Atau klik menu ⋮ → &quot;Install MALIKA&quot;
                     </p>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       Menu browser terletak di pojok kanan atas
@@ -340,7 +340,7 @@ export default function PwaInstallInstructions() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Klik "Install" pada dialog konfirmasi
+                      Klik &quot;Install&quot; pada dialog konfirmasi
                     </p>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       Aplikasi akan terinstall dan bisa diakses dari desktop/start menu

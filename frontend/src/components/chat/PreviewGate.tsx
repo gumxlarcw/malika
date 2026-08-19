@@ -45,10 +45,6 @@ export function PreviewGate({ ui }: PreviewGateProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultQ]);
 
-  if (!defaultQ) return null;
-  const links = Array.isArray(ui?.links) ? ui.links : [];
-  const suggestions = Array.isArray(ui?.suggestions) ? ui.suggestions : [];
-
   const safeHref = useCallback((hrefRaw: unknown) => {
     const href = String(hrefRaw || '').trim();
     if (!href) return '';
@@ -66,6 +62,10 @@ export function PreviewGate({ ui }: PreviewGateProps) {
 
     return '';
   }, []);
+
+  if (!defaultQ) return null;
+  const links = Array.isArray(ui?.links) ? ui.links : [];
+  const suggestions = Array.isArray(ui?.suggestions) ? ui.suggestions : [];
 
   const PreviewBody = () => (
     <div className="space-y-4">

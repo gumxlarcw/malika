@@ -72,7 +72,7 @@ export function KnowledgeModal({ id, onClose }: KnowledgeModalProps) {
     const isAndroid = /android/i.test(ua);
     const iOSDevice = /iPad|iPhone|iPod/i.test(ua);
     const iPadOS13Plus =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (navigator as any).platform === "MacIntel" && navigator.maxTouchPoints > 1;
     const isIOS = iOSDevice || iPadOS13Plus;
     setClientPdfMode(isIOS || isSafari || isAndroid ? "pdfjs" : "iframe");

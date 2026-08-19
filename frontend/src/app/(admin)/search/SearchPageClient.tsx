@@ -1347,7 +1347,7 @@ export default function SearchPageClient() {
     const isSafari = /safari/i.test(ua) && !/chrome|chromium|crios|android/i.test(ua);
     const isAndroid = /android/i.test(ua);
     const iOSDevice = /iPad|iPhone|iPod/i.test(ua);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const iPadOS13Plus = (navigator as any).platform === "MacIntel" && navigator.maxTouchPoints > 1;
     const isIOS = iOSDevice || iPadOS13Plus;
 

@@ -42,7 +42,7 @@ function computeGeoJsonBounds(fc: GeoJSON.FeatureCollection): Bounds | null {
   let minLng = Infinity;
   let maxLng = -Infinity;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const walk = (coords: any) => {
     if (typeof coords[0] === "number") {
       const [lng, lat] = coords as [number, number];
@@ -250,7 +250,7 @@ export default function ChoroplethMap({
   // apply hover style to the matching map polygon — and reset the rest.
   useEffect(() => {
     Object.entries(layerByKdkab.current).forEach(([k, layer]) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const l = layer as any;
       if (k === hoveredKdkab) {
         l.setStyle(hoverStyle);
