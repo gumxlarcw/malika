@@ -102,10 +102,29 @@ async function sourceRows(limit) {
   return rows;
 }
 
+// Presence is not completion: a document whose first window failed to insert but
+// whose second succeeded would otherwise be skipped for ever, leaving a hole that
+// nothing reports. Each window records how many windows its document has, so a
+// document counts as done only when it is all there.
 async function alreadyDone() {
   const [rows] = await sql(
-    `SELECT DISTINCT source_ref_id FROM \`${SHADOW}\` WHERE source_kind IN ('knowledge_doc','knowledge_chunk')`);
-  return new Set(rows.map(r => Number(r.source_ref_id)));
+    `SELECT source_ref_id, COUNT(*) got, MAX(JSON_EXTRACT(metadata,'$.windows')) want
+       FROM \`${SHADOW}\` WHERE source_kind IN ('knowledge_doc','knowledge_chunk')
+      GROUP BY source_ref_id`);
+  const done = new Set();
+  const partial = [];
+  for (const r of rows) {
+    if (Number(r.got) === Number(r.want)) done.add(Number(r.source_ref_id));
+    else partial.push(Number(r.source_ref_id));
+  }
+  if (partial.length) {
+    // Clear the partial ones so they are rebuilt whole rather than topped up.
+    await sql(
+      `DELETE FROM \`${SHADOW}\` WHERE source_kind IN ('knowledge_doc','knowledge_chunk') AND source_ref_id IN (${partial.map(() => '?').join(',')})`,
+      partial);
+    console.log(`cleared ${partial.length} partially written document(s) for rebuild`);
+  }
+  return done;
 }
 
 async function run() {
@@ -121,6 +140,33 @@ async function run() {
   let windows = 0, docs = 0, failed = 0;
   const t0 = Date.now();
 
+  // Two workers inserting into a table carrying a VECTOR KEY deadlocked within
+  // seconds, and a lost insert is a hole in the index rather than a slow run. The
+  // expensive half is embedding, so that stays concurrent while writes are taken
+  // one at a time; the retry is the net under the remaining contention.
+  let writeLock = Promise.resolve();
+  function withWriteLock(fn) {
+    const run = writeLock.then(fn, fn);
+    writeLock = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  async function insertWindow(params, label) {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        return await withWriteLock(() => sql(
+          `INSERT IGNORE INTO \`${SHADOW}\`
+             (source_kind, source_ref_id, parent_chunk_id, chunk_index, title, content_text,
+              metadata, embedding, embedding_model, embedding_generated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, VEC_FromText(?), ?, NOW())`, params));
+      } catch (e) {
+        const retryable = /deadlock|lock wait timeout/i.test(e.message || '');
+        if (!retryable || attempt === 4) throw e;
+        await new Promise(r => setTimeout(r, 150 * attempt));
+      }
+    }
+  }
+
   async function processRow(r) {
     const kind = r.parent_id == null ? 'knowledge_doc' : 'knowledge_chunk';
     const body = String(r.content || '').trim();
@@ -128,7 +174,7 @@ async function run() {
 
     let parts;
     try {
-      parts = await windowByTokensAsync(body);
+      parts = await windowByTokensAsync(body, r.title);
     } catch (e) {
       console.error(`  window fail kb=${r.id}: ${e.message}`); failed++; return;
     }
@@ -139,14 +185,11 @@ async function run() {
       const text = `${r.title}\n\n${parts[w]}`;
       try {
         const emb = await embedPassage(text);
-        await sql(
-          `INSERT IGNORE INTO \`${SHADOW}\`
-             (source_kind, source_ref_id, parent_chunk_id, chunk_index, title, content_text,
-              metadata, embedding, embedding_model, embedding_generated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, VEC_FromText(?), ?, NOW())`,
-          [kind, r.id, r.parent_id, w, r.title, parts[w],
-           JSON.stringify({ category: r.category || null, keywords: r.keywords || null, window: w, windows: parts.length }),
-           JSON.stringify(emb), EMBEDDING_MODEL]);
+        await insertWindow([
+          kind, r.id, r.parent_id, w, r.title, parts[w],
+          JSON.stringify({ category: r.category || null, keywords: r.keywords || null, window: w, windows: parts.length }),
+          JSON.stringify(emb), EMBEDDING_MODEL,
+        ]);
         windows++;
       } catch (e) {
         console.error(`  embed fail kb=${r.id} w=${w}: ${e.message}`); failed++;
@@ -167,17 +210,29 @@ async function run() {
   console.log(`\ndone: ${docs} docs → ${windows} windows, ${failed} failures, ${((Date.now() - t0) / 60000).toFixed(1)} min`);
 }
 
-// windowByTokens takes a synchronous counter; countTokens is async, so each line
-// is tokenized once up front and served from a cache. Anything the splitter asks
-// about that is not a whole line (a partial line, or a joined window) is
-// ESTIMATED CONSERVATIVELY — over-counting only yields smaller windows, while
-// under-counting would let one past 512 tokens and silently truncate it, which is
-// the exact failure this rebuild exists to remove. The invariant is asserted
-// against the real tokenizer in --sample.
-async function windowByTokensAsync(text) {
-  const lines = String(text).split('\n').map(s => s.trim()).filter(Boolean);
+// Windows are ESTIMATED cheaply and then VERIFIED against the real tokenizer.
+//
+// Estimation alone was not good enough, and the failure was silent in exactly the
+// way this rebuild exists to remove: a first attempt subtracted the tokenizer's
+// per-line [CLS]/[SEP] pair from summed line counts and produced 166 of 394
+// windows over the 512-token limit (max 593). Two causes — the correction
+// over-shot, and the document title is prepended at embed time but was never
+// charged to the budget. A window that overflows is truncated by the model and its
+// tail becomes unsearchable, which is the original bug wearing a new hat.
+//
+// So the tokenizer is the gate, not the estimate: any window that does not fit is
+// halved until it does. Halving always terminates and needs no ratio to be right.
+const HARD_LIMIT = 512;
+
+async function windowByTokensAsync(text, title) {
+  const prefix = `passage: ${title}\n\n`;
+  const prefixTokens = await countTokens(prefix);
+  // Charge the title to the budget, and keep headroom for estimator error.
+  const budget = Math.max(64, MAX_TOKENS - prefixTokens);
+
+  const lines = String(text).split('\n').map(x => x.trim()).filter(Boolean);
   const cache = new Map();
-  let minRatio = Infinity; // chars per token, smallest seen = densest text
+  let minRatio = Infinity;
   for (const l of lines) {
     if (!cache.has(l)) {
       const t = await countTokens(l);
@@ -185,27 +240,42 @@ async function windowByTokensAsync(text) {
       if (t > 0) minRatio = Math.min(minRatio, l.length / t);
     }
   }
-  // 1.51 chars/token is the densest observed anywhere in the corpus.
   const ratio = Math.max(1.4, Math.min(minRatio === Infinity ? 3 : minRatio, 6));
-
-  // Every per-line count carries the tokenizer's own [CLS]/[SEP] pair, so naively
-  // summing lines over-counts a joined window by ~1.92 tokens per line (measured:
-  // 6,207 vs 5,007 over 625 lines, a 1.24x inflation). Uncorrected, windows filled
-  // to only ~80% of the budget and the rebuild produced 83k windows where ~67k
-  // carry the same text.
   const SPECIAL_TOKENS_PER_LINE = 2;
-  const count = (s) => {
-    const str = String(s);
+  const est = (x) => {
+    const str = String(x);
     if (cache.has(str)) return cache.get(str);
     if (str.includes('\n')) {
       const parts = str.split('\n');
-      const sum = parts.reduce((a, p) => a + count(p), 0);
+      const sum = parts.reduce((a, q) => a + est(q), 0);
       return Math.max(1, sum - SPECIAL_TOKENS_PER_LINE * (parts.length - 1));
     }
-    return Math.ceil(str.length / ratio); // conservative for a partial line
+    return Math.ceil(str.length / ratio);
   };
 
-  return windowByTokens(text, { maxTokens: MAX_TOKENS, overlapTokens: OVERLAP_TOKENS, countTokens: count });
+  const draft = windowByTokens(text, { maxTokens: budget, overlapTokens: OVERLAP_TOKENS, countTokens: est });
+
+  const verified = [];
+  const queue = [...draft];
+  while (queue.length) {
+    const piece = queue.shift();
+    const real = await countTokens(prefix + piece);
+    if (real <= HARD_LIMIT) { verified.push(piece); continue; }
+    const lines2 = piece.split('\n');
+    if (lines2.length > 1) {
+      const mid = Math.ceil(lines2.length / 2);
+      queue.unshift(lines2.slice(0, mid).join('\n'), lines2.slice(mid).join('\n'));
+      continue;
+    }
+    const words = piece.split(/\s+/);
+    if (words.length > 1) {
+      const mid = Math.ceil(words.length / 2);
+      queue.unshift(words.slice(0, mid).join(' '), words.slice(mid).join(' '));
+      continue;
+    }
+    verified.push(piece); // a single token-dense word; nothing left to split
+  }
+  return verified;
 }
 
 async function cutover() {
