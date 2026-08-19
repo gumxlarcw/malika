@@ -1,15 +1,30 @@
 import { test, expect } from "@playwright/test";
 import { isReachable } from "./utils";
 
-const ADMIN_URL = process.env.ADMIN_URL || "http://127.0.0.1:5050";
+const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || "http://127.0.0.1:5050/backend";
 
 test.describe("Peta Tematik dashboard section", () => {
   test.beforeEach(async ({ page }) => {
-    const dashboardUrl = `${ADMIN_URL}/dashboard`;
+    const dashboardUrl = `${ADMIN_BASE_URL}/dashboard`;
     if (!(await isReachable(dashboardUrl))) {
       test.skip(true, "Admin dashboard not reachable");
     }
     await page.goto(dashboardUrl, { waitUntil: "domcontentloaded" });
+
+    // The dashboard sits behind RequireAuth, and that gate only renders after
+    // hydration -- at domcontentloaded the body is still empty, so counting
+    // immediately always sees zero. Wait for whichever surface wins, and skip
+    // rather than fail when it is the login form (no credentials are seeded for
+    // e2e), matching admin-datasource-crud.spec.ts.
+    const loginHeading = page.getByRole("heading", { name: /Login Admin/i });
+    const petaHeading = page.locator("text=Peta Tematik").first();
+    const rendered = await Promise.race([
+      loginHeading.waitFor({ state: "visible", timeout: 15000 }).then(() => "login").catch(() => null),
+      petaHeading.waitFor({ state: "visible", timeout: 15000 }).then(() => "peta").catch(() => null),
+    ]);
+    if (rendered === "login") {
+      test.skip(true, "Admin auth required");
+    }
   });
 
   test("loads section, picks indikator, renders map", async ({ page }) => {
