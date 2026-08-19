@@ -43,6 +43,8 @@ const JSON_OUT = val('--json', null);
 // lane the chat path will use; without it the run measures raw vector order.
 const PERIOD = has('--period');
 const POOL = parseInt(val('--pool', '50'), 10);
+// --table lets a rebuilt index be measured before it is cut over.
+const TABLE = val('--table', null);
 
 // The chat path takes year/month from query_builder. Here they are read from the
 // query text with the same parser used on document titles, so the eval does not
@@ -67,9 +69,12 @@ const satisfies = (text, mustMatch) => {
 
 async function validate(cases) {
   console.log('Validating labels against the corpus\n');
+  const { resolveRetrievalTable } = require('../src/services/ai/retrieval.service');
+  const t = resolveRetrievalTable(TABLE);
   const [rows] = await sequelize.query(
-    "SELECT id, title, content_text FROM retrieval_chunks WHERE source_kind IN ('knowledge_chunk','knowledge_doc')"
+    `SELECT id, title, content_text FROM \`${t}\` WHERE source_kind IN ('knowledge_chunk','knowledge_doc')`
   );
+  console.log(`table: ${t}`);
   console.log(`corpus: ${rows.length} chunks\n`);
 
   // A predicate matching many chunks is not automatically bad: BPS reprints the
@@ -109,7 +114,7 @@ async function run(cases) {
   const results = [];
   for (const c of cases) {
     const fetchN = PERIOD ? POOL : TOP_N;
-    const { results: raw } = await searchRetrieval(c.query, { topN: fetchN });
+    const { results: raw } = await searchRetrieval(c.query, { topN: fetchN, table: TABLE });
     let hits = raw;
     if (PERIOD) {
       const { year, month } = queryPeriod(c.query);
@@ -186,6 +191,7 @@ function report(results) {
     process.exit(bad === 0 ? 0 : 1);
   }
 
+  console.log(`table: ${TABLE || 'retrieval_chunks'}`);
   console.log(PERIOD ? `mode: period re-rank (pool ${POOL} → top ${TOP_N})` : `mode: vector only (top ${TOP_N})`);
   const results = await run(cases);
   report(results);
