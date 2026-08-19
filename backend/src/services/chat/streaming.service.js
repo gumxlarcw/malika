@@ -107,7 +107,7 @@ try {
 // shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
-const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine, createDisclosureFilter, DISCLOSURE_NOTICE, hasDisclosure, sanitizeReasoningTrace } = require('./chatUtils');
+const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine, createDisclosureFilter, DISCLOSURE_NOTICE, hasDisclosure, sanitizeReasoningTrace, hasUsableValues, pickFirstSourceWithData, pickNearestYear } = require('./chatUtils');
 // The model is a single Sonnet lane; routeModel only sizes the answer budget
 // (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
 // been orphaned since the single-lane refactor, leaving every answer at 1000
@@ -2697,7 +2697,7 @@ async function getMergedMultiSourcePreview({ sources, year, geo, topic = null })
           sourceName: src.sourceName,
         });
         
-        if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && bpsData.data.length > 0) {
+        if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && hasUsableValues(bpsData.data)) {
           return {
             sourceId: src.sourceId,
             sourceName: src.sourceName,
@@ -2908,7 +2908,7 @@ async function getProcessedPreviewForRange({ sourceId, years, geo, month }) {
           month, // quarterly filter
         });
         
-        if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && bpsData.data.length > 0) {
+        if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && hasUsableValues(bpsData.data)) {
           // Add year column to each row
           const rowsWithYear = bpsData.data.map(row => ({
             ...row,
@@ -3079,7 +3079,7 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
       month, // pass through so quarterly queries (month_no 31-34) filter correctly
     });
 
-    if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && bpsData.data.length > 0) {
+    if (bpsData && !bpsData.__disabled && Array.isArray(bpsData.data) && hasUsableValues(bpsData.data)) {
       let filteredData = bpsData.data;
       let geoMatched = null;
 
@@ -3127,12 +3127,17 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
       order: [['last_update', 'DESC']],
     });
 
+    let parsed = null;
     if (cache && cache.processed_json) {
-      let parsed = cache.processed_json;
-      if (typeof parsed === 'string') {
-        parsed = JSON.parse(parsed);
-      }
+      parsed = typeof cache.processed_json === 'string'
+        ? JSON.parse(cache.processed_json)
+        : cache.processed_json;
+    }
 
+    // A cached shell is still a shell: when every measure cell is empty this
+    // branch is skipped so the live fetch below still gets its turn, rather than
+    // the caller being handed a table of dashes.
+    if (parsed && hasUsableValues(parsed.data)) {
       return {
         source: parsed.source || 'Data',
         columns: Array.isArray(parsed.columns) ? parsed.columns : [],
@@ -3169,7 +3174,7 @@ async function getProcessedPreviewFromCache({ sourceId, year, month, geo }) {
           const processDynamic = require('../processor/dynamic.processor');
           const processed = processDynamic(resp.data);
           
-          if (processed && Array.isArray(processed.data) && processed.data.length > 0) {
+          if (processed && Array.isArray(processed.data) && hasUsableValues(processed.data)) {
             let filteredData = processed.data;
             let liveGeoMatched = null;
             
@@ -3260,17 +3265,14 @@ async function findNearestAvailablePeriod(sourceId, requestedYear) {
       if (Array.isArray(rows) && rows.length > 0) {
         const years = rows.map(r => Number(r.year)).filter(y => !isNaN(y));
         if (years.length > 0) {
-          // If requestedYear is provided, find nearest
-          if (requestedYear) {
-            const nearest = years.reduce((prev, curr) => 
-              Math.abs(curr - requestedYear) < Math.abs(prev - requestedYear) ? curr : prev
-            );
-            if (nearest !== requestedYear) {
-              return { period: nearest, direction: nearest < requestedYear ? 'terbaru' : 'terdekat' };
-            }
-          }
-          // Return latest available
-          return { period: Math.max(...years), direction: 'terbaru' };
+          // The requested year has already been read and produced nothing, so it
+          // is excluded rather than handed back — see pickNearestYear.
+          const nearest = pickNearestYear(years, requestedYear);
+          if (nearest === null) return null;
+          return {
+            period: nearest,
+            direction: requestedYear && nearest < requestedYear ? 'terbaru' : 'terdekat',
+          };
         }
       }
     }
@@ -3291,15 +3293,12 @@ async function findNearestAvailablePeriod(sourceId, requestedYear) {
       if (years.length > 0) {
         const uniqueYears = [...new Set(years)].sort((a, b) => b - a);
         
-        if (requestedYear) {
-          const nearest = uniqueYears.reduce((prev, curr) => 
-            Math.abs(curr - requestedYear) < Math.abs(prev - requestedYear) ? curr : prev
-          );
-          if (nearest !== requestedYear) {
-            return { period: nearest, direction: nearest < requestedYear ? 'terbaru' : 'terdekat' };
-          }
-        }
-        return { period: uniqueYears[0], direction: 'terbaru' };
+        const nearest = pickNearestYear(uniqueYears, requestedYear);
+        if (nearest === null) return null;
+        return {
+          period: nearest,
+          direction: requestedYear && nearest < requestedYear ? 'terbaru' : 'terdekat',
+        };
       }
     }
     
@@ -3321,15 +3320,12 @@ async function findNearestAvailablePeriod(sourceId, requestedYear) {
         if (years.length > 0) {
           const uniqueYears = [...new Set(years)].sort((a, b) => b - a);
           
-          if (requestedYear) {
-            const nearest = uniqueYears.reduce((prev, curr) => 
-              Math.abs(curr - requestedYear) < Math.abs(prev - requestedYear) ? curr : prev
-            );
-            if (nearest !== requestedYear) {
-              return { period: nearest, direction: nearest < requestedYear ? 'terbaru' : 'terdekat' };
-            }
-          }
-          return { period: uniqueYears[0], direction: 'terbaru' };
+          const nearest = pickNearestYear(uniqueYears, requestedYear);
+          if (nearest === null) return null;
+          return {
+            period: nearest,
+            direction: requestedYear && nearest < requestedYear ? 'terbaru' : 'terdekat',
+          };
         }
       }
     } catch {
@@ -4657,6 +4653,68 @@ async function streamChatResponse({
             from: latestProcessed.from,
           };
         }
+      }
+    }
+
+    // CANDIDATE FALLBACK: the ranked-first source can be registered for a year and
+    // still carry nothing — BPS publishes some year-slices as a shell whose every
+    // measure cell is "...", and a source can also simply stop short of the year
+    // asked for. Ranking picks one source and the block above never reconsiders it,
+    // so a single empty top hit used to end the search. Walk the next few
+    // candidates instead; the one that answers becomes the selected source, so the
+    // citation, the deep link, and the follow-up lock all name what was actually read.
+    if (!dataPreview && shouldShowPreview && !isEximQuery && !isRangeQuery && candidates.length > 1) {
+      const alternateIds = candidates
+        .map(c => Number(c?.id))
+        .filter(id => Number.isFinite(id) && id > 0 && id !== Number(selectedSourceId))
+        .slice(0, 3);
+
+      const picked = await pickFirstSourceWithData(alternateIds, async (altId) => {
+        // Prefer the year that was asked for; fall back to that source's nearest
+        // period so an alternate is not rejected merely for lacking one year.
+        const years = [];
+        if (requestedYear) years.push(requestedYear);
+        const near = await findNearestAvailablePeriod(altId, requestedYear || null);
+        if (near?.period && !years.includes(near.period)) years.push(near.period);
+
+        for (const y of years) {
+          const alt = await getProcessedPreviewFromCache({
+            sourceId: altId,
+            year: y,
+            month: intentResult?.query_builder?.params?.month || null,
+            geo: requestedGeo,
+          });
+          if (alt && hasUsableValues(alt.data)) return { ...alt, _year: y };
+        }
+        return null;
+      });
+
+      if (picked) {
+        const alt = picked.preview;
+        const altYear = alt._year;
+        selectedSourceId = picked.sourceId;
+
+        if (requestedYear && altYear !== requestedYear) {
+          // Same vocabulary as findNearestAvailablePeriod — this string is
+          // interpolated straight into the Indonesian prompt.
+          periodFallback = {
+            requestedYear,
+            actualYear: altYear,
+            direction: altYear < requestedYear ? 'terbaru' : 'terdekat',
+          };
+        }
+        requestedYear = altYear;
+
+        dataPreview = {
+          title: `${alt.source} • ${altYear}${requestedGeo && alt.geoMatched !== false ? ` • ${requestedGeo}` : ''}`,
+          columns: (alt.columns || []).slice(0, 12),
+          rows: alt.data.slice(0, 20),
+          total_rows: alt.data.length,
+          geo: requestedGeo,
+          geoUnavailable: requestedGeo && alt.geoMatched === false ? requestedGeo : null,
+          from: alt.from,
+          periodFallback,
+        };
       }
     }
 

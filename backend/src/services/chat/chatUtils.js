@@ -585,7 +585,107 @@ function buildDbFirstHeader({ intentResult, candidates, latestBySource }) {
   return lines.join('\n').trim();
 }
 
+// Columns that name a row rather than measure it. A table carrying only these
+// has told us nothing, however many rows it has.
+const LABEL_COLUMNS = new Set(['tahun', 'wilayah', 'periode', 'bulan', 'daerah', 'kabupaten/kota', 'value_codes']);
+
+// BPS SIMDASI marks a suppressed cell with a literal ellipsis; the readers map it
+// to null, but it also reaches us verbatim on some paths.
+function isMissingCell(v) {
+  if (v === null || v === undefined) return true;
+  if (typeof v === 'number') return Number.isNaN(v); // 0 is a real statistic
+  const s = String(v).trim();
+  return s === '' || s === '...' || s === '-' || s === '–';
+}
+
+/**
+ * True when at least one measure cell in the table carries a value.
+ *
+ * Row count is not evidence of data: BPS publishes some year-slices as a shell —
+ * every region present, every measure "..." — and `rows.length > 0` accepts it,
+ * so the answer becomes a table of dashes and the pipeline stops looking.
+ */
+function hasUsableValues(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return false;
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    for (const [key, value] of Object.entries(row)) {
+      if (LABEL_COLUMNS.has(String(key).trim().toLowerCase())) continue;
+      if (!isMissingCell(value)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Walk candidate sources in rank order and return the first whose preview
+ * actually carries values, along with that preview.
+ *
+ * `fetchPreview` is injected so the ranking rule stays testable without a
+ * database or a live BPS call. A source that throws is treated as a miss: one
+ * upstream timeout should not end the search while other candidates remain.
+ *
+ * @returns {Promise<{sourceId: number, preview: object}|null>}
+ */
+async function pickFirstSourceWithData(sourceIds, fetchPreview) {
+  const ids = Array.isArray(sourceIds) ? sourceIds : [];
+  const tried = new Set();
+  for (const raw of ids) {
+    const sourceId = Number(raw);
+    if (!Number.isFinite(sourceId) || sourceId <= 0 || tried.has(sourceId)) continue;
+    tried.add(sourceId);
+    let preview = null;
+    try {
+      preview = await fetchPreview(sourceId);
+    } catch {
+      continue;
+    }
+    if (preview && hasUsableValues(preview.data)) return { sourceId, preview };
+  }
+  return null;
+}
+
+/**
+ * Choose which year to offer when the requested one produced no usable data.
+ *
+ * The requested year is deliberately excluded: this is only consulted after that
+ * year has already been read and come back empty, so re-offering it would loop.
+ * That is the case the previous inline copies got wrong — a year can be
+ * registered and still publish nothing, and "nearest differs from requested" is
+ * false there, so they fell through to the newest year on record.
+ *
+ * Ties go to the more recent year.
+ *
+ * @returns {number|null}
+ */
+function pickNearestYear(years, requestedYear) {
+  const pool = (Array.isArray(years) ? years : [])
+    .map(Number)
+    .filter(y => Number.isFinite(y));
+  if (pool.length === 0) return null;
+
+  // Number(null) is 0 — finite, and would be read as "the year 0 was asked for".
+  const target = (requestedYear === null || requestedYear === undefined || requestedYear === '')
+    ? NaN
+    : Number(requestedYear);
+  if (!Number.isFinite(target)) return Math.max(...pool);
+
+  const others = pool.filter(y => y !== target);
+  if (others.length === 0) return null;
+
+  return others.reduce((best, y) => {
+    const d = Math.abs(y - target);
+    const bd = Math.abs(best - target);
+    if (d < bd) return y;
+    if (d === bd && y > best) return y; // prefer the more recent on a tie
+    return best;
+  });
+}
+
 module.exports = {
+  pickNearestYear,
+  hasUsableValues,
+  pickFirstSourceWithData,
   sanitizeReasoningLine,
   parseDocPeriod,
   orderKnowledgeDocsByPeriod,
