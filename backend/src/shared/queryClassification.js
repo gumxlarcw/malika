@@ -235,7 +235,10 @@ const OUT_OF_SCOPE_PATTERNS = [
 
 const INDIVIDUAL_DATA_REQUEST_PATTERNS = [
   /\b(?:data|informasi)\s+(?:individu|perorangan|pribadi|personal)\b/i,
-  /\bdata\s+mikro\b/i,
+  // Not "data mikro dan kecil" / "mikro kecil dan menengah" — that is the
+  // Usaha/Industri Mikro dan Kecil series (indicators 315, 316, 420, 421),
+  // published aggregates rather than confidential unit records.
+  /\bdata\s+mikro\b(?!\s+(?:dan\s+)?kecil)/i,
   /\b(?:identitas|nama|alamat)\s+(?:responden|sensus|survei)\b/i,
   /\bdata\s+responden\b/i,
   /\b(?:data|info)\s+(?:rumah\s+tangga|perusahaan|usaha)\s+(?:tertentu|spesifik|khusus)\b/i,
