@@ -218,6 +218,39 @@ function sanitizeReasoningLine(lineRaw) {
 }
 
 /**
+ * Does this text format an individual-level disclosure ("Nama responden: …")?
+ * Shared by the answer filter and the reasoning trace so both judge alike.
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+function hasDisclosure(text) {
+  const t = String(text || '');
+  return RESPONSE_DISCLOSURE_PATTERNS.some((re) => re.test(t));
+}
+
+/**
+ * Sanitize a whole reasoning trace for persistence.
+ *
+ * Truncates at the first disclosing line rather than dropping that line alone:
+ * the names live on the lines *after* the header, and those match nothing on
+ * their own. Removing only the header would leave exactly the records it
+ * announced.
+ *
+ * @param {string} raw - Full reasoning text.
+ * @returns {string|null} Sanitized trace, or null when nothing survives.
+ */
+function sanitizeReasoningTrace(raw) {
+  const kept = [];
+  for (const line of String(raw || '').split('\n')) {
+    if (hasDisclosure(line)) break;
+    const clean = sanitizeReasoningLine(line);
+    if (clean !== null) kept.push(clean);
+  }
+  return kept.join('\n').trim() || null;
+}
+
+/**
  * Notice appended in place of a suppressed disclosure. Written in MALIKA's
  * voice because the user sees it mid-answer, with no hint that a filter ran —
  * naming the machinery would only invite probing at it.
@@ -561,6 +594,8 @@ module.exports = {
   stripMalikaUiBlock,
   createDisclosureFilter,
   DISCLOSURE_NOTICE,
+  hasDisclosure,
+  sanitizeReasoningTrace,
   stripRawUrlsFromText,
   clampChatRhythm,
   safeParseInt,

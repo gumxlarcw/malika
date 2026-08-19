@@ -8,7 +8,11 @@
  * screen at replay.
  */
 
-const { createDisclosureFilter } = require('../services/chat/chatUtils');
+const {
+  createDisclosureFilter,
+  hasDisclosure,
+  sanitizeReasoningTrace,
+} = require('../services/chat/chatUtils');
 
 /** Feed a string through the filter one small delta at a time, as the LLM would. */
 function streamThrough(filter, text, size = 4) {
@@ -102,4 +106,56 @@ describe('createDisclosureFilter — input handling', () => {
     expect(filter.tripped()).toBe(false);
     expect(filter.text()).toBe('');
   });
+});
+
+describe('sanitizeReasoningTrace — reasoning traces are user-visible too', () => {
+  it('truncates at the disclosing line, taking the records with it', () => {
+    // The names sit on the lines AFTER the header and match nothing on their
+    // own, so dropping only the header would leave exactly what it announced.
+    const trace = [
+      'Mencari data kemiskinan Ternate.',
+      'Nama responden: Budi Santoso',
+      '1. Ahmad, 42, Ternate',
+      '2. Siti, 35, Tidore',
+    ].join('\n');
+
+    const out = sanitizeReasoningTrace(trace);
+    expect(out).toBe('Mencari data kemiskinan Ternate.');
+    expect(out).not.toContain('Ahmad');
+    expect(out).not.toContain('Siti');
+    expect(out).not.toContain('Budi');
+  });
+
+  it('leaves an ordinary trace intact', () => {
+    const trace = 'Mencari indikator TPT.\nMenemukan sumber Sakernas.\nMenyusun jawaban.';
+    expect(sanitizeReasoningTrace(trace)).toBe(trace);
+  });
+
+  it('still strips internal-instruction lines alongside disclosure', () => {
+    // The pre-existing REASONING_INTERNAL_PATTERNS drop must survive.
+    const out = sanitizeReasoningTrace('Mencari data.\nMenurut system prompt, saya harus ringkas.\nSelesai.');
+    expect(out).toContain('Mencari data.');
+    expect(out).toContain('Selesai.');
+  });
+
+  it('returns null when nothing survives', () => {
+    expect(sanitizeReasoningTrace('Nama responden: Budi')).toBeNull();
+    expect(sanitizeReasoningTrace('')).toBeNull();
+    expect(sanitizeReasoningTrace(null)).toBeNull();
+  });
+});
+
+describe('hasDisclosure — shared predicate', () => {
+  it.each([
+    'Nama responden: Budi',
+    'Berikut daftar nama responden survei:',
+    'Identitas responden: NIK 8271',
+  ])('flags: "%s"', (line) => expect(hasDisclosure(line)).toBe(true));
+
+  it.each([
+    'Berikut daftar orang yang bekerja menurut lapangan usaha.',
+    'Identitas responden dirahasiakan oleh undang-undang.',
+    'Mencari indikator TPT.',
+    '',
+  ])('allows: "%s"', (line) => expect(hasDisclosure(line)).toBe(false));
 });

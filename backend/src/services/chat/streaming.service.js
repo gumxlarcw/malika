@@ -105,7 +105,7 @@ try {
 // shared openaiClient.chat() helper. Single Sonnet lane — no tier-based selection.
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
-const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine, createDisclosureFilter, DISCLOSURE_NOTICE } = require('./chatUtils');
+const { parseDocPeriod, orderKnowledgeDocsByPeriod, sanitizeReasoningLine, createDisclosureFilter, DISCLOSURE_NOTICE, hasDisclosure, sanitizeReasoningTrace } = require('./chatUtils');
 // The model is a single Sonnet lane; routeModel only sizes the answer budget
 // (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
 // been orphaned since the single-lane refactor, leaving every answer at 1000
@@ -5182,17 +5182,31 @@ async function streamChatResponse({
     // Reasoning is emitted a whole line at a time so it can be filtered; see the
     // onReasoning callback below.
     let reasoningLineBuffer = '';
+    // Set once a line discloses individual data; everything after it is dropped.
+    // Halting rather than skipping the one line is deliberate — the names sit on
+    // the lines that follow the header and match nothing by themselves.
+    let reasoningDisclosed = false;
+    // Because a line is held until it is complete, the disclosing line itself is
+    // never emitted: unlike the answer stream, nothing leaks before detection.
+    const emitReasoningLine = (line, suffix) => {
+      if (reasoningDisclosed) return;
+      if (hasDisclosure(line)) {
+        reasoningDisclosed = true;
+        console.warn('[StreamChat] Disclosure filter tripped in reasoning trace — trace truncated');
+        return;
+      }
+      const clean = sanitizeReasoningLine(line);
+      if (clean !== null) sendEvent('reasoning', { content: `${clean}${suffix}` });
+    };
     const flushReasoningLines = (flushTail = false) => {
       let nl;
       while ((nl = reasoningLineBuffer.indexOf('\n')) !== -1) {
         const line = reasoningLineBuffer.slice(0, nl);
         reasoningLineBuffer = reasoningLineBuffer.slice(nl + 1);
-        const clean = sanitizeReasoningLine(line);
-        if (clean !== null) sendEvent('reasoning', { content: `${clean}\n` });
+        emitReasoningLine(line, '\n');
       }
       if (flushTail && reasoningLineBuffer) {
-        const clean = sanitizeReasoningLine(reasoningLineBuffer);
-        if (clean !== null) sendEvent('reasoning', { content: clean });
+        emitReasoningLine(reasoningLineBuffer, '');
         reasoningLineBuffer = '';
       }
     };
@@ -5264,12 +5278,7 @@ async function streamChatResponse({
     const fullText = disclosureFilter.text();
     // Persist the same text the reader saw — filtering the stream but storing the
     // raw trace would put the leaked lines straight back on screen at replay.
-    const reasoningText = (llmResult.reasoning || '')
-      .split('\n')
-      .map((line) => sanitizeReasoningLine(line))
-      .filter((line) => line !== null)
-      .join('\n')
-      .trim() || null;
+    const reasoningText = sanitizeReasoningTrace(llmResult.reasoning);
     // The tier that actually answered — falls back to the requested name only
     // when the proxy named none.
     const servedModel = llmResult.model || effectiveModel;
