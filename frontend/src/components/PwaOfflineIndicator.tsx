@@ -1,36 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { getQueueState, subscribeQueueState } from "@/lib/offlineQueue";
 
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+// Each snapshot returns a primitive, never the QueueState object: getQueueState
+// builds a fresh object on every call, and useSyncExternalStore compares
+// snapshots by identity, so returning it directly would re-render forever.
 export default function PwaOfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true);
-  const [queueSize, setQueueSize] = useState(0);
-  const [syncing, setSyncing] = useState(false);
-
-  useEffect(() => {
-    if (typeof navigator !== "undefined") {
-      setIsOnline(navigator.onLine);
-    }
-    const onOnline = () => setIsOnline(true);
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    const initial = getQueueState();
-    setQueueSize(initial.size);
-    setSyncing(initial.syncing);
-    return subscribeQueueState((state) => {
-      setQueueSize(state.size);
-      setSyncing(state.syncing);
-    });
-  }, []);
+  const isOnline = useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
+  const queueSize = useSyncExternalStore(
+    subscribeQueueState,
+    () => getQueueState().size,
+    () => 0,
+  );
+  const syncing = useSyncExternalStore(
+    subscribeQueueState,
+    () => getQueueState().syncing,
+    () => false,
+  );
 
   if (isOnline && queueSize === 0 && !syncing) return null;
 

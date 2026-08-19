@@ -17,14 +17,14 @@ export default function LoadingProgressBar({
   variant = "simulated",
   duration = 900, // default duration in ms
 }: Props) {
-  const [pct, setPct] = useState(8);
+  const [simulatedPct, setSimulatedPct] = useState(8);
+  // `done` fully determines the bar, so derive it during render instead of
+  // writing 100 from an effect -- that also drops the extra frame where the bar
+  // still showed the simulated value after the work had finished.
+  const pct = done ? 100 : simulatedPct;
 
   useEffect(() => {
-    if (variant === "indeterminate") return;
-    if (done) {
-      setPct(100);
-      return;
-    }
+    if (variant === "indeterminate" || done) return;
 
     const startedAt = Date.now();
     const interval = window.setInterval(() => {
@@ -33,7 +33,7 @@ export default function LoadingProgressBar({
       // It asymptotically approaches 99% until `done` flips true.
       const eased = 1 - Math.exp(-elapsed / duration);
       const next = Math.min(99, Math.round(8 + eased * 91));
-      setPct((p) => (next > p ? next : p));
+      setSimulatedPct((p) => (next > p ? next : p));
     }, 80);
 
     return () => window.clearInterval(interval);
