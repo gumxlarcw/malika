@@ -29,6 +29,7 @@ const fs = require('fs');
 const sequelize = require('../src/config/db');
 const { searchRetrieval } = require('../src/services/ai/retrieval.service');
 const { parseDocPeriod, parseQuarterFromText, selectDocsByPeriod } = require('../src/services/chat/chatUtils');
+const { dedupeBySourceRef } = require('../src/services/ai/vectorSearch.service');
 
 const FIXTURE = path.join(__dirname, 'fixtures', 'retrieval-deepdoc-cases.json');
 
@@ -45,6 +46,13 @@ const PERIOD = has('--period');
 const POOL = parseInt(val('--pool', '50'), 10);
 // --table lets a rebuilt index be measured before it is cut over.
 const TABLE = val('--table', null);
+// --level doc scores whether the right DOCUMENT was surfaced, collapsing a
+// document's windows to its best match, which is what the chat path consumes.
+// Chunk level asks whether one specific retrieved row contained the answer, and
+// that is not comparable across indexes with different chunk sizes: after the
+// re-chunk a row is ~1,360 chars where it used to be ~3,500, so the same predicate
+// gets strictly harder for reasons that have nothing to do with retrieval quality.
+const LEVEL = (val('--level', 'chunk') === 'doc') ? 'doc' : 'chunk';
 
 // The chat path takes year/month from query_builder. Here they are read from the
 // query text with the same parser used on document titles, so the eval does not
@@ -110,17 +118,49 @@ async function validate(cases) {
   return bad;
 }
 
+// Document-level truth: which knowledge_base rows contain the answer in their FULL
+// text. Built from the source table, not the index, so it is identical no matter how
+// the index happens to be chunked.
+let docTruth = new Map();
+async function buildDocTruth(cases) {
+  const [rows] = await sequelize.query(
+    `SELECT id, content FROM knowledge_base
+      WHERE parent_id IS NOT NULL
+         OR NOT EXISTS (SELECT 1 FROM knowledge_base c WHERE c.parent_id = knowledge_base.id)`);
+  docTruth = new Map(cases.map(c => [
+    c.id,
+    new Set(rows.filter(r => satisfies(r.content, c.must_match)).map(r => Number(r.id))),
+  ]));
+  const empty = cases.filter(c => docTruth.get(c.id).size === 0);
+  if (empty.length) console.log(`WARNING: ${empty.length} case(s) have no answer document: ${empty.map(c => c.id).join(', ')}`);
+}
+
 async function run(cases) {
   const results = [];
   for (const c of cases) {
-    const fetchN = PERIOD ? POOL : TOP_N;
+    const fetchN = (PERIOD || LEVEL === 'doc') ? POOL : TOP_N;
     const { results: raw } = await searchRetrieval(c.query, { topN: fetchN, table: TABLE });
+
     let hits = raw;
-    if (PERIOD) {
-      const { year, month } = queryPeriod(c.query);
-      hits = selectDocsByPeriod(raw, { year, month, limit: TOP_N });
+    let rank;
+    if (LEVEL === 'doc') {
+      // Collapse windows to documents first — the order production uses — then rank.
+      let docs = dedupeBySourceRef(raw.map(r => ({ ...r, id: Number(r.sourceRefId) })));
+      if (PERIOD) {
+        const { year, month } = queryPeriod(c.query);
+        docs = selectDocsByPeriod(docs, { year, month, limit: TOP_N });
+      } else {
+        docs = docs.slice(0, TOP_N);
+      }
+      hits = docs;
+      rank = docs.findIndex(d => docTruth.get(c.id).has(Number(d.id))) + 1;
+    } else {
+      if (PERIOD) {
+        const { year, month } = queryPeriod(c.query);
+        hits = selectDocsByPeriod(raw, { year, month, limit: TOP_N });
+      }
+      rank = hits.findIndex(h => satisfies(h.content, c.must_match)) + 1; // 0 = miss
     }
-    const rank = hits.findIndex(h => satisfies(h.content, c.must_match)) + 1; // 0 = miss
     // Spread is always taken from the RAW vector order, never the re-ranked list:
     // it measures how well the lane separates candidates, and a re-rank that lifts
     // a lower-similarity document would otherwise report a negative "spread" and
@@ -192,7 +232,9 @@ function report(results) {
   }
 
   console.log(`table: ${TABLE || 'retrieval_chunks'}`);
+  console.log(`level: ${LEVEL}${LEVEL === 'doc' ? ' (did the right document surface)' : ' (did one retrieved row contain the answer)'}`);
   console.log(PERIOD ? `mode: period re-rank (pool ${POOL} → top ${TOP_N})` : `mode: vector only (top ${TOP_N})`);
+  if (LEVEL === 'doc') await buildDocTruth(cases);
   const results = await run(cases);
   report(results);
   if (JSON_OUT) {

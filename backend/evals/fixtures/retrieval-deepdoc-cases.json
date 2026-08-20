@@ -15,7 +15,8 @@
     "",
     "Every predicate is uniqueness-checked by `node evals/retrieval-eval.js --validate`.",
     "A case matching 0 chunks is a broken label; one matching very many is too loose.",
-    "Predicates pair the answer figure with a topic co-term. Bare figures such as '5,81' matched 1073 chunks (random recall@10 = 31%); pairing brings that under 1%."
+    "Predicates pair the answer figure with a topic co-term. Bare figures such as '5,81' matched 1073 chunks (random recall@10 = 31%); pairing brings that under 1%.",
+    "Expanded 2026-08-20 from 15 to 50 cases. The 35 added were mined from the corpus, not invented: each pairs a figure found past offset 1500 of its chunk with a distinctive word from the same table caption, so the pair identifies one table unambiguously. 10 further candidates were generated and dropped because no single document contained both strings. They are all difficulty deep-body on purpose — the original set had only four of those, which is the class this whole effort is about and far too few to tell a win from a loss."
   ],
   "cases": [
     {
@@ -175,6 +176,391 @@
         "q-to-q"
       ],
       "note": "figure paired with a topic co-term: the bare figure alone matched hundreds of unrelated chunks"
+    },
+    {
+      "id": "agregat-pdrb-23695",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "beberapa agregat pdrb provinsi Maluku Utara 2015",
+      "must_match": [
+        "1 185 471",
+        "agregat"
+      ],
+      "note": "Tabel 12.7, Buku Saku Statistik Provinsi Maluku Utara 2015; figure at offset 1607 in its chunk (kb 23695)"
+    },
+    {
+      "id": "penyaluran-bbm-pelumas-24926",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "penyaluran bbm dan pelumas oleh pertamina region iv-c depot ternate menurut bulan Maluku Utara 2014",
+      "must_match": [
+        "53,77",
+        "penyaluran"
+      ],
+      "note": "Tabel 10.4.7, Maluku Utara Dalam Angka 2014; figure at offset 1654 in its chunk (kb 24926)"
+    },
+    {
+      "id": "lapangan-usaha-pengadaan-9803",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "distribusi persentase lapangan usaha pengadaan listrik dan gas atas dasar harga berlaku Maluku Utara 2019",
+      "must_match": [
+        "92,80",
+        "pengadaan"
+      ],
+      "note": "Tabel 4.4, Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha 2019-2023; figure at offset 2428 in its chunk (kb 9803)"
+    },
+    {
+      "id": "pekerja-berkewarganegaraan-indonesia-24055",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "banyaknya pekerja berkewarganegaraan indonesia Maluku Utara 2015",
+      "must_match": [
+        "4 173",
+        "berkewarganegaraan"
+      ],
+      "note": "Tabel 3.3, Statistik Hotel Dan Penginapan Provinsi Maluku Utara 2015; figure at offset 3048 in its chunk (kb 24055)"
+    },
+    {
+      "id": "penduduk-menjadi-korban-4935",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "persentase penduduk menjadi korban kejahatan Maluku Utara 2025",
+      "must_match": [
+        "10,70",
+        "kejahatan"
+      ],
+      "note": "Tabel 8.1, Statistik Kesejahteraan Rakyat Provinsi Maluku Utara 2025; figure at offset 2852 in its chunk (kb 4935)"
+    },
+    {
+      "id": "laju-inflasi-66-26381",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "laju inflasi 66 kota di indonesia menurut tahun kalender Maluku Utara 2012",
+      "must_match": [
+        "11,07",
+        "indonesia"
+      ],
+      "note": "Tabel 14.1, Maluku Utara Dalam Angka 2012; figure at offset 1985 in its chunk (kb 26381)"
+    },
+    {
+      "id": "ternak-dipotong-di-23311",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "jumlah ternak yang dipotong di rumah potong hewan Maluku Utara 2015",
+      "must_match": [
+        "149 217",
+        "dipotong"
+      ],
+      "note": "Tabel 5.5.6, Maluku Utara dalam Angka 2015; figure at offset 1538 in its chunk (kb 23311)"
+    },
+    {
+      "id": "mahasiswa-dosen-lulusan-26686",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "banyaknya mahasiswa, dosen, dan lulusan pada politeknik kesehatan ternate Maluku Utara 2010",
+      "must_match": [
+        "1 342",
+        "politeknik"
+      ],
+      "note": "Tabel 5.1.8, Maluku Utara Dalam Angka 2010; figure at offset 1689 in its chunk (kb 26686)"
+    },
+    {
+      "id": "open-unemployment-rate-26953",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "table open unemployment rate Maluku Utara 2009",
+      "must_match": [
+        "70,43",
+        "unemployment"
+      ],
+      "note": "Tabel 13.9, Maluku Utara Dalam Angka 2009; figure at offset 1869 in its chunk (kb 26953)"
+    },
+    {
+      "id": "konsumen-26191",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "indeks harga konsumen Maluku Utara 2013",
+      "must_match": [
+        "14 390",
+        "konsumen"
+      ],
+      "note": "Tabel 14.2, Maluku Utara Dalam Angka 2013; figure at offset 1515 in its chunk (kb 26191)"
+    },
+    {
+      "id": "rumah-sakit-puskesmas-26691",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "banyaknya rumah sakit, puskesmas, dan puskesmas pembantu di Maluku Utara 2010",
+      "must_match": [
+        "96 226",
+        "puskesmas"
+      ],
+      "note": "Tabel 5.2.1.1, Maluku Utara Dalam Angka 2010; figure at offset 1718 in its chunk (kb 26691)"
+    },
+    {
+      "id": "produksi-kayu-hutan-24886",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "produksi kayu hutan menurut jenis produksi di provinsi Maluku Utara 2014",
+      "must_match": [
+        "9 600",
+        "produksi"
+      ],
+      "note": "Tabel 5.4.2, Maluku Utara Dalam Angka 2014; figure at offset 1508 in its chunk (kb 24886)"
+    },
+    {
+      "id": "sekolah-guru-murid-16743",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "jumlah sekolah, guru, dan murid sekolah menengah kejuruan Maluku Utara 2019",
+      "must_match": [
+        "472 487 927 929",
+        "menengah"
+      ],
+      "note": "Tabel 4.1.7, Buku Saku Statistik Provinsi Maluku Utara 2019; figure at offset 1832 in its chunk (kb 16743)"
+    },
+    {
+      "id": "penduduk-usia-muda-6802",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "jumlah penduduk usia muda di Maluku Utara 2024",
+      "must_match": [
+        "244,76",
+        "penduduk"
+      ],
+      "note": "Tabel 1.1, Indikator Kesejahteraan Rakyat Provinsi Maluku Utara 2024; figure at offset 3119 in its chunk (kb 6802)"
+    },
+    {
+      "id": "produksi-kayu-hutan-23645",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "produksi kayu hutan menurut jenis produksi di provinsi Maluku Utara 2015",
+      "must_match": [
+        "140 434",
+        "produksi"
+      ],
+      "note": "Tabel 5.4.2, Buku Saku Statistik Provinsi Maluku Utara 2015; figure at offset 1625 in its chunk (kb 23645)"
+    },
+    {
+      "id": "pdrb-kategori-industri-22615",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "distribusi persentase pdrb kategori industri pengolahan atas dasar harga berlaku Maluku Utara 2015",
+      "must_match": [
+        "22,82",
+        "pengolahan"
+      ],
+      "note": "Tabel 4.3, Produk Domestik Regional Bruto Provinsi Maluku Utara Menurut Lapangan Usaha 2015; figure at offset 2108 in its chunk (kb 22615)"
+    },
+    {
+      "id": "kelahiran-penolong-kelahiran-26111",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "banyaknya kelahiran menurut penolong kelahiran di provinsi Maluku Utara 2013",
+      "must_match": [
+        "20 093",
+        "kelahiran"
+      ],
+      "note": "Tabel 4.2.7, Maluku Utara Dalam Angka 2013; figure at offset 1569 in its chunk (kb 26111)"
+    },
+    {
+      "id": "lapangan-usaha-industry-17110",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "lapangan usaha industry pdrb Maluku Utara 2019",
+      "must_match": [
+        "1 275",
+        "lapangan"
+      ],
+      "note": "Tabel 12.1, Provinsi Maluku Utara Dalam Angka 2019; figure at offset 1671 in its chunk (kb 17110)"
+    },
+    {
+      "id": "penerima-bantuan-17044",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "jumlah penerima bantuan Maluku Utara 2019",
+      "must_match": [
+        "8 473",
+        "penerima"
+      ],
+      "note": "Tabel 4.5.8, Provinsi Maluku Utara Dalam Angka 2019; figure at offset 1680 in its chunk (kb 17044)"
+    },
+    {
+      "id": "tingkat-partisipasi-angkatan-18849",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "tingkat partisipasi angkatan kerja Maluku Utara 2017",
+      "must_match": [
+        "70,50",
+        "partisipasi"
+      ],
+      "note": "Tabel 2.5, Perkembangan Indikator Sosial Provinsi Maluku Utara 2017; figure at offset 3301 in its chunk (kb 18849)"
+    },
+    {
+      "id": "volume-nilai-ekspor-23653",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "volume dan nilai ekspor dirinci menurut jenis komoditi di provinsi Maluku Utara 2015",
+      "must_match": [
+        "1 609 375 238",
+        "komoditi"
+      ],
+      "note": "Tabel 7.1.1, Buku Saku Statistik Provinsi Maluku Utara 2015; figure at offset 1565 in its chunk (kb 23653)"
+    },
+    {
+      "id": "realisasi-pembiayaan-pemerintah-23398",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "realisasi pembiayaan pemerintah kabupaten halmahera utara tahun anggaran 2014 Maluku Utara 2014",
+      "must_match": [
+        "205,55",
+        "pembiayaan"
+      ],
+      "note": "Tabel 6.5, Statistik Keuangan Pemerintah Provinsi Dan Kabupaten/Kota Provinsi Maluku Utara 2014-2015; figure at offset 1509 in its chunk (kb 23398)"
+    },
+    {
+      "id": "sampling-error-estimasi-16408",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "sampling error estimasi persentase sapi potong betina anak menurut kabupaten/ kota Maluku Utara",
+      "must_match": [
+        "13,22",
+        "kabupaten"
+      ],
+      "note": "Tabel 6.2.5, Sampling Error Estimasi Hasil SUrvei Pertanian Antar Sensus; figure at offset 1639 in its chunk (kb 16408)"
+    },
+    {
+      "id": "penduduk-berumur-5-14543",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "persentase penduduk berumur 5 tahun ke atas yang menggunakan komputer Maluku Utara 2020",
+      "must_match": [
+        "26,51",
+        "menggunakan"
+      ],
+      "note": "Tabel 6.3, Statistik Kesejahteraan Rakyat Provinsi Maluku Utara 2020; figure at offset 1544 in its chunk (kb 14543)"
+    },
+    {
+      "id": "sekolah-murid-guru-20812",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "jumlah sekolah, murid, guru, dan rasio murid-guru madrasah tsanawiyah Maluku Utara 2017",
+      "must_match": [
+        "10 684 131",
+        "tsanawiyah"
+      ],
+      "note": "Tabel 4.1.11, Provinsi Maluku Utara Dalam Angka 2017; figure at offset 2536 in its chunk (kb 20812)"
+    },
+    {
+      "id": "kasus-10-penyakit-23624",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "jumlah kasus 10 penyakit terbanyak di provinsi Maluku Utara 2015",
+      "must_match": [
+        "34 198",
+        "terbanyak"
+      ],
+      "note": "Tabel 4.2.9, Buku Saku Statistik Provinsi Maluku Utara 2015; figure at offset 2219 in its chunk (kb 23624)"
+    },
+    {
+      "id": "sampling-error-estimasi-16393",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "sampling error estimasi jumlah rumah tangga usaha domba menurut kabupaten/ kota Maluku Utara",
+      "must_match": [
+        "708 111",
+        "kabupaten"
+      ],
+      "note": "Tabel 6.1.10, Sampling Error Estimasi Hasil SUrvei Pertanian Antar Sensus; figure at offset 2997 in its chunk (kb 16393)"
+    },
+    {
+      "id": "produksi-usaha-pelabuhan-27240",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "produksi usaha pelabuhan sidangoli uraian 2000 Maluku Utara 2001",
+      "must_match": [
+        "158 233",
+        "pelabuhan"
+      ],
+      "note": "Tabel 8.4, Maluku Utara Dalam Angka 2001; figure at offset 2320 in its chunk (kb 27240)"
+    },
+    {
+      "id": "tingkat-pengangguran-terbuka-20092",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "tingkat pengangguran terbuka Maluku Utara 2016",
+      "must_match": [
+        "12,30",
+        "pengangguran"
+      ],
+      "note": "Tabel 4.2, Indikator Kesejahteraan Rakyat  Maluku Utara 2016; figure at offset 2256 in its chunk (kb 20092)"
+    },
+    {
+      "id": "tingkat-pengangguran-terbuka-18742",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "tingkat pengangguran terbuka Maluku Utara 2018",
+      "must_match": [
+        "69,32",
+        "pengangguran"
+      ],
+      "note": "Tabel 13.9, Buku Saku Statistik Provinsi Maluku Utara 2018; figure at offset 3332 in its chunk (kb 18742)"
+    },
+    {
+      "id": "sampling-error-penduduk-4968",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "sampling error persentase penduduk berumur 059 bulan Maluku Utara 2025",
+      "must_match": [
+        "14,60",
+        "sampling"
+      ],
+      "note": "Tabel 9.33, Statistik Kesejahteraan Rakyat Provinsi Maluku Utara 2025; figure at offset 1650 in its chunk (kb 4968)"
+    },
+    {
+      "id": "perempuan-pernah-kawin-18998",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "persentase perempuan pernah kawin berumur 15-49 tahun yang melahirkan anak lahir hidup Maluku Utara 2018",
+      "must_match": [
+        "2 006 192",
+        "melahirkan"
+      ],
+      "note": "Tabel 4.2.8, Provinsi Maluku Utara Dalam Angka 2018; figure at offset 1675 in its chunk (kb 18998)"
+    },
+    {
+      "id": "pdrb-berlaku-26759",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "pdrb atas dasar harga berlaku menurut provinsi Maluku Utara 2010",
+      "must_match": [
+        "85 143",
+        "berlaku"
+      ],
+      "note": "Tabel 14.2, Maluku Utara Dalam Angka 2010; figure at offset 1501 in its chunk (kb 26759)"
+    },
+    {
+      "id": "penyaluran-bbm-pelumas-23683",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "penyaluran bbm dan pelumas oleh pertamina region iv-c depot ternate menurut bulan Maluku Utara 2015",
+      "must_match": [
+        "3 186",
+        "penyaluran"
+      ],
+      "note": "Tabel 10.4.7, Buku Saku Statistik Provinsi Maluku Utara 2015; figure at offset 2247 in its chunk (kb 23683)"
+    },
+    {
+      "id": "agregat-pdrb-26756",
+      "difficulty": "deep-body",
+      "topic": "tabel",
+      "query": "beberapa agregat pdrb provinsi Maluku Utara 2010",
+      "must_match": [
+        "237 527",
+        "agregat"
+      ],
+      "note": "Tabel 13.5, Maluku Utara Dalam Angka 2010; figure at offset 1727 in its chunk (kb 26756)"
     }
   ]
 }
