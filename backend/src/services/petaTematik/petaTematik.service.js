@@ -24,19 +24,38 @@ function tableName(id) {
 
 async function getYears(indikatorId) {
   const id = validateIndikatorId(indikatorId);
+  // Cache key bumped to `:v2` because the response shape now includes
+  // `years_empty` (years that exist but have no kabko-level data — only
+  // provinsi total or fully null). Old `:years` cache entries would lack
+  // this field; bumping the key invalidates them without flushing all cache.
   const watermark = await getWatermark(id);
-  return cache.getOrCompute(`ind:${id}:${watermark}:years`, async () => {
+  return cache.getOrCompute(`ind:${id}:${watermark}:years:v2`, async () => {
     const seq = getSequelizeBps();
+    const placeholders = KABKOTA_NAMES_FULL.map(() => '?').join(',');
+    // One scan: per-year count of kabko rows with non-null value. Year is
+    // "empty" if zero kabko has data for it (i.e. data only at provinsi level
+    // or completely null in that year — map can't render).
     const [yearRows] = await seq.query(
-      `SELECT DISTINCT year FROM \`${tableName(id)}\`
-        WHERE year > 0 ORDER BY year ASC`
+      `SELECT
+         year,
+         SUM(CASE WHEN dim_value IN (${placeholders}) AND value IS NOT NULL THEN 1 ELSE 0 END) AS kabko_count
+       FROM \`${tableName(id)}\`
+       WHERE year > 0
+       GROUP BY year
+       ORDER BY year ASC`,
+      { replacements: [...KABKOTA_NAMES_FULL] }
     );
     const [hmRows] = await seq.query(
       `SELECT (SUM(CASE WHEN month_no BETWEEN 1 AND 12 THEN 1 ELSE 0 END) > 0) AS has_monthly
          FROM \`${tableName(id)}\``
     );
+    const years = yearRows.map(r => Number(r.year));
+    const years_empty = yearRows
+      .filter(r => Number(r.kabko_count) === 0)
+      .map(r => Number(r.year));
     return {
-      years: yearRows.map(r => Number(r.year)).sort((a, b) => a - b),
+      years,
+      years_empty,
       has_monthly: Number(hmRows[0]?.has_monthly || 0) === 1,
     };
   });

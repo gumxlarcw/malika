@@ -37,6 +37,48 @@ interface AutomationItem {
   };
 }
 
+interface AutomationStatusResult {
+  items?: AutomationItem[];
+  scheduler_enabled?: boolean;
+  poll_minutes?: number;
+  min_interval_hours?: number;
+}
+
+interface StatusJobStartResponse {
+  job?: { jobId?: string };
+  message?: string;
+}
+
+interface StatusJobStatusResponse {
+  job?: {
+    status?: "pending" | "running" | "done" | "failed";
+    data?: AutomationStatusResult;
+    error?: string;
+  };
+}
+
+/**
+ * Run the automation status async job pattern (POST → poll → done) and return
+ * the aggregated status. Used by dashboard KPIs. Mirrors the loop in
+ * /automation page.tsx but without the per-tick progress updates since the
+ * dashboard only needs the final tally. Polls up to ~20s before giving up.
+ */
+async function fetchAutomationStatusViaJob(): Promise<AutomationStatusResult> {
+  const startRes = await api.post<StatusJobStartResponse>("/automation/status-job", {});
+  const jobId = startRes.data?.job?.jobId;
+  if (!jobId) throw new Error(startRes.data?.message || "Status job tidak bisa dimulai");
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    const statusRes = await api.get<StatusJobStatusResponse>(`/automation/status-job/${jobId}`);
+    const j = statusRes.data?.job;
+    if (!j) throw new Error("Status job response kosong");
+    if (j.status === "done") return j.data || {};
+    if (j.status === "failed") throw new Error(j.error || "Status job gagal");
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  throw new Error("Status job timeout (>20s)");
+}
+
 interface DashboardStats {
   total: number;
   visible: number;
@@ -138,13 +180,17 @@ export default function DashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const [dsRes, autoRes] = await Promise.all([
+        // GET /automation was removed in the 2026-05-11 audit. The replacement
+        // is the async job pattern used by /automation page: POST to start a
+        // status job, then poll its progress endpoint until `done`. Dashboard
+        // uses the same flow so KPI counts stay accurate without re-introducing
+        // the removed sync endpoint.
+        const [dsRes, automation] = await Promise.all([
           api.get<Datasource[]>("/datasource/admin"),
-          api.get<{ items?: AutomationItem[]; scheduler_enabled?: boolean; poll_minutes?: number; min_interval_hours?: number }>("/automation"),
+          fetchAutomationStatusViaJob().catch(() => ({} as AutomationStatusResult)),
         ]);
 
         const datasources = Array.isArray(dsRes.data) ? dsRes.data : [];
-        const automation = autoRes.data || {};
         const items = Array.isArray(automation.items) ? automation.items : [];
 
         const total = datasources.length;
