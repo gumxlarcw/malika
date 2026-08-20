@@ -101,15 +101,10 @@ export default function Konsultasi({ t, onComingSoon }: Props) {
           <h2 className={cn("m-0 text-2xl font-semibold leading-8", TEXT)}>{t.tKonsulH}</h2>
           <p className={cn("mt-1.5 text-sm leading-5", TEXT_4)}>{t.tKonsulSub}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium leading-[18px] text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
-            {t.tKonsulSoon}
-          </span>
-          <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-warning-200 bg-warning-50 px-3 py-1.5 text-xs font-medium leading-[18px] text-warning-700 dark:border-warning-500/40 dark:bg-warning-500/10 dark:text-warning-300">
-            {t.tKonsulBadge}
-          </span>
-        </div>
+        <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium leading-[18px] text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+          {t.tKonsulSoon}
+        </span>
       </div>
 
       {/* How a booking works */}
