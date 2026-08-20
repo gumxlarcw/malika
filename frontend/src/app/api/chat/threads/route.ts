@@ -16,6 +16,10 @@ function getMalikaUid(req: NextRequest) {
   return String(uid).trim();
 }
 
+function getMalikaToken(req: NextRequest) {
+  return req.headers.get("x-malika-token") || "";
+}
+
 export async function GET(req: NextRequest) {
   const uid = getMalikaUid(req);
   if (!uid) {
@@ -24,12 +28,14 @@ export async function GET(req: NextRequest) {
 
   const url = `${backendBaseUrl()}/chat/threads`;
 
+  const token = getMalikaToken(req);
+  const fwd: Record<string, string> = { "x-malika-uid": uid };
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: {
-        "x-malika-uid": uid,
-      },
+      headers: fwd,
       cache: "no-store",
     });
   } catch {
@@ -62,14 +68,15 @@ export async function POST(req: NextRequest) {
 
   const url = `${backendBaseUrl()}/chat/threads`;
 
+  const token = getMalikaToken(req);
+  const fwd: Record<string, string> = { "Content-Type": "application/json", "x-malika-uid": uid };
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-malika-uid": uid,
-      },
+      headers: fwd,
       body: JSON.stringify({ title: body?.title }),
       cache: "no-store",
     });

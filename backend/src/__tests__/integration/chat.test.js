@@ -1,6 +1,7 @@
 const request = require('supertest');
 
 jest.mock('../../controllers/chat.controller', () => ({
+  createIdentity: (req, res) => res.json({ ok: true, uid: 'u', token: 't', exp: 0 }),
   listThreads: (req, res) => res.json({ items: [{ id: 1, title: 'Test' }] }),
   createThread: (req, res) => res.status(201).json({ id: 10, title: req.body.title || 'New' }),
   listMessages: (req, res) => res.json({ items: [{ id: 1, content: 'Hello' }] }),

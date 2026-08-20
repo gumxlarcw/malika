@@ -30,12 +30,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const url = `${backendBaseUrl()}/chat/threads/${encodeURIComponent(String(threadId))}/messages`;
 
+  const token = req.headers.get("x-malika-token") || "";
+  const fwd: Record<string, string> = { "x-malika-uid": uid };
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: {
-        "x-malika-uid": uid,
-      },
+      headers: fwd,
       cache: "no-store",
     });
   } catch {
@@ -74,14 +76,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const url = `${backendBaseUrl()}/chat/threads/${encodeURIComponent(String(threadId))}/messages`;
 
+  const token = req.headers.get("x-malika-token") || "";
+  const fwd: Record<string, string> = { "Content-Type": "application/json", "x-malika-uid": uid };
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-malika-uid": uid,
-      },
+      headers: fwd,
       body: JSON.stringify({ text: body?.text }),
       cache: "no-store",
     });

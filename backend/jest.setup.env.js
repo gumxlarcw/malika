@@ -23,3 +23,8 @@ if (dotenvResult.error && dotenvResult.error.code !== 'ENOENT') {
     'Or export OPENAI_API_URL / OPENAI_API_BASE_URL (plus the DB and JWT vars) yourself, the way CI does.'
   );
 }
+
+// anonIdentity.service is fail-closed: it throws at import when MALIKA_ANON_SECRET
+// is unset. Provide a deterministic test secret when .env doesn't define one so
+// any suite that transitively imports the chat controller/routes can load.
+process.env.MALIKA_ANON_SECRET = process.env.MALIKA_ANON_SECRET || 'test-anon-secret-not-for-production';

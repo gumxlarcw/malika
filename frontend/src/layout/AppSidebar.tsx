@@ -15,6 +15,7 @@ import {
   ShootingStarIcon,
   TableIcon,
   MalutMapIcon,
+  DocsIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
 import type { NotificationItem } from "@/lib/notifications.data";
@@ -73,6 +74,12 @@ const navItems: NavItem[] = [
     name: "Feedback",
     path: "/feedback",
     tourId: "sidebar-feedback",
+  },
+  {
+    icon: <DocsIcon />,
+    name: "Change Log",
+    path: "/change-log",
+    tourId: "sidebar-change-log",
   },
 ];
 

@@ -15,12 +15,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const url = `${backendBaseUrl()}/chat/threads/${encodeURIComponent(String(threadId))}/suggestions`;
 
+  const token = req.headers.get("x-malika-token") || "";
+  const fwd: Record<string, string> = { "x-malika-uid": uid };
+  if (token) fwd["x-malika-token"] = token;
+
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: {
-        "x-malika-uid": uid,
-      },
+      headers: fwd,
       cache: "no-store",
     });
   } catch {

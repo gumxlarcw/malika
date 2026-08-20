@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 const { authMiddleware, requireAdmin } = require("./src/middleware/auth.middleware");
 const { csrfMiddleware, getCsrfToken } = require("./src/middleware/csrf.middleware");
 const { createAuditLogMiddleware } = require("./src/middleware/auditLog.middleware");
+const { verifyToken: verifyAnonToken } = require("./src/services/chat/anonIdentity.service");
 
 // ROUTES
 const authRoutes = require("./src/routes/auth.routes");
@@ -119,20 +120,25 @@ const aiLimiter = rateLimit({
 });
 app.use("/ai", aiLimiter, aiRoutes);
 
-// Public chat (rate-limited; requires x-malika-uid header from PWA)
+// Public chat (rate-limited; identity comes from the signed x-malika-token)
 const chatLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 60,
     standardHeaders: true,
     legacyHeaders: false,
+    // Bucket per device ONLY when the uid is proven by a server-signed token.
+    // A bare x-malika-uid is client-supplied: keying on it let a single IP mint
+    // an unlimited number of fresh buckets just by rotating the header, which
+    // defeats the limiter entirely. Unsigned callers share the per-IP bucket
+    // (`trust proxy` is set, so req.ip is the real client, not the tunnel).
     keyGenerator: (req) => {
+        const ip = String(req.ip || '');
         try {
-            const uidRaw = req.get('x-malika-uid') || req.get('x-malika-user') || '';
-            const uid = String(uidRaw || '').trim().slice(0, 100);
-            // Combine IP + UID to reduce abuse and avoid UID-only sharing behind NAT.
-            return uid ? `${req.ip || ''}|${uid}` : String(req.ip || '');
+            const payload = verifyAnonToken(req.get('x-malika-token') || '');
+            const sub = payload && payload.sub ? String(payload.sub).trim().slice(0, 100) : '';
+            return sub ? `${ip}|${sub}` : ip;
         } catch {
-            return String(req.ip || '');
+            return ip;
         }
     },
 });

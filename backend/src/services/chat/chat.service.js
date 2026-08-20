@@ -1,5 +1,7 @@
 const ChatThread = require('../../models/ChatThread.model');
 const ChatMessage = require('../../models/ChatMessage.model');
+const ChatMessageFlag = require('../../models/ChatMessageFlag.model');
+const ChatFeedback = require('../../models/ChatFeedback.model');
 const { resolveSearchIntent } = require('../search/intent.service');
 const { buildDatasourceCandidates } = require('../search/intent.service');
 const DataPeriod = require('../../models/DataPeriod.model');
@@ -91,7 +93,10 @@ function now() {
 }
 
 function getOwnerIdFromReq(req) {
-  const raw = req.get('x-malika-uid') || req.get('x-malika-user') || '';
+  // Prefer the uid derived by malikaIdentityMiddleware (verified token in strict
+  // mode; token-or-legacy-header in dual mode). Fall back to the raw header so
+  // routes without the middleware — and existing unit tests — still resolve.
+  const raw = req.malikaUid || req.get('x-malika-uid') || req.get('x-malika-user') || '';
   const ownerId = String(raw || '').trim();
   if (!ownerId) {
     const err = new Error('Missing x-malika-uid header');
@@ -118,7 +123,7 @@ function getOpenAIKey() {
 }
 
 function getOpenAIModel() {
-  return process.env.OPENAI_MODEL_CHAT || 'gpt-4.1-mini';
+  return process.env.OPENAI_MODEL_CHAT || 'claude-sonnet-4-6';
 }
 
 async function listThreads(ownerId) {
@@ -165,6 +170,25 @@ async function listMessages(ownerId, threadId) {
     limit: 500,
   });
   return rows.map((r) => r.toJSON());
+}
+
+/**
+ * Delete a thread the caller owns, cascading its messages, flags and feedback.
+ * Ownership is enforced first (getThreadOwned throws 404 when the thread is not
+ * owned by ownerId) so a forged uid cannot delete another user's thread. All
+ * deletes run in one transaction so a mid-cascade failure leaves nothing partial.
+ */
+async function deleteThread(ownerId, threadId) {
+  await getThreadOwned(ownerId, threadId);
+
+  await ChatThread.sequelize.transaction(async (transaction) => {
+    await ChatMessageFlag.destroy({ where: { thread_id: threadId }, transaction });
+    await ChatFeedback.destroy({ where: { thread_id: threadId }, transaction });
+    await ChatMessage.destroy({ where: { thread_id: threadId }, transaction });
+    await ChatThread.destroy({ where: { id: threadId, owner_id: ownerId }, transaction });
+  });
+
+  return { ok: true, id: threadId };
 }
 
 /**
@@ -3193,4 +3217,5 @@ module.exports = {
   createThread,
   listMessages,
   sendMessage,
+  deleteThread,
 };

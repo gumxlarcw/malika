@@ -50,6 +50,66 @@ export function getOrCreateMalikaUid() {
   }
 }
 
+const MALIKA_TOKEN_KEY = "malika_token";
+const TOKEN_RENEW_BEFORE_SECONDS = 30 * 24 * 60 * 60; // renew when < 30 days remain
+
+function decodeTokenExp(token: string): number | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const json = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof json.exp === "number" ? json.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ensure a signed identity token exists for `uid`. Reuses the stored token while
+ * it has > 30 days to live; otherwise mints/renews via POST /api/chat/identity
+ * (presenting the existing uid so the same anonymous identity is preserved —
+ * legacy adoption). Returns the token, or null if minting failed — callers fall
+ * back to the bare uid, which the backend still accepts while STRICT is off.
+ */
+export async function getOrCreateMalikaToken(uid: string): Promise<string | null> {
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(MALIKA_TOKEN_KEY);
+  } catch {
+    stored = null;
+  }
+  if (stored) {
+    const exp = decodeTokenExp(stored);
+    if (exp && exp - Math.floor(Date.now() / 1000) > TOKEN_RENEW_BEFORE_SECONDS) {
+      return stored;
+    }
+  }
+  try {
+    const res = await fetch(`${backendBaseUrl()}/identity`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(stored ? { "x-malika-token": stored } : {}),
+      },
+      body: JSON.stringify({ uid }),
+    });
+    if (!res.ok) return stored;
+    const json = await res.json();
+    if (json?.token) {
+      try {
+        localStorage.setItem(MALIKA_TOKEN_KEY, json.token);
+        if (json.uid) localStorage.setItem("malika_uid", json.uid);
+      } catch {
+        /* ignore persistence failure; token still returned for this session */
+      }
+      return json.token as string;
+    }
+    return stored;
+  } catch {
+    return stored;
+  }
+}
+
 // Search history helpers
 const SEARCH_HISTORY_KEY = "malika_search_history";
 const MAX_SEARCH_HISTORY = 10;
