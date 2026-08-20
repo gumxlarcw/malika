@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { getNotifItems, type Copy, type Lang } from "../_lib/copy";
-import { PEOPLE } from "../_lib/people";
+import { PEOPLE, TIM } from "../_lib/people";
 import {
   BORDER,
   BRAND_BORDER,
@@ -15,7 +15,7 @@ import {
   TEXT_4,
 } from "../_lib/ui";
 
-export type ModalKind = "reservasi" | "masuk" | "notif" | "petugas";
+export type ModalKind = "reservasi" | "masuk" | "notif" | "petugas" | "soon";
 
 type Props = {
   t: Copy;
@@ -280,6 +280,28 @@ export default function LandingModals({
     );
   }
 
+  if (modal === "soon") {
+    return (
+      <ModalShell labelledBy={titleId} onClose={handleClose} closeLabel={t.tClose}>
+        <span className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium leading-[18px] text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+          {t.tKonsulSoon}
+        </span>
+        <div id={titleId} className={cn("mt-3.5", heading)}>
+          {t.tMSoonH}
+        </div>
+        <p className={cn("mt-2 text-[13px] leading-[21px]", TEXT_3)}>{t.tMSoonSub}</p>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="mt-5 h-[46px] w-full cursor-pointer rounded-[10px] border-0 bg-brand-500 text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-brand-600"
+        >
+          {t.tMSoonCta}
+        </button>
+      </ModalShell>
+    );
+  }
+
   const person = PEOPLE[petugas] ?? PEOPLE[0];
   return (
     <ModalShell labelledBy={titleId} onClose={handleClose} closeLabel={t.tClose}>
@@ -298,23 +320,28 @@ export default function LandingModals({
             {person.nama}
           </span>
           <span className={cn("mt-[3px] block text-[13px] leading-5", TEXT_4)}>{person.jabatan}</span>
+          <span className={cn("mt-0.5 block text-[13px] leading-5", TEXT_4)}>
+            {TIM[person.tim].nama}
+          </span>
         </span>
       </div>
-      <div className="mt-4.5 flex flex-wrap gap-2">
-        {person.chips.map((chip) => (
-          <span
-            key={chip}
-            className={cn(
-              "rounded-full border px-3 py-[5px] text-xs font-medium leading-[18px]",
-              BRAND_BORDER,
-              SURFACE_BRAND_2,
-              BRAND_TEXT
-            )}
-          >
-            {chip}
-          </span>
-        ))}
-      </div>
+      {person.chips.length > 0 && (
+        <div className="mt-4.5 flex flex-wrap gap-2">
+          {person.chips.map((chip) => (
+            <span
+              key={chip}
+              className={cn(
+                "rounded-full border px-3 py-[5px] text-xs font-medium leading-[18px]",
+                BRAND_BORDER,
+                SURFACE_BRAND_2,
+                BRAND_TEXT
+              )}
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
       <p className={cn("mt-4 text-[13px] leading-[21px]", TEXT_3)}>{t.tMPetugasNote}</p>
       <button
         type="button"

@@ -26,18 +26,17 @@ import RilisTrending from "./RilisTrending";
 export default function LandingClient() {
   const [lang, setLang] = useState<Lang>("id");
   const [modal, setModal] = useState<ModalKind | null>(null);
-  const [petugas, setPetugas] = useState(0);
   const t = getCopy(lang);
   const nav = useMemo(() => landingNav(t), [t]);
 
   const closeModal = useCallback(() => setModal(null), []);
   const openReservasi = useCallback(() => setModal("reservasi"), []);
-  const openMasuk = useCallback(() => setModal("masuk"), []);
   const openNotif = useCallback(() => setModal("notif"), []);
-  const openPetugas = useCallback((index: number) => {
-    setPetugas(index);
-    setModal("petugas");
-  }, []);
+  // Consultation booking is not live, so every button inside that section opens
+  // the coming-soon dialog instead. The specialist profile dialog still exists in
+  // LandingModals — restoring it means bringing back the `petugas` index state and
+  // handing <Konsultasi> an `onOpenPetugas` again.
+  const openSoon = useCallback(() => setModal("soon"), []);
 
   return (
     <div className={cn("min-h-screen font-outfit", PAGE_BG)}>
@@ -48,12 +47,7 @@ export default function LandingClient() {
         <MenuGrid t={t} onOpenReservasi={openReservasi} />
         <HeadlineFigures t={t} />
         <PetaPreview t={t} lang={lang} />
-        <Konsultasi
-          t={t}
-          onOpenReservasi={openReservasi}
-          onOpenMasuk={openMasuk}
-          onOpenPetugas={openPetugas}
-        />
+        <Konsultasi t={t} onComingSoon={openSoon} />
         <KategoriGrid t={t} />
         <RilisTrending t={t} />
         <AboutStrip t={t} />
@@ -66,7 +60,7 @@ export default function LandingClient() {
         t={t}
         lang={lang}
         modal={modal}
-        petugas={petugas}
+        petugas={0}
         onClose={closeModal}
         onOpenReservasi={openReservasi}
       />

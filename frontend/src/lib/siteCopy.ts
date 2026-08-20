@@ -81,6 +81,7 @@ const ID = {
   tKonsulH: "Konsultasi langsung dengan spesialis data",
   tKonsulSub: "Ajukan reservasi, lalu petugas mengonfirmasi jadwalnya",
   tKonsulBadge: "Perlu daftar / masuk dulu",
+  tKonsulSoon: "Segera hadir",
   tStep1: "Daftar atau masuk",
   tStep1s: "Verifikasi email · sekali saja",
   tStep2: "Pilih spesialis",
@@ -176,6 +177,10 @@ const ID = {
   tMPetugasNote:
     "Konsultasi dilayani sesuai piket Pelayanan Statistik Terpadu. Ajukan waktu yang Anda inginkan, petugas akan mengonfirmasi.",
   tMPetugasCta: "Ajukan reservasi dengan petugas ini",
+  tMSoonH: "Reservasi konsultasi belum dibuka",
+  tMSoonSub:
+    "Daftar spesialis dan alur pemesanannya sudah bisa dilihat lebih dulu. Tombolnya aktif begitu layanannya siap.",
+  tMSoonCta: "Mengerti",
 } as const;
 
 export type CopyKey = keyof typeof ID;
@@ -243,6 +248,7 @@ const EN: Copy = {
   tKonsulH: "Talk to a data specialist",
   tKonsulSub: "Request a slot, then the officer confirms the schedule",
   tKonsulBadge: "Sign up / sign in first",
+  tKonsulSoon: "Coming soon",
   tStep1: "Sign up or sign in",
   tStep1s: "Email verification · once only",
   tStep2: "Pick a specialist",
@@ -330,6 +336,10 @@ const EN: Copy = {
   tMPetugasNote:
     "Consultations follow the Integrated Statistics Service roster. Propose a time and the officer will confirm.",
   tMPetugasCta: "Request a booking with this officer",
+  tMSoonH: "Consultation booking is not open yet",
+  tMSoonSub:
+    "The specialist list and the booking steps are here to preview. The buttons go live once the service is ready.",
+  tMSoonCta: "Got it",
 };
 
 export function getCopy(lang: Lang): Copy {

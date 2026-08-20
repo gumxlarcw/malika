@@ -127,8 +127,10 @@ const DIALOGS: Array<{ name: string; open: (page: import("@playwright/test").Pag
     },
   },
   {
-    name: "masuk",
-    expect: /Masuk atau daftar/,
+    // Booking is gated: every control inside #konsultasi opens the coming-soon
+    // dialog, so "Sudah punya akun? Masuk" no longer reaches the sign-in sheet.
+    name: "coming soon — masuk",
+    expect: /Reservasi konsultasi belum dibuka/,
     open: async (page) => {
       await page.locator("#konsultasi").scrollIntoViewIfNeeded();
       await page.getByRole("button", { name: /Sudah punya akun\? Masuk/ }).click();
@@ -142,8 +144,8 @@ const DIALOGS: Array<{ name: string; open: (page: import("@playwright/test").Pag
     },
   },
   {
-    name: "profil petugas",
-    expect: /Statistisi|Pranata/,
+    name: "coming soon — lihat profil",
+    expect: /Reservasi konsultasi belum dibuka/,
     open: async (page) => {
       await page.locator("#konsultasi").scrollIntoViewIfNeeded();
       await page.getByRole("button", { name: /Lihat profil/ }).first().click();
