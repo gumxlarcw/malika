@@ -200,12 +200,22 @@ export const ThinkingFeed: React.FC<ThinkingFeedProps> = ({
   // ═══════════════════════════════════════════════════════════════════
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 overflow-hidden">
-      {/* Header. No timer: a restored panel never ran the clock, so it only ever
-          read "0s" — a wrong number is worse than no number. */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <span aria-hidden="true" className="text-[13px]">🧠</span>
-        <span className="flex-1 text-[12.5px] font-medium text-gray-700 dark:text-gray-300">
-          Proses berpikir
+      {/* Header — the rail's finished state. Still no timer: a restored panel never
+          ran the clock, so it only ever read "0s", and a wrong number is worse than
+          none. No step count either: this panel is not given the steps, and a
+          hardcoded "9/09" would assert something it cannot know. */}
+      <div className="flex items-center gap-2.5 px-3 py-2">
+        <span
+          className="rounded-full shrink-0"
+          style={{ width: 8, height: 8, background: "#465fff" }}
+          aria-hidden="true"
+        />
+        <span style={{ font: "600 13px/18px Outfit, system-ui, sans-serif", color: "#101828" }}>
+          Selesai
+        </span>
+        <span className="flex-1" />
+        <span style={{ font: "400 11px/18px 'IBM Plex Mono', monospace", color: "#98a2b3" }}>
+          proses berpikir
         </span>
       </div>
 

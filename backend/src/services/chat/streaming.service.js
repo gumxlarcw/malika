@@ -4126,6 +4126,11 @@ async function streamChatResponse({
     );
 
     // ── Pipeline progress status: stage 2 of 5 ──
+    // The dimensions of the question — period, region, indicator — are resolved by
+    // now. That work was silent, so the rail had nothing to show between reading
+    // the question and hitting the datasources.
+    sendEvent('status', { message: 'Analisis DNA data…', stage: 'dna' });
+
     sendEvent('status', { message: 'Mencari sumber data…', stage: 'search' });
 
     // Resolve intent and get candidates using the NORMALIZED query
@@ -5348,6 +5353,7 @@ async function streamChatResponse({
 
     // ── Pipeline progress status: stage 6 of 6 — fired on first response chunk
     let _generatingStatusEmitted = false;
+    let _deepdiveStatusEmitted = false;
     // Backstop against the model formatting an individual-level disclosure. The
     // request-side Pasal 21 gate is the primary control; this catches the
     // paraphrase that slips it, and outright fabrication.
@@ -5360,6 +5366,13 @@ async function streamChatResponse({
       const forwarded = disclosureFilter.push(content);
       if (forwarded) sendEvent('text', { content: forwarded });
     }, (reasoningChunk) => {
+      // Reasoning starting is a real transition the rail could not see: 'Berpikir…'
+      // fires before the LLM call, 'Menyusun jawaban…' only when answer text begins.
+      // Between them sat the longest silence in the turn.
+      if (!_deepdiveStatusEmitted) {
+        _deepdiveStatusEmitted = true;
+        sendEvent('status', { message: 'Sub-analisis mendalam…', stage: 'deepdive' });
+      }
       // Reasoning lands before the first answer token, so this is also what
       // fills the otherwise silent gap while the model thinks. Held back a line
       // at a time: the filter judges lines, and a rule cannot be applied to half
@@ -5393,6 +5406,10 @@ async function streamChatResponse({
     // Build UI metadata for frontend (pass knowledge mode and topic)
     const uiMeta = buildUIMetadata(intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, reasoningText);
     
+    // Building the table, suggestions and links IS the formatting step; it used to
+    // happen with the rail showing nothing after the answer stopped streaming.
+    sendEvent('status', { message: 'Memformat hasil…', stage: 'format' });
+
     // Emit malika_ui event for frontend (before done)
     sendEvent('malika_ui', uiMeta);
 

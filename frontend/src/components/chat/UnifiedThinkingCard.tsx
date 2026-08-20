@@ -1,24 +1,24 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import ProgressRail, { fmtSecs } from "./ProgressRail";
 
 /**
  * UnifiedThinkingCard
  *
- * Shows the model's own reasoning trace while it works — nothing else.
+ * Two layers, per the "Rel Terukur" direction: the nine-step rail is always
+ * visible, the model's reasoning trace collapses beneath it.
  *
- * This used to render the whole pipeline: a six-step timeline, per-step elapsed
- * timers, and a "N langkah selesai" chip, with the reasoning tucked behind a
- * click. That was internal machinery on display. Now the trace is the content,
- * open by default, and the pipeline steps are gone (2026-08-18).
+ * History worth knowing before changing this again. The card once drew a
+ * six-step timeline with per-step timers; on 2026-08-18 all of it was removed
+ * because it showed internal machinery and hid the reasoning behind a click.
+ * That fix over-corrected: the nine `status` events the backend sends went
+ * undrawn, so the ~13-18s before the first reasoning token showed one line of
+ * text and read as a hang.
  *
- * Reasoning does not start until the retrieval stages finish (~13-18s in), so
- * until the first token arrives the card shows a single line naming the current
- * stage. Without it those opening seconds look like a hang, which is the exact
- * problem this card exists to prevent.
- *
- * Steps still arrive from ChatProcessContext.processSteps, fed by the SSE
- * 'status' events in streaming.service.js — they just aren't drawn as a list.
+ * The rail restores the steps without the old faults — no emoji, no per-step
+ * machinery names, reasoning still open by default, and every row backed by a
+ * real SSE event rather than inferred from timing.
  */
 
 export interface ProcessStepLike {
@@ -38,9 +38,15 @@ interface UnifiedThinkingCardProps {
   onStop?: () => void;
   /**
    * The model's thinking trace. Empty on the greeting tier, which does not
-   * reason — there the status line carries the card on its own.
+   * reason — there the rail carries the card on its own.
    */
   reasoningText?: string;
+}
+
+/** Rough token count for the trace chip; the backend does not send one. */
+function tokenChip(text: string): string {
+  const n = Math.round(text.length / 4);
+  return n >= 1000 ? `${(n / 1000).toFixed(1).replace(".", ",")}k token` : `${n} token`;
 }
 
 export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({
@@ -51,7 +57,26 @@ export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({
 }) => {
   const trace = reasoningText.trim();
   const hasTrace = trace.length > 0;
-  const activeStep = steps.find((s) => s.status !== "done");
+
+  // Reasoning is the thing worth reading, so it stays open while it streams and
+  // folds away once the answer is done — the 2026-08-18 auto-collapse was removed
+  // for hiding itself mid-read, so this only fires when streaming stops.
+  const [open, setOpen] = useState(true);
+  const wasStreaming = useRef(isStreaming);
+  useEffect(() => {
+    if (wasStreaming.current && !isStreaming) setOpen(false);
+    wasStreaming.current = isStreaming;
+  }, [isStreaming]);
+
+  // Elapsed clock for the header. Ticks only while streaming.
+  const startRef = useRef<number>(Date.now());
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!isStreaming) return;
+    if (!startRef.current) startRef.current = Date.now();
+    const id = setInterval(() => setElapsed(Date.now() - startRef.current), 100);
+    return () => clearInterval(id);
+  }, [isStreaming]);
 
   // Follow the trace as it grows, but stop fighting the reader the moment they
   // scroll up to re-read something.
@@ -61,7 +86,7 @@ export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({
     const el = boxRef.current;
     if (!el || !stickToBottomRef.current) return;
     el.scrollTop = el.scrollHeight;
-  }, [trace]);
+  }, [trace, open]);
 
   const onScroll = () => {
     const el = boxRef.current;
@@ -71,56 +96,64 @@ export const UnifiedThinkingCard: React.FC<UnifiedThinkingCardProps> = ({
 
   return (
     <div className="mb-4">
-      <div className="relative overflow-hidden rounded-2xl bg-white ring-1 ring-gray-200/80 dark:bg-gray-900 dark:ring-white/10">
-        {isStreaming && (
-          <span
-            aria-hidden="true"
-            className="malika-rail-glow absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-brand-300 via-brand-500 to-brand-700"
-          />
+      <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-gray-200/80 dark:bg-gray-900 dark:ring-white/10">
+        <ProgressRail
+          steps={steps}
+          isStreaming={isStreaming}
+          onStop={onStop}
+          elapsedMs={elapsed}
+        />
+
+        {hasTrace && (
+          <div style={{ borderTop: "1px solid #e4e7ec" }}>
+            <div className="flex items-center gap-2 px-4 pt-2.5 pb-1.5">
+              <span
+                style={{ font: "500 12.5px/18px Outfit, system-ui, sans-serif", color: "#344054" }}
+              >
+                Proses berpikir
+              </span>
+              <span style={{ font: "400 11px/18px 'IBM Plex Mono', monospace", color: "#98a2b3" }}>
+                {tokenChip(trace)}
+              </span>
+              <span className="flex-1" />
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="rounded-md px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-white/5"
+                style={{ font: "500 11.5px/18px Outfit, system-ui, sans-serif", color: "#3641f5" }}
+                aria-expanded={open}
+              >
+                {open ? "Sembunyikan" : "Lihat rincian"}
+              </button>
+            </div>
+
+            {open && (
+              <div className="px-4 pb-3">
+                <div
+                  ref={boxRef}
+                  onScroll={onScroll}
+                  aria-live="polite"
+                  className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-3 dark:bg-white/5"
+                  style={{
+                    font: "400 11.5px/1.75 'IBM Plex Mono', monospace",
+                    color: "#475467",
+                  }}
+                >
+                  {trace}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
-        <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
-          <span aria-hidden="true" className="text-[13px]">🧠</span>
-          <span className="text-[12.5px] font-medium text-gray-700 dark:text-gray-300">
-            Proses berpikir
-          </span>
-          {isStreaming && onStop && (
-            <button
-              type="button"
-              onClick={onStop}
-              className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
-              aria-label="Hentikan"
-              title="Hentikan"
-            >
-              <span className="inline-block w-2 h-2 bg-rose-500 rounded-[1px]" />
-              Hentikan
-            </button>
-          )}
-        </div>
-
-        <div className="px-4 pb-3">
-          {hasTrace ? (
-            <div
-              ref={boxRef}
-              onScroll={onScroll}
-              aria-live="polite"
-              className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-3 font-mono text-[11.5px] leading-relaxed text-gray-600 dark:bg-white/5 dark:text-gray-400"
-            >
-              {trace}
-            </div>
-          ) : (
-            // Pre-reasoning: one line, no timeline, no timers.
-            <div className="flex items-center gap-2 text-[12px] text-gray-500 dark:text-gray-400">
-              <span className="relative grid place-items-center w-3.5 h-3.5 shrink-0">
-                <span className="malika-pulse absolute inset-0 rounded-full bg-brand-500/30" />
-                <span className="relative w-1.5 h-1.5 rounded-full bg-brand-500" />
-              </span>
-              <span className="truncate">
-                {activeStep?.message?.replace(/[….]+$/, "") || "Memproses"}…
-              </span>
-            </div>
-          )}
-        </div>
+        {!isStreaming && !hasTrace && (
+          <div
+            className="px-4 pb-3"
+            style={{ font: "400 11.5px/16px Outfit, system-ui, sans-serif", color: "#98a2b3" }}
+          >
+            Selesai dalam {fmtSecs(elapsed) || "—"}.
+          </div>
+        )}
       </div>
     </div>
   );
