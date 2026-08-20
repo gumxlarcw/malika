@@ -76,8 +76,12 @@ async function run() {
   let n = 0, failed = 0;
   for (const r of todo) {
     try {
-      // Same text the row already carries: this isolates the model change.
-      const emb = await embedPassage(`${r.title}\n${r.content_text}`);
+      // Clipped to the same 1500 chars the live e5-base index was built from, and
+      // the same the bge-m3 comparison measured. Letting it run to MAX_INPUT_CHARS
+      // (3000) would embed roughly twice the text of the baseline — a second
+      // variable alongside the model, and measured at ~6s/row against 1.7s, which
+      // turned a 14-hour job into a 50-hour one.
+      const emb = await embedPassage(`${r.title}\n${r.content_text}`.slice(0, 1500));
       await sql(
         `INSERT IGNORE INTO \`${TARGET}\`
            (source_kind, source_ref_id, parent_chunk_id, chunk_index, title, content_text,
