@@ -27,6 +27,6 @@ describe('resolveRetrievalTable', () => {
   });
 
   test('the whitelist is a closed set', () => {
-    expect(RETRIEVAL_TABLES).toEqual(['retrieval_chunks', 'retrieval_chunks_rebuild', 'retrieval_chunks_old']);
+    expect(RETRIEVAL_TABLES).toEqual(['retrieval_chunks', 'retrieval_chunks_rebuild', 'retrieval_chunks_old', 'retrieval_chunks_bge']);
   });
 });

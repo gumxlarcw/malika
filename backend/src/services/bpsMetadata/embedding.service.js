@@ -22,9 +22,43 @@
  * Reference: https://huggingface.co/intfloat/multilingual-e5-base
  */
 
-const MODEL_ID = 'Xenova/multilingual-e5-base';
+// Selectable so a stronger encoder can be adopted, and rolled back, without a code
+// change. Measured on 50 labelled cases (ranking only, answers force-included):
+//   e5-base  recall@5 42% · recall@10 60% · MRR 0.258
+//   bge-m3   recall@5 60% · recall@10 80% · MRR 0.338
+// Switching also needs the retrieval_chunks vector column to match DIMENSIONS, so
+// it is a re-index, never a hot swap.
+const MODEL_ID = process.env.EMBEDDING_MODEL_ID || 'Xenova/multilingual-e5-base';
 const FALLBACK_MODEL_ID = 'Xenova/multilingual-e5-small';
-const DIMENSIONS = 768;
+
+const KNOWN_DIMENSIONS = {
+  'Xenova/multilingual-e5-small': 384,
+  'Xenova/multilingual-e5-base': 768,
+  'Xenova/multilingual-e5-large': 1024,
+  'Xenova/bge-m3': 1024,
+};
+
+/** Dimensions of a known model, or null — a wrong guess is only caught after a re-index. */
+function dimensionsFor(modelId) {
+  return KNOWN_DIMENSIONS[modelId] ?? null;
+}
+
+/**
+ * The input markers a model was trained with.
+ *
+ * e5 expects "query: " / "passage: " and loses accuracy without them; bge-m3 was
+ * trained with none and loses accuracy with them. Neither mistake raises an error —
+ * the vectors just quietly get worse — so an unrecognised model gets no prefix
+ * rather than an assumed one.
+ */
+function prefixesFor(modelId) {
+  const id = String(modelId || '');
+  const isE5 = /(^|[/-])multilingual-e5-(small|base|large)$/.test(id);
+  return isE5 ? { query: 'query: ', passage: 'passage: ' } : { query: '', passage: '' };
+}
+
+const DIMENSIONS = dimensionsFor(MODEL_ID) ?? 768;
+const PREFIX = prefixesFor(MODEL_ID);
 // Guard-rail only. It used to be the de-facto chunk size at 1500 chars, which the
 // note below it justified as "~370 tokens, well under the 512-token limit" — that
 // was measured against short documents. Real chunks average 3,508 chars and
@@ -75,7 +109,7 @@ async function embedPassage(text) {
   if (!cleaned) throw new Error('Empty text for embedding');
   const pipe = await getPipeline();
 
-  const out = await pipe(`passage: ${cleaned}`, { pooling: 'mean', normalize: true });
+  const out = await pipe(`${PREFIX.passage}${cleaned}`, { pooling: 'mean', normalize: true });
   const arr = Array.from(out.data);
   if (arr.length !== DIMENSIONS) {
     throw new Error(`Embedding dim mismatch: got ${arr.length}, expected ${DIMENSIONS}`);
@@ -92,7 +126,7 @@ async function embedQuery(text) {
   if (!cleaned) throw new Error('Empty text for embedding');
   const pipe = await getPipeline();
 
-  const out = await pipe(`query: ${cleaned}`, { pooling: 'mean', normalize: true });
+  const out = await pipe(`${PREFIX.query}${cleaned}`, { pooling: 'mean', normalize: true });
   const arr = Array.from(out.data);
   if (arr.length !== DIMENSIONS) {
     throw new Error(`Embedding dim mismatch: got ${arr.length}, expected ${DIMENSIONS}`);
@@ -136,6 +170,9 @@ async function countTokens(text) {
 }
 
 module.exports = {
+  prefixesFor,
+  dimensionsFor,
+  EMBEDDING_PREFIX: PREFIX,
   countTokens,
   generateEmbedding,
   embedQuery,

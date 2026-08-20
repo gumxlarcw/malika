@@ -12,7 +12,7 @@ const ALLOWED_KINDS = ['datasource', 'knowledge_doc', 'knowledge_chunk', 'indica
 // A rebuilt index must be measurable before it is cut over, so the table is
 // selectable. A table name cannot be a bound parameter — it reaches the query by
 // interpolation — so the accepted set is closed rather than sanitised.
-const RETRIEVAL_TABLES = ['retrieval_chunks', 'retrieval_chunks_rebuild', 'retrieval_chunks_old'];
+const RETRIEVAL_TABLES = ['retrieval_chunks', 'retrieval_chunks_rebuild', 'retrieval_chunks_old', 'retrieval_chunks_bge'];
 
 function resolveRetrievalTable(table) {
   if (!table) return RETRIEVAL_TABLES[0];
