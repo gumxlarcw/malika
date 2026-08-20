@@ -7,7 +7,7 @@ const ChatThread = require('../models/ChatThread.model');
 async function submitFeedback(req, res) {
   try {
     const { thread_id, stars, review } = req.body;
-    const ownerId = req.headers['x-malika-uid'] || null;
+    const ownerId = req.malikaUid || req.headers['x-malika-uid'] || null;
 
     if (!thread_id || !stars) {
       return res.status(400).json({ ok: false, error: 'thread_id and stars required' });
@@ -68,7 +68,7 @@ async function submitFeedback(req, res) {
 async function submitGeneralFeedback(req, res) {
   try {
     const { stars, review } = req.body;
-    const ownerId = req.headers['x-malika-uid'] || null;
+    const ownerId = req.malikaUid || req.headers['x-malika-uid'] || null;
 
     if (!ownerId) {
       return res.status(400).json({ ok: false, error: 'Device identifier required' });
@@ -119,7 +119,7 @@ async function submitGeneralFeedback(req, res) {
  */
 async function getMyFeedback(req, res) {
   try {
-    const ownerId = req.headers['x-malika-uid'] || null;
+    const ownerId = req.malikaUid || req.headers['x-malika-uid'] || null;
 
     if (!ownerId) {
       return res.json({ ok: true, feedback: null });
@@ -143,7 +143,7 @@ async function getMyFeedback(req, res) {
 async function getFeedbackByThread(req, res) {
   try {
     const { thread_id } = req.params;
-    const ownerId = req.headers['x-malika-uid'] || null;
+    const ownerId = req.malikaUid || req.headers['x-malika-uid'] || null;
 
     const feedback = await ChatFeedback.findOne({
       where: { thread_id, owner_id: ownerId },

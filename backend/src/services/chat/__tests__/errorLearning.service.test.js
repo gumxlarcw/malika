@@ -183,4 +183,17 @@ describe('analyzeFlags draft suggestions', () => {
     const res = await errorLearningService.analyzeFlags();
     expect(res.byType.hallucination.suggestedDraft).toBeUndefined();
   });
+
+  it('excludes province/kab-kota names from the keyword cloud, keeping topic words', async () => {
+    const res = await errorLearningService.analyzeFlags();
+    const words = res.byType.hallucination.topKeywords.map(k => k.word);
+    // Region names that appeared in the mocked queries must be filtered out…
+    for (const geo of ['halmahera', 'maluku', 'utara', 'ternate']) {
+      expect(words).not.toContain(geo);
+    }
+    // …while the statistical topic that characterizes the cluster survives.
+    expect(words).toContain('penduduk');
+    expect(res.byType.hallucination.suggestedDraft.trigger_keywords)
+      .toEqual(expect.not.arrayContaining(['halmahera', 'maluku', 'ternate']));
+  });
 });

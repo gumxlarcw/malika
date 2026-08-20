@@ -7,12 +7,15 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware, requireAdmin } = require('../middleware/auth.middleware');
 const { createAuditLogMiddleware } = require('../middleware/auditLog.middleware');
+const { malikaIdentityMiddleware } = require('../middleware/malikaIdentity.middleware');
 const errorLearningController = require('../controllers/errorLearning.controller');
 
 const auditEL = createAuditLogMiddleware({ resource: 'error-learning' });
 
-// Public endpoint - users can flag messages
-router.post('/flag', auditEL, errorLearningController.flagMessage);
+// Public anon endpoint - users can flag messages. Guarded by the anon identity
+// middleware (signed token, or bare uid while STRICT is off) — NOT the admin
+// authMiddleware/requireAdmin that protects the management routes below.
+router.post('/flag', malikaIdentityMiddleware, auditEL, errorLearningController.flagMessage);
 
 // Admin-only endpoints (require auth + admin role)
 router.get('/stats', authMiddleware, requireAdmin, errorLearningController.getStats);

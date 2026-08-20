@@ -9,6 +9,13 @@ const ChatMessage = require('../../models/ChatMessage.model');
 const KnowledgeBase = require('../../models/KnowledgeBase.model');
 const { processEmbeddings } = require('../ai/knowledgeDoc.service');
 const { Op, Sequelize } = require('sequelize');
+const { GEO_FRAGMENT_WORDS, KNOWN_GEO } = require('../../utils/geoAnalysis');
+
+// Province + kab/kota names, their word components, and abbreviations. Excluded
+// from keyword-frequency clouds so place names (which appear in almost every BPS
+// query) don't drown out the statistical topic that actually characterizes a
+// flag cluster. Single source of truth: shared/geo-regions.json via geoAnalysis.
+const GEO_EXCLUDE_WORDS = new Set([...GEO_FRAGMENT_WORDS, ...KNOWN_GEO]);
 
 /**
  * Flag a problematic message for review
@@ -209,7 +216,11 @@ async function analyzeFlags() {
     const analysis = {};
     for (const [type, typeFlags] of Object.entries(byType)) {
       const allQueries = typeFlags.map(f => String(f.user_query || '')).join(' ');
-      const words = allQueries.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      const words = allQueries
+        .toLowerCase()
+        .split(/\s+/)
+        .map(w => w.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')) // strip surrounding punctuation
+        .filter(w => w.length > 3 && !GEO_EXCLUDE_WORDS.has(w));
       
       // Count word frequency
       const wordCount = {};
