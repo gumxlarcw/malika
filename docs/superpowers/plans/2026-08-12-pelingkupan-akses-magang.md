@@ -414,7 +414,7 @@ Expected: **berhasil** — baca `data_bps` memang haknya.
 
 **Kenapa penyaringan `source_kind` wajib:** `retrieval_chunks.source_kind` adalah enum yang memuat `'chat_thread'` — sebagian barisnya adalah embedding dari percakapan user, dan `content_text`-nya memuat isi obrolan. Subset `LIMIT 2000` polos akan memasukkan kembali PII yang sudah dibuang lewat pengosongan `chat_messages`.
 
-- [ ] **Step 1: Tulis skrip generator**
+- [x] **Step 1: Tulis skrip generator**
 
 ```bash
 mkdir -p /var/www/html/project-data-strategis/scripts/dev
@@ -500,7 +500,7 @@ Skema `users` sudah diverifikasi 2026-08-12: `id, name, email, password_hash, ro
 mysql project_data_strategis -e "SHOW COLUMNS FROM users;"
 ```
 
-- [ ] **Step 2: Tulis skrip verifikasi**
+- [x] **Step 2: Tulis skrip verifikasi**
 
 Dump yang tidak dibuktikan bebas PII sama saja dengan dump produksi.
 
@@ -552,7 +552,7 @@ SCRIPT
 chmod 750 /var/www/html/project-data-strategis/scripts/dev/verify-dev-seed.sh
 ```
 
-- [ ] **Step 3: Jalankan generator**
+- [x] **Step 3: Jalankan generator**
 
 ```bash
 /var/www/html/project-data-strategis/scripts/dev/make-dev-seed.sh
@@ -560,7 +560,7 @@ chmod 750 /var/www/html/project-data-strategis/scripts/dev/verify-dev-seed.sh
 
 Expected: selesai tanpa error, ukuran hasil ≈ 50–120 MB (dari 2,3 GB).
 
-- [ ] **Step 4: Jalankan verifikasi — ini gerbangnya**
+- [x] **Step 4: Jalankan verifikasi — ini gerbangnya**
 
 ```bash
 /var/www/html/project-data-strategis/scripts/dev/verify-dev-seed.sh /root/dev-seed-$(date +%F).sql.gz
@@ -568,7 +568,7 @@ Expected: selesai tanpa error, ukuran hasil ≈ 50–120 MB (dari 2,3 GB).
 
 Expected: `✓ LULUS`. Bila ada `GAGAL`/`PERIKSA`, **jangan bagikan dump-nya** — perbaiki daftar tabel lalu ulangi Step 3.
 
-- [ ] **Step 5: Muat ke `pds_dev1` dan `pds_dev2` dan buktikan aplikasi bisa jalan di atasnya**
+- [x] **Step 5: Muat ke `pds_dev1` dan `pds_dev2` dan buktikan aplikasi bisa jalan di atasnya**
 
 Dump yang sama dimuat ke kedua database magang.
 
@@ -589,7 +589,7 @@ done
 
 Expected untuk keduanya: `chat_messages` = 0, `user_memory` = 0, `chunks_chat_thread` = **0**, `retrieval_chunks` > 0, `knowledge_base` ≈ 2000, `data_sources` = 298.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /var/www/html/project-data-strategis
@@ -727,7 +727,7 @@ Ketiganya berdampak ke project lain dan **bukan bagian dari rencana ini**. Dicat
 - Consumes: database `pds_dev1`/`pds_dev2` (Task 3), dump termuat (Task 4)
 - Produces: `ecosystem.dev.js` yang dirujuk `docs/ONBOARDING.md` di Task 7.
 
-- [ ] **Step 1: Lengkapi `.env.example`**
+- [x] **Step 1: Lengkapi `.env.example`**
 
 Lima key ini ada di `.env` produksi tetapi hilang dari `.env.example`. `MALIKA_ANON_SECRET` bersifat **fail-closed** — tanpa itu clone bersih crash saat import chat controller, sebelum test apa pun berjalan. Magang hari pertama pasti tersandung.
 
@@ -752,7 +752,7 @@ EOF
 diff backend/.env.example.backup backend/.env.example
 ```
 
-- [ ] **Step 2: Verifikasi tidak ada lagi key yang hilang**
+- [x] **Step 2: Verifikasi tidak ada lagi key yang hilang**
 
 ```bash
 comm -23 \
@@ -762,7 +762,7 @@ comm -23 \
 
 Expected: keluaran **kosong**.
 
-- [ ] **Step 3: Buat `ecosystem.dev.js`**
+- [x] **Step 3: Buat `ecosystem.dev.js`**
 
 Port berbeda dari produksi, dan batas memori dipasang di sini — di file aplikasi milik magang, bukan di setelan memori box.
 
@@ -819,7 +819,7 @@ module.exports = {
 EOF
 ```
 
-- [ ] **Step 4: Verifikasi port sandbox belum dipakai**
+- [x] **Step 4: Verifikasi port sandbox belum dipakai**
 
 ```bash
 ss -ltn | grep -E ':(5200|5250|6200)\b' || echo "ketiga port bebas"
@@ -827,14 +827,14 @@ ss -ltn | grep -E ':(5200|5250|6200)\b' || echo "ketiga port bebas"
 
 Expected: `ketiga port bebas`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/.env.example ecosystem.dev.js
 git commit -m "chore(dev): ecosystem sandbox magang + lengkapi .env.example"
 ```
 
-- [ ] **Step 6 (opsional): URL publik untuk sandbox**
+- [ ] **Step 6 (opsional): URL publik untuk sandbox** — *tidak dikerjakan; hanya bila magang perlu memamerkan hasil di luar server*
 
 Hanya bila magang perlu menunjukkan hasil kerjanya lewat browser di luar server. Dikerjakan **pemilik server**, satu kali; magang tidak pernah menyentuh file ini.
 
@@ -898,7 +898,7 @@ gh api repos/gumxlarcw/malika/collaborators --jq '.[] | "\(.login) push=\(.permi
 
 Expected: baris magang menunjukkan `push=false admin=false`. Bila `push=true`, ulangi Step 1 — Write access membatalkan seluruh perlindungan ini.
 
-- [ ] **Step 3: Tulis panduan onboarding**
+- [x] **Step 3: Tulis panduan onboarding**
 
 ```bash
 cat > docs/ONBOARDING.md <<'EOF'
@@ -1012,7 +1012,7 @@ manual setelah review.
 EOF
 ```
 
-- [ ] **Step 4: Uji panduan sebagai magang sungguhan**
+- [x] **Step 4: Uji panduan sebagai magang sungguhan**
 
 Jalankan Step "Setup pertama kali" dari awal sebagai user `magang1`. Perintah pertama yang gagal adalah cacat di panduan — perbaiki dokumennya, jangan diakali manual.
 
@@ -1023,7 +1023,7 @@ sudo -u magang2 -H bash -lc 'cd ~ && node --version && npm --version && mysql -u
 
 Expected: versi node/npm tampil untuk keduanya, query mengembalikan `298`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/ONBOARDING.md

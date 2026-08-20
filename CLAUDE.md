@@ -1,3 +1,10 @@
+<!-- ═══════ ALWAYS FOLLOW — auto-loaded every session via @import ═══════ -->
+@.claude/rules/code-style.md
+@.claude/rules/testing.md
+@.claude/rules/api-conventions.md
+<!-- deploy skill auto-loads on demand; see "Claude Code config in this repo" below -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
 # MALIKA — Project-specific Claude Code instructions
 
 This file is auto-loaded by Claude Code at the start of every session in `/var/www/html/project-data-strategis/`.
@@ -72,3 +79,25 @@ Update Change Log in the relevant file after significant changes.
 - Check `/root/.claude/projects/-var-www-html/memory/MEMORY.md` for project history & decisions
 - Check `git log --oneline -20` to see recent direction
 - Phase A–F audit fix plan: `docs/superpowers/plans/2026-05-08-db-audit-fixes.md`
+
+## Commands (per sub-project)
+
+npm + Node 20 everywhere. Run inside the sub-project directory.
+
+| step | `backend/` (Jest) | `backend/admin/` (Vitest) | `frontend/` (Playwright) |
+|---|---|---|---|
+| install | `npm ci` | `npm ci` | `npm ci --legacy-peer-deps` |
+| dev | `node server.js` | `npm run dev` | `npm run dev` |
+| build | — | `npm run build` | `npm run build` |
+| test | `npm test` | `npm test` | `npx playwright test` |
+| lint | `npm run lint` | `npm run lint` | `npm run lint` |
+
+Reload after changes: backend → `pm2 reload pds-backend --update-env`; admin/PWA → **build first**, then `pm2 reload pds-admin`/`pds-frontend --update-env` (see the deploy skill).
+
+## Claude Code config in this repo
+
+- **Rules** (`.claude/rules/`): `code-style`, `testing`, `api-conventions` — @-imported at the top of this file, so always on.
+- **Commands** (`.claude/commands/`): `/review` (diff vs `main` against the rules), `/fix-issue <n|desc>` (TDD fix). Use these for repeatable tasks.
+- **Agents** (`.claude/agents/`): `code-reviewer`, `security-auditor` — delegate review/security passes to these (isolated context).
+- **Skill** (`.claude/skills/deploy/`): deploy/reload workflow; loads on demand when you deploy.
+- **Local-only** (gitignored): `CLAUDE.local.md` (personal notes) and `.claude/settings.local.json` (local permission state).

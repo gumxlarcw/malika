@@ -1,0 +1,22 @@
+{
+  "_comment": "Shared, team-wide MCP servers for MALIKA. JSON has no comments, so disabled examples live under _examples (which Claude Code does NOT load) — copy an entry into mcpServers to enable it, then approve it in this project. NOTE: this repo's currently-active MCP servers (context7, etc.) come from user/plugin config, not from this file, so mcpServers is intentionally empty.",
+  "mcpServers": {},
+  "_examples": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}" }
+    },
+    "mariadb": {
+      "command": "npx",
+      "args": ["-y", "@benborla29/mcp-server-mysql"],
+      "env": {
+        "MYSQL_HOST": "127.0.0.1",
+        "MYSQL_PORT": "3306",
+        "MYSQL_DB": "project_data_strategis",
+        "MYSQL_USER": "${DB_USER}",
+        "MYSQL_PASS": "${DB_PASS}"
+      }
+    }
+  }
+}

@@ -83,3 +83,8 @@ backups/
 
 # ─── Temporary scratch ───────────────────────────────────────────────────────
 tmp/
+
+# ─── Claude Code local-only config (added 2026-05-29) ────────────────────────
+# Personal notes; and the local settings file, which can accumulate tokens/paths.
+CLAUDE.local.md
+.claude/settings.local.json
