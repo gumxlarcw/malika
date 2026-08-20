@@ -18,6 +18,16 @@ export interface ProcessStep {
   detail?: string;
   /** Result quality indicator from backend: ok (default), warn (partial), empty (none) */
   detailStatus?: "ok" | "warn" | "empty";
+  /**
+   * Server-measured stage duration, from where the stage's work begins.
+   *
+   * Preferred over doneAt - startedAt, which measures the gap between
+   * consecutive status events on the client. Those two differ sharply where a
+   * stage is announced somewhere other than where it runs: 'dna' and 'search'
+   * are emitted on adjacent lines (client delta ≈ 0ms), and the knowledge
+   * search starts ~1000 lines before it is announced.
+   */
+  elapsedMs?: number;
 }
 
 interface ProcessIndicatorProps {

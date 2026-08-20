@@ -25,12 +25,14 @@ export type ThinkingEvent = ThinkingItem;
  * menyusun jawaban…") so the chat UI can render a step list.
  * The V2 refactor's richer events (thinking, status_detail, tool_call,
  * tool_result, suggestions_update) remain unwired — the matching frontend
- * components were trimmed in commit b4bde20.
+ * components were trimmed in commit b4bde20. status_detail was on that list
+ * until streaming.service.js started emitting it; it is wired again.
  */
 export type SSEEventType =
   | "text"
   | "chunk"    // V1 legacy format (greeting handler)
   | "status"
+  | "status_detail"  // per-stage findings + server-measured duration
   | "reasoning"  // model's thinking trace (reasoning tiers only)
   | "intent"
   | "malika_ui"
@@ -68,12 +70,31 @@ export interface StatusEvent {
   stage: "normalize" | "search" | "preview" | "knowledge" | "thinking" | string;
 }
 
+/**
+ * Enrichment for a stage already announced by `status`.
+ *
+ * A separate event rather than fields on `status` for two reasons: the backend
+ * only learns what a stage found *after* announcing it, and pushStep() ignores a
+ * stage it has already seen, so a second `status` for the same stage would be
+ * dropped on arrival.
+ *
+ * Removed as a dead handler in commit b4bde20 because nothing emitted it.
+ * streaming.service.js emits it now — see sendDetail() there.
+ */
+export interface StatusDetailEvent {
+  stage: string;
+  detail: string;
+  /** Server-measured, from where the stage's work begins. */
+  elapsedMs?: number;
+}
+
 export interface StreamCallbacks {
   onUserSaved?: (data: { id: number }) => void;
   onThreadUpdated?: (data: { title: string; topics?: string }) => void;
   onIntent?: (data: IntentEvent) => void;
   onMalikaUi?: (data: any) => void;
   onStatus?: (data: StatusEvent) => void;
+  onStatusDetail?: (data: StatusDetailEvent) => void;
   /** Model's thinking trace, streamed before the answer on reasoning tiers. */
   onReasoning?: (data: { content: string }) => void;
   onText?: (data: { content: string }) => void;
@@ -208,6 +229,9 @@ export function streamMessage(
               case "status":
                 callbacks.onStatus?.(evt.data);
                 break;
+              case "status_detail":
+                callbacks.onStatusDetail?.(evt.data);
+                break;
               case "reasoning":
                 callbacks.onReasoning?.(evt.data);
                 break;
@@ -239,6 +263,9 @@ export function streamMessage(
       if (buffer.trim()) {
         for (const evt of parseSSEEvents(buffer + "\n\n")) {
           switch (evt.event) {
+            case "status_detail":
+              callbacks.onStatusDetail?.(evt.data);
+              break;
             case "reasoning":
               callbacks.onReasoning?.(evt.data);
               break;

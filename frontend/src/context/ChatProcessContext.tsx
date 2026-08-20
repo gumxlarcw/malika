@@ -48,7 +48,7 @@ interface ChatProcessContextValue {
   /** Push a new step (marks previous active steps as done) */
   pushStep: (step: ProcessStep) => void;
   /** Attach detail to a step by stage name */
-  pushStepDetail: (stage: string, detail: string, detailStatus?: "ok" | "warn" | "empty") => void;
+  pushStepDetail: (stage: string, detail: string, detailStatus?: "ok" | "warn" | "empty", elapsedMs?: number) => void;
   /** Mark all steps as done */
   markAllStepsDone: () => void;
   /** Set steps directly (e.g., restore from ref after remount) */
@@ -128,9 +128,16 @@ export function ChatProcessProvider({ children }: { children: ReactNode }) {
     });
   }, [setProcessSteps]);
 
-  const pushStepDetail = useCallback((stage: string, detail: string, detailStatus?: "ok" | "warn" | "empty") => {
+  const pushStepDetail = useCallback((stage: string, detail: string, detailStatus?: "ok" | "warn" | "empty", elapsedMs?: number) => {
     setProcessSteps((prev) =>
-      prev.map((s) => (s.stage === stage ? { ...s, detail, ...(detailStatus ? { detailStatus } : {}) } : s))
+      prev.map((s) => (s.stage === stage
+        ? {
+            ...s,
+            detail,
+            ...(detailStatus ? { detailStatus } : {}),
+            ...(typeof elapsedMs === "number" ? { elapsedMs } : {}),
+          }
+        : s))
     );
   }, [setProcessSteps]);
 

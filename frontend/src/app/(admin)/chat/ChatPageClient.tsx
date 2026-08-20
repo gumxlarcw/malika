@@ -885,8 +885,20 @@ export default function ChatPageClient({
           setIsThinkingActive(true);
         },
 
-        // Note: status_detail, tool_call, tool_result, suggestions_update
-        // remain unwired (V2 ghost). See chat-pipeline.md.
+        // The `detail` line under a rail row: what the stage actually found,
+        // arriving after the stage was announced because that is when the
+        // backend knows it. pushStepDetail() has existed unused since the rail
+        // was built — this is its first caller.
+        onStatusDetail: (data) => {
+          const stage = String(data?.stage || "").trim();
+          const detail = String(data?.detail || "").trim();
+          if (!stage || !detail) return;
+          const elapsedMs = typeof data?.elapsedMs === "number" ? data.elapsedMs : undefined;
+          pushStepDetail(stage, detail, undefined, elapsedMs);
+        },
+
+        // Note: tool_call, tool_result, suggestions_update remain unwired
+        // (V2 ghost). See chat-pipeline.md.
 
         onDone: (data) => {
           const finalText = String(data?.full_text || "");

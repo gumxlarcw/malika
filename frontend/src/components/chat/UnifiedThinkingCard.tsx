@@ -28,6 +28,8 @@ export interface ProcessStepLike {
   startedAt: number;
   doneAt?: number;
   detail?: string;
+  /** Server-measured stage duration; preferred over doneAt - startedAt. */
+  elapsedMs?: number;
 }
 
 interface UnifiedThinkingCardProps {

@@ -74,8 +74,12 @@ export function buildRail(steps: ProcessStepLike[]): RailModelRow[] {
     if (i < lastSeen) state = "done";
     else if (i === lastSeen) state = "active";
 
-    const elapsedMs =
+    // Server-measured when available. The client fallback times the gap between
+    // consecutive status events, which is the right answer only for stages that
+    // are announced where they actually run.
+    const clientElapsed =
       hit?.doneAt && hit?.startedAt ? hit.doneAt - hit.startedAt : undefined;
+    const elapsedMs = hit?.elapsedMs ?? clientElapsed;
     return { step, state, elapsedMs, detail: hit?.detail };
   });
 }

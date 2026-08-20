@@ -108,6 +108,20 @@ try {
 // ============================================================================
 const { chat: llmChat } = require('./streaming/openaiClient');
 const { parseDocPeriod, sanitizeReasoningLine, createDisclosureFilter, DISCLOSURE_NOTICE, hasDisclosure, sanitizeReasoningTrace, hasUsableValues, pickFirstSourceWithData, pickNearestYear, selectDocsByPeriod } = require('./chatUtils');
+// The `detail` line under each rail row, plus the per-stage clock. Kept out of
+// this file because the formatters are pure and worth testing on their own.
+const {
+  createStageClock,
+  formatNormalizeDetail,
+  formatSearchDetail,
+  formatPreviewDetail,
+  formatKnowledgeDetail,
+  formatDnaDetail,
+  formatThinkingDetail,
+  formatDeepdiveDetail,
+  formatGeneratingDetail,
+  formatFormatDetail,
+} = require('./stageDetail');
 // The model is a single Sonnet lane; routeModel only sizes the answer budget
 // (max_tokens / temperature) from query complexity. Re-wired 2026-08-18 — it had
 // been orphaned since the single-lane refactor, leaving every answer at 1000
@@ -3863,6 +3877,37 @@ async function streamChatResponse({
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
+  // Per-stage clock and the `detail` line for the rail.
+  //
+  // `status` announces a stage as it BEGINS, so the values worth showing are not
+  // in scope yet at that point — the resolved region and year settle ~65 lines
+  // after 'normalize' fires, and `candidates` only after 'search'. A stage is
+  // therefore enriched by a second event once its work has produced something.
+  //
+  // Deliberately a separate event rather than a field on `status`: the client's
+  // pushStep() ignores a stage it has already seen, so re-emitting `status` for
+  // the same stage would be silently dropped.
+  //
+  // Re-introduces the `status_detail` event name that commit b4bde20 removed as
+  // dead — it was dead because nothing emitted it. This emits it.
+  //
+  // `timed: false` is for a stage whose detail is known long before its work
+  // ends — 'thinking' knows its token budget the moment the tier is routed, but
+  // is not finished until the model answers. Sending a duration there would
+  // report the routing call instead of the wait. Omitting elapsedMs lets the
+  // client fall back to the gap between status events, which for those stages
+  // is the correct window.
+  const stageClock = createStageClock();
+  const sendDetail = (stage, detail, { timed = true } = {}) => {
+    if (!detail) return;
+    const elapsedMs = timed ? stageClock.elapsed(stage) : undefined;
+    sendEvent('status_detail', {
+      stage,
+      detail,
+      ...(elapsedMs === undefined ? {} : { elapsedMs }),
+    });
+  };
+
   try {
     // Validate thread ownership
     const thread = await ChatThread.findOne({
@@ -4062,6 +4107,7 @@ async function streamChatResponse({
     }
 
     // ── Pipeline progress status: stage 1 of 5 ──
+    stageClock.mark('normalize');
     sendEvent('status', { message: 'Mengenali topik & wilayah…', stage: 'normalize' });
 
     // Apply query normalization (abbreviation expansion, typo fix, geo normalization)
@@ -4099,6 +4145,15 @@ async function streamChatResponse({
       }
     }
 
+    sendDetail('normalize', formatNormalizeDetail({
+      geo: geoInferenceResult?.hasGeo ? geoInferenceResult.geoReferences?.[0]?.canonical : null,
+      year: inferredYear,
+    }));
+
+    // Fast-path resolution is the DNA stage's own work; time it from here rather
+    // than from the status event below, which fires after it has already run.
+    stageClock.mark('dna');
+
     // Fast-path check: skip expensive RAG/intent resolution for common queries
     let fastPathIntent = null;
     let usedFastPath = false;
@@ -4120,6 +4175,7 @@ async function streamChatResponse({
     // Settled into {ok, value|err} rather than left as a bare promise: the
     // consumption site keeps its own error handling, and an early return between
     // here and there cannot produce an unhandled rejection.
+    stageClock.mark('knowledge');
     const knowledgeSearchSettled = searchKnowledgeBase(effectiveUserQuery, KB_POOL_SIZE).then(
       (value) => ({ ok: true, value }),
       (err) => ({ ok: false, err })
@@ -4130,7 +4186,13 @@ async function streamChatResponse({
     // now. That work was silent, so the rail had nothing to show between reading
     // the question and hitting the datasources.
     sendEvent('status', { message: 'Analisis DNA data…', stage: 'dna' });
+    sendDetail('dna', formatDnaDetail({
+      originalQuery: effectiveUserQuery,
+      normalizedQuery,
+      usedFastPath,
+    }));
 
+    stageClock.mark('search');
     sendEvent('status', { message: 'Mencari sumber data…', stage: 'search' });
 
     // Resolve intent and get candidates using the NORMALIZED query
@@ -4327,6 +4389,8 @@ async function streamChatResponse({
     }
 
     // ── Pipeline progress status: stage 3 of 5 ──
+    sendDetail('search', formatSearchDetail(candidates));
+    stageClock.mark('preview');
     sendEvent('status', { message: 'Memuat data tabel terbaru…', stage: 'preview' });
 
     // Try to get data preview
@@ -5134,6 +5198,7 @@ async function streamChatResponse({
     }
 
     // ── Pipeline progress status: stage 4 of 5 ──
+    sendDetail('preview', formatPreviewDetail(dataPreview));
     sendEvent('status', { message: 'Memuat referensi BRS & publikasi…', stage: 'knowledge' });
 
     // RAG: collect the knowledge search started back at stage 2.
@@ -5146,6 +5211,7 @@ async function streamChatResponse({
         console.warn('[StreamChat] Knowledge search failed:', settled.err?.message);
       }
     }
+    sendDetail('knowledge', formatKnowledgeDetail(knowledgeContext));
 
     // If this is a knowledge-type query (non-data) and we have relevant knowledge,
     // skip the data table/preview to avoid showing irrelevant data
@@ -5317,6 +5383,7 @@ async function streamChatResponse({
     };
 
     // ── Pipeline progress status: stage 5 of 6 ──
+    stageClock.mark('thinking');
     sendEvent('status', { message: 'Berpikir…', stage: 'thinking' });
 
     // Size the answer budget from query complexity. A merge bundle, multi-source
@@ -5333,6 +5400,11 @@ async function streamChatResponse({
       isKnowledgeMode: shouldSkipDataPreview,
     });
     console.log(`[StreamChat] Answer tier: ${answerTier} (max_tokens=${answerConfig.max_tokens}, temp=${answerConfig.temperature})`);
+    sendDetail(
+      'thinking',
+      formatThinkingDetail({ tier: answerTier, maxTokens: answerConfig.max_tokens }),
+      { timed: false },
+    );
 
     // Stream from proxy. Routing via llmChat: handles retry, circuit breaker,
     // abort signal propagation.
@@ -5361,6 +5433,7 @@ async function streamChatResponse({
     const llmResult = await readLlmChatResponse(response, (content) => {
       if (!_generatingStatusEmitted) {
         _generatingStatusEmitted = true;
+        stageClock.mark('generating');
         sendEvent('status', { message: 'Menyusun jawaban…', stage: 'generating' });
       }
       const forwarded = disclosureFilter.push(content);
@@ -5371,6 +5444,7 @@ async function streamChatResponse({
       // Between them sat the longest silence in the turn.
       if (!_deepdiveStatusEmitted) {
         _deepdiveStatusEmitted = true;
+        stageClock.mark('deepdive');
         sendEvent('status', { message: 'Sub-analisis mendalam…', stage: 'deepdive' });
       }
       // Reasoning lands before the first answer token, so this is also what
@@ -5395,6 +5469,8 @@ async function streamChatResponse({
     // The tier that actually answered — falls back to the requested name only
     // when the proxy named none.
     const servedModel = llmResult.model || effectiveModel;
+    sendDetail('deepdive', formatDeepdiveDetail(reasoningText));
+    sendDetail('generating', formatGeneratingDetail({ text: fullText, model: servedModel }));
 
     // Build EXIM params object if this is an EXIM query
     const eximParamsForMeta = isEximQuery ? {
@@ -5404,11 +5480,13 @@ async function streamChatResponse({
     } : null;
 
     // Build UI metadata for frontend (pass knowledge mode and topic)
+    stageClock.mark('format');
     const uiMeta = buildUIMetadata(intentResult, candidates, dataPreview, periodFallback, null, eximParamsForMeta, shouldSkipDataPreview, conversationTopic, reasoningText);
     
     // Building the table, suggestions and links IS the formatting step; it used to
     // happen with the rail showing nothing after the answer stopped streaming.
     sendEvent('status', { message: 'Memformat hasil…', stage: 'format' });
+    sendDetail('format', formatFormatDetail(uiMeta));
 
     // Emit malika_ui event for frontend (before done)
     sendEvent('malika_ui', uiMeta);
