@@ -65,3 +65,5 @@ flowchart TB
 ```
 
 See docs/ARCHITECTURE.md for full details.
+
+<!-- uji runner CI 2026-08-21 -->
