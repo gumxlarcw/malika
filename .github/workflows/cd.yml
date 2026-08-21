@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Deploy (staging)
         if: ${{ vars.STAGING_DEPLOY_ENABLED == 'true' }}
         env:
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Deploy (production)
         if: ${{ vars.PROD_DEPLOY_ENABLED == 'true' }}
         env:
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Rollback
         if: ${{ vars.ROLLBACK_ENABLED == 'true' }}
         env:
