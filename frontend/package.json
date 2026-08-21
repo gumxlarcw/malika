@@ -50,7 +50,7 @@
     "recharts": "^3.7.0",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
-    "swiper": "^11.2.10",
+    "swiper": "^14.1.0",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
