@@ -88,3 +88,9 @@ tmp/
 # Personal notes; and the local settings file, which can accumulate tokens/paths.
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Artefak nyasar (tugas 5, tidy-worktrees.sh, 2026-08-22)
+*.backup-*
+*.bak2
+*.xlsx
+
