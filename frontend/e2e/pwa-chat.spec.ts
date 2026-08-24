@@ -19,15 +19,30 @@ test("chat conversation flow", async ({ page }) => {
 
   await page.goto(`${PWA_BASE_URL}/chat`, { waitUntil: "domcontentloaded" });
 
-  const textarea = page
-    .locator('textarea[placeholder*="ulis"], textarea[placeholder*="ertanyaan"]')
-    .first();
-  if ((await textarea.count()) === 0) test.skip(true, "Chat input not found");
-  await expect(textarea).toBeVisible();
+  // A fresh anon identity owns no threads, and the composer lives in the
+  // `activeThreadId` branch — the welcome state renders no textarea at all. So
+  // the flow has to open a thread first; skipping on "no input found" instead
+  // meant this test skipped itself on every run.
+  const newChat = page.getByRole("button", { name: "New Chat" });
+  await expect(newChat).toBeVisible({ timeout: 15000 });
+  await newChat.click();
+
+  // Anchor on the composer id, not the placeholder: the placeholder swaps to
+  // "Memuat…"/"Menunggu respons…" while loading and streaming, so a
+  // placeholder-matched locator resolves to zero elements at exactly the
+  // moments this test waits on it.
+  const textarea = page.locator("#chat-composer textarea");
+  await expect(textarea).toBeVisible({ timeout: 15000 });
   await textarea.fill("halo");
   await textarea.press("Enter");
 
-  await expect(page.getByText("halo", { exact: false })).toBeVisible({ timeout: 15000 });
+  // Scope to the user's own bubble. getByText("halo") is substring- and
+  // case-insensitive, so it matches the "Halo, saya MALIKA" welcome heading and
+  // passes on a page where nothing was ever sent — it proved nothing about the
+  // send. The bubble only exists once the message is in the thread.
+  const sentMessage = page.locator(".malika-user-message").filter({ hasText: "halo" });
+  await expect(sentMessage).toHaveCount(1, { timeout: 15000 });
+  await expect(sentMessage).toBeVisible();
 });
 
 // Mobile viewport configurations for testing responsive design
@@ -79,28 +94,46 @@ test("mobile history drawer opens and closes", async ({ page }) => {
     test.skip(true, "PWA not reachable");
   }
 
-  // Use mobile viewport
-  await page.setViewportSize({ width: 375, height: 667 });
+  const viewport = { width: 375, height: 667 };
+  await page.setViewportSize(viewport);
   await page.goto(`${PWA_BASE_URL}/chat`, { waitUntil: "domcontentloaded" });
 
-  // Find and click hamburger menu
   const hamburgerBtn = page.locator('button[title="Riwayat Chat"]');
-  if ((await hamburgerBtn.count()) === 0) {
-    test.skip(true, "Hamburger button not found (may not be mobile viewport)");
-  }
+  await expect(hamburgerBtn).toBeVisible({ timeout: 15000 });
+
+  // "Riwayat Chat" is only the hamburger's title attribute, never a text node,
+  // so getByText can never match it. The drawer is also always mounted and
+  // slides in via translate-x, which leaves it with a non-empty bounding box —
+  // Playwright reports it visible in both states, so a visibility assertion
+  // here can never fail. Its x position is the only honest signal.
+  const drawer = page.locator("div.fixed.inset-y-0.left-0").first();
+  const backdrop = page.locator('[class*="fixed"][class*="inset-0"][class*="bg-black"]');
+  const drawerX = async () => (await drawer.boundingBox())?.x ?? NaN;
+
+  // Confirms the locator really is the history panel and not some other fixed
+  // overlay: the panel is what carries the sidebar heading.
+  await expect(drawer.getByText("Chat MALIKA", { exact: true })).toHaveCount(1);
+
+  await expect.poll(drawerX, { timeout: 5000 }).toBeLessThan(0);
+  await expect(backdrop).toHaveCount(0);
 
   await hamburgerBtn.click();
 
-  // History drawer should appear with "Riwayat Chat" heading
-  const drawerHeading = page.getByText("Riwayat Chat", { exact: true });
-  await expect(drawerHeading).toBeVisible({ timeout: 3000 });
+  await expect(backdrop).toHaveCount(1);
+  await expect.poll(drawerX, { timeout: 5000 }).toBeGreaterThanOrEqual(0);
 
-  // Close drawer by clicking backdrop or close button
-  const backdrop = page.locator('[class*="fixed"][class*="inset-0"][class*="bg-black"]');
-  if ((await backdrop.count()) > 0) {
-    await backdrop.click();
-    await expect(drawerHeading).not.toBeVisible({ timeout: 3000 });
-  }
+  // The backdrop spans the whole viewport, so its centre point sits under the
+  // drawer (z-100001 over the backdrop's z-100000) and a plain .click() is
+  // swallowed by the drawer. Aim at the strip of backdrop beside it.
+  const openBox = await drawer.boundingBox();
+  expect(openBox).not.toBeNull();
+  const drawerRight = (openBox?.x ?? 0) + (openBox?.width ?? 0);
+  await backdrop.click({
+    position: { x: (drawerRight + viewport.width) / 2, y: viewport.height / 2 },
+  });
+
+  await expect(backdrop).toHaveCount(0);
+  await expect.poll(drawerX, { timeout: 5000 }).toBeLessThan(0);
 });
 
 // Test touch targets are at least 44x44px on mobile
