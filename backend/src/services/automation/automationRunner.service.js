@@ -1,3 +1,4 @@
+const { upsertMergedCacheIfChanged } = require('../cache/mergedCacheWrite.service');
 const DataSource = require('../../models/DataSource.model');
 const MergedCache = require('../../models/MergedCache.model');
 const AutomationConfig = require('../../models/AutomationConfig.model');
@@ -1040,13 +1041,14 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, progress,
   info(`Metrics count: ${metrics?.length || 0}`);
 
   // Persist to primary
-  await MergedCache.upsert({
+  const wrotePrimary = await upsertMergedCacheIfChanged(MergedCache, {
     source_id: id,
     signature: signature || 'all',
     merged_json: JSON.stringify(structuredForCache || structured),
     last_update: new Date(lastUpdate.toISOString()),
     updated_at: new Date(),
   });
+  if (!wrotePrimary) info('Primary cache unchanged; skipped write (no binlog)');
 
   // Best-effort: index merged table columns + categorical values into search terms.
   try {
@@ -1077,13 +1079,14 @@ async function runAutomationForSource({ sourceId, mode = 'daily', log, progress,
       reportProgress('replicating', 85, 'Replicating to data_bps');
       await sequelizeBps.authenticate();
       await sequelizeBps.sync();
-      await MergedCacheBps.upsert({
+      const wroteReplica = await upsertMergedCacheIfChanged(MergedCacheBps, {
         source_id: id,
         signature: signature || 'all',
         merged_json: JSON.stringify(structuredForCache || structured),
         last_update: new Date(lastUpdate.toISOString()),
         updated_at: new Date(),
       });
+      if (!wroteReplica) info('Replica cache unchanged; skipped write (no binlog)');
       replicated_bps_cache = true;
       info(`Saved replica: data_bps.data_merged_cache (signature=${signature || 'all'})`);
       reportProgress('saved_replica', 90, 'Saved replica cache');

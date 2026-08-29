@@ -1,4 +1,5 @@
 const DataSource = require("../../models/DataSource.model");
+const { upsertMergedCacheIfChanged } = require("../cache/mergedCacheWrite.service");
 const MergedCache = require("../../models/MergedCache.model");
 const ProcessedCache = require("../../models/ProcessedCache.model");
 const AutomationConfig = require("../../models/AutomationConfig.model");
@@ -499,7 +500,7 @@ async function seedEximDatasources({
         // Save only a preview to merged_cache to avoid oversized packets / ECONNRESET.
         const structuredForCache = buildMergedCachePreview(structured, { maxRows: 2000 });
 
-        await MergedCache.upsert({
+        await upsertMergedCacheIfChanged(MergedCache, {
           source_id: row.id,
           signature,
           merged_json: JSON.stringify(structuredForCache),
@@ -521,7 +522,7 @@ async function seedEximDatasources({
             info(`MASTER (${variant.key}): replication authenticated`);
             await sequelizeBps.sync();
             info(`MASTER (${variant.key}): replication synced`);
-            await MergedCacheBps.upsert({
+            await upsertMergedCacheIfChanged(MergedCacheBps, {
               source_id: row.id,
               signature,
               merged_json: JSON.stringify(structuredForCache),
@@ -660,7 +661,7 @@ async function seedEximDatasources({
 
         const signature = `exim:${variant.key}:${g.code}`;
 
-        await MergedCache.upsert({
+        await upsertMergedCacheIfChanged(MergedCache, {
           source_id: row.id,
           signature,
           merged_json: JSON.stringify(structured),
@@ -679,7 +680,7 @@ async function seedEximDatasources({
           if (sequelizeBps && MergedCacheBps) {
             await sequelizeBps.authenticate();
             await sequelizeBps.sync();
-            await MergedCacheBps.upsert({
+            await upsertMergedCacheIfChanged(MergedCacheBps, {
               source_id: row.id,
               signature,
               merged_json: JSON.stringify(structured),

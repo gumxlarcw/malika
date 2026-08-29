@@ -600,6 +600,32 @@ async function replicateMergedToIndicatorTableBps({
       INSERT INTO \`${tableName}\` (${columns.map((c) => `\`${c}\``).join(",")})
       VALUES ${placeholders}
       ON DUPLICATE KEY UPDATE
+        -- updated_at HARUS dinilai paling dulu. Assignment di ON DUPLICATE KEY
+        -- UPDATE dievaluasi kiri->kanan, jadi kalau baris ini ditaruh terakhir
+        -- ia membandingkan kolom yang sudah ditimpa dan hasilnya selalu "sama".
+        --
+        -- Sebelumnya: updated_at = VALUES(updated_at) tanpa syarat. Karena nilai
+        -- itu new Date() tiap run, SETIAP baris dianggap berubah walau datanya
+        -- identik; dengan binlog_format=ROW tiap baris menulis citra sebelum+
+        -- sesudah. Hasilnya binlog 5,6 GB/hari untuk data yang totalnya 156 MB.
+        updated_at = IF(
+              source_id   <=> VALUES(source_id)
+          AND source_name <=> VALUES(source_name)
+          AND signature   <=> VALUES(signature)
+          AND year        <=> VALUES(year)
+          AND month_name  <=> VALUES(month_name)
+          AND hs2         <=> VALUES(hs2)
+          AND hs2_name    <=> VALUES(hs2_name)
+          AND pod         <=> VALUES(pod)
+          AND ctr         <=> VALUES(ctr)
+          AND kodehs      <=> VALUES(kodehs)
+          AND dim_key     <=> VALUES(dim_key)
+          AND dim_value   <=> VALUES(dim_value)
+          AND dim_hash    <=> VALUES(dim_hash)
+          AND value       <=> VALUES(value)
+          AND value_code  <=> VALUES(value_code)
+          AND last_update <=> VALUES(last_update),
+          updated_at, VALUES(updated_at)),
         source_id = VALUES(source_id),
         source_name = VALUES(source_name),
         signature = VALUES(signature),
@@ -615,8 +641,7 @@ async function replicateMergedToIndicatorTableBps({
         dim_hash = VALUES(dim_hash),
         value = VALUES(value),
         value_code = VALUES(value_code),
-        last_update = VALUES(last_update),
-        updated_at = VALUES(updated_at);
+        last_update = VALUES(last_update);
     `;
 
     try {
